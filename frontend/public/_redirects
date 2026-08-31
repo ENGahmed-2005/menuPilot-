@@ -1,0 +1,7 @@
+# React Router (client-side routing) SPA fallback لـ Netlify.
+# من غير السطر ده، أي مسار غير "/" (زي /admin/dashboard أو /owner/tables)
+# بيرجّع 404 من Netlify نفسه عند فتح الرابط مباشرة أو عمل refresh —
+# لأن Netlify بيدوّر على ملف فعلي بهذا الاسم ومش موجود (كله virtual routes
+# جوّا React Router). السطر ده بيقول لـ Netlify: أي مسار مش لقيته كملف،
+# رجّع index.html بدل الـ 404 — وبعدين React Router ياخد الموضوع من هناك.
+/*  /index.html  200
