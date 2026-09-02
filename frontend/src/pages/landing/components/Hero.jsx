@@ -53,7 +53,13 @@ export default function Hero({ onNavigate }) {
         </Suspense>
       </div>
 
-      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[1.05fr_.95fr] lg:px-10 lg:pb-32">
+      {/* pointer-events-none هنا هو الإصلاح: من غيرها، الـ div ده (اللي بياخد
+          مساحة القسم كله حتى في الفراغات بين النص والبطاقة) كان بيبلع كل
+          أحداث الماوس قبل ما توصل لطبقة الـ mosaic تحته، فالتفاعل مع
+          المؤشر كان شغّال بس في هوامش الشاشة النادرة برّه الـ max-w-7xl.
+          كل عنصر قابل للنقر فعليًا (الزرارين) بيفعّل pointer-events-auto
+          بنفسه صراحة عشان يفضل شغّال عادي. */}
+      <div className="pointer-events-none mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[1.05fr_.95fr] lg:px-10 lg:pb-32">
         <Reveal>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#EEA122]/25 bg-[#EEA122]/10 px-4 py-2 text-xs font-bold text-[#EEA122]">
             <Sparkles size={14} className="animate-pulse" />
@@ -71,12 +77,12 @@ export default function Hero({ onNavigate }) {
           <div className="mt-9 flex flex-wrap gap-3">
             <button
               onClick={() => onNavigate("/register")}
-              className="group inline-flex items-center gap-2 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#1F2420] shadow-lg shadow-[#EEA122]/20 transition hover:-translate-y-0.5 hover:bg-[#E67E22] hover:shadow-xl hover:shadow-[#EEA122]/25"
+              className="group pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#1F2420] shadow-lg shadow-[#EEA122]/20 transition hover:-translate-y-0.5 hover:bg-[#E67E22] hover:shadow-xl hover:shadow-[#EEA122]/25"
             >
               ابدأ مع menuPilot
               <ArrowLeft size={18} className="transition group-hover:-translate-x-1" />
             </button>
-            <a href="#how" className="inline-flex items-center gap-2 rounded-full border border-[#F3EFE5]/15 px-7 py-4 font-bold text-[#F3EFE5]/85 transition hover:border-[#F3EFE5]/35 hover:bg-[#F3EFE5]/5">
+            <a href="#how" className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[#F3EFE5]/15 px-7 py-4 font-bold text-[#F3EFE5]/85 transition hover:border-[#F3EFE5]/35 hover:bg-[#F3EFE5]/5">
               اكتشف كيف يعمل
               <ArrowLeft size={18} />
             </a>
