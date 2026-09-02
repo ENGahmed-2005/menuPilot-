@@ -2,7 +2,13 @@
    Hero.jsx — قسم البداية (العنوان الرئيسي + معاينة تفاعلية للوحة المطعم)
    ========================================================================== */
 import { ArrowLeft, Check, QrCode, Sparkles, UtensilsCrossed } from "lucide-react";
+import { lazy, Suspense } from "react";
 import Reveal from "./Reveal";
+
+// Three.js تقيلة (~500 كيلوبايت) ومطلوبة بس في صفحة الهبوط، فلو استوردناها
+// بشكل عادي هتتحمّل في كل صفحة بالتطبيق (تسجيل الدخول، لوحة التحكم...).
+// lazy() بيعمل chunk منفصل ليها، يتحمّل بس لما حد يفتح "/" فعليًا.
+const ShapeMosaic = lazy(() => import("./backgrounds/ShapeMosaic"));
 
 const PREVIEW_STATS = [
   ["24", "طلب اليوم"],
@@ -19,9 +25,33 @@ const PREVIEW_ORDERS = [
 
 export default function Hero({ onNavigate }) {
   return (
-    <section className="relative isolate">
+    <section className="relative isolate overflow-hidden">
       <div className="pointer-events-none absolute -right-40 top-0 -z-10 h-96 w-96 animate-[pulse_9s_ease-in-out_infinite] rounded-full bg-[#EEA122]/10 blur-3xl" />
       <div className="pointer-events-none absolute -left-40 bottom-0 -z-10 h-96 w-96 animate-[pulse_11s_ease-in-out_infinite] rounded-full bg-[#5B7A52]/10 blur-3xl" />
+
+      {/* خلفية Shape Mosaic التفاعلية (WebGL/Three.js) — أشكال بتلف وتضيء
+          قرب الماوس. ألوان مربوطة بهوية الموقع: ink-soft للحالة العادية
+          (خافتة جدًا فوق الخلفية الداكنة)، وcopper#EEA122 عند القرب من
+          المؤشر (نفس لون زرار الـ CTA). z سالب زي دوائر الـ blur فوق —
+          كده الأزرار والنص فوقها بالكامل (تُلمس عاديًا)، والمناطق الفاضية
+          بس هي اللي بتستقبل حركة الماوس وتتفاعل. -z-10 بيخليها تحت المحتوى
+          بس فوق خلفية <main> الداكنة، فبتبان كطبقة زخرفية خلف كل حاجة. */}
+      <div className="pointer-events-auto absolute inset-0 -z-10">
+        <Suspense fallback={null}>
+          <ShapeMosaic
+            ink="#4B5147"
+            lit="#EEA122"
+            cell={34}
+            size={8}
+            kinds={6}
+            fill={0}
+            spin={8}
+            turn={16}
+            reach={17}
+            style={{ opacity: 0.75 }}
+          />
+        </Suspense>
+      </div>
 
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[1.05fr_.95fr] lg:px-10 lg:pb-32">
         <Reveal>
