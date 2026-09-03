@@ -17,6 +17,7 @@ import ValueStrip from "./components/ValueStrip";
 import Features from "./components/Features";
 import HowItWorks from "./components/HowItWorks";
 import Roles from "./components/Roles";
+import Pricing from "./components/Pricing";
 import TeamSection from "./components/TeamSection";
 import CTASection from "./components/CTASection";
 import Footer from "./components/Footer";
@@ -35,6 +36,7 @@ export default function LandingPage() {
       <Features />
       <HowItWorks />
       <Roles />
+      <Pricing />
 
       {/* TEAM: intentionally before CTA + footer */}
       <section id="team" className="border-t border-[#F3EFE5]/10 bg-[#F3EFE5]/[.02]">

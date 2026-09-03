@@ -41,5 +41,6 @@ export const NAV_LINKS = [
   { href: "#features", label: "المميزات" },
   { href: "#how", label: "كيف يعمل" },
   { href: "#roles", label: "الأدوار" },
+  { href: "#pricing", label: "الأسعار" },
   { href: "#team", label: "الفريق" },
 ];
