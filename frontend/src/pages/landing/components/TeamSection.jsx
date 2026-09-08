@@ -1,4 +1,4 @@
-import { Code2, Database, Layers3, UsersRound } from "lucide-react";
+import { Code2, Database, UsersRound } from "lucide-react";
 
 const TEAM = [
   {
@@ -17,11 +17,6 @@ const TEAM = [
     icon: Database,
   },
   {
-    name: "Somia Zakaria",
-    role: "Team Member",
-    icon: Layers3,
-  },
-  {
     name: "Saja Saqallah",
     role: "React Frontend Developer",
     icon: Code2,
@@ -30,11 +25,6 @@ const TEAM = [
     name: "Raneen Rayan",
     role: "React Developer",
     icon: Code2,
-  },
-  {
-    name: "عبد المعين البربري",
-    role: "Full-Stack React · Laravel Developer",
-    icon: Layers3,
   },
 ];
 
