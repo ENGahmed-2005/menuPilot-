@@ -1,18 +1,11 @@
-/* ==========================================================================
-   ScanEntry.jsx — أول شاشة يشوفها الزبون بعد مسح رمز QR الخاص بالطاولة
-   يغطي: FR-24 (فتح جلسة بالاسم + رقم الهاتف)
-   --------------------------------------------------------------------------
-   المسار المتوقع: /t/:tableCode  (الرمز داخل QR، وليس معرّف الطاولة الداخلي)
-   بعد فتح الجلسة بنجاح، ننتقل لصفحة القائمة مع sessionId بالـ URL.
-   ========================================================================== */
 import { useState } from "react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Phone, UserRound, Utensils } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { openSession } from "../../api/sessions";
 
 export default function ScanEntry() {
   const { tableCode } = useParams();
   const navigate = useNavigate();
-
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +20,6 @@ export default function ScanEntry() {
       const session = await openSession({ tableCode, name, phone });
       navigate(`/t/${tableCode}/menu?session=${session.id}`);
     } catch (err) {
-      // FR-26: الـ backend يرفض بـ 409 لو في جلسة نشطة أصلاً على نفس الطاولة.
       if (err.status === 409) {
         setError("هذه الطاولة لديها جلسة نشطة بالفعل. الرجاء طلب مساعدة الطاقم.");
       } else {
@@ -39,53 +31,111 @@ export default function ScanEntry() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ink px-4 py-10">
-      <div className="w-full max-w-sm rounded-2xl bg-paper-2 p-7 text-ink shadow-xl">
-        <span className="mb-1 block text-xs font-medium tracking-wide text-copper-deep">
-          طاولة {tableCode}
-        </span>
-        <h1 className="mb-2 font-display text-3xl">أهلاً بك!</h1>
-        <p className="mb-6 text-sm text-ink-soft">
-          أدخل اسمك ورقم هاتفك لتبدأ الطلب.
-        </p>
-
-        {error && (
-          <p role="alert" className="mb-4 rounded-lg bg-brick/10 px-3 py-2 text-sm text-brick">
-            {error}
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-ink-soft">الاسم</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full rounded-lg border border-ink/15 px-3.5 py-2.5 text-sm text-ink outline-none focus:border-copper focus:ring-2 focus:ring-copper/20"
-            />
+    <main className="min-h-screen bg-ink text-paper" dir="rtl">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col lg:flex-row">
+        <section className="relative hidden overflow-hidden lg:flex lg:w-1/2 lg:flex-col lg:justify-between lg:p-12">
+          <div className="absolute -right-28 -top-28 h-72 w-72 rounded-full bg-copper/20 blur-3xl" />
+          <div className="absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-herb/20 blur-3xl" />
+          <div className="relative">
+            <div className="mb-10 flex h-12 w-12 items-center justify-center rounded-2xl bg-copper text-ink shadow-lg">
+              <Utensils size={22} />
+            </div>
+            <p className="text-sm font-semibold tracking-[0.2em] text-copper">MENUPILOT</p>
+            <h1 className="mt-5 max-w-lg font-display text-6xl leading-tight">
+              طلبك يبدأ من هنا.
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-8 text-paper/60">
+              أدخل بياناتك مرة واحدة، ثم تصفح القائمة واطلب مباشرة من طاولتك بدون تطبيق.
+            </p>
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-ink-soft">
-              رقم الهاتف
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-              className="w-full rounded-lg border border-ink/15 px-3.5 py-2.5 text-sm text-ink outline-none focus:border-copper focus:ring-2 focus:ring-copper/20"
-            />
+          <div className="relative flex items-center gap-3 text-sm text-paper/50">
+            <CheckCircle2 size={18} className="text-herb" />
+            تجربة سريعة • آمنة • بدون تسجيل حساب
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-full bg-copper py-3 text-sm font-medium text-paper transition-colors hover:bg-copper-deep disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "جارِ البدء…" : "ابدأ الطلب"}
-          </button>
-        </form>
+        </section>
+
+        <section className="flex flex-1 items-center justify-center px-5 py-8 sm:px-8 lg:bg-paper-2 lg:text-ink">
+          <div className="w-full max-w-md">
+            <div className="mb-6 flex items-center gap-3 lg:hidden">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-copper text-ink">
+                <Utensils size={19} />
+              </div>
+              <div>
+                <p className="text-xs font-bold tracking-[0.18em] text-copper">MENUPILOT</p>
+                <p className="text-xs text-paper/50">القائمة الرقمية</p>
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-ink/10 bg-paper-2 p-6 text-ink shadow-2xl sm:p-8 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+              <div className="mb-8">
+                <span className="inline-flex items-center rounded-full bg-copper/10 px-3 py-1.5 text-xs font-bold text-copper-deep">
+                  طاولة {tableCode}
+                </span>
+                <h2 className="mt-4 font-display text-4xl sm:text-5xl">أهلاً بك!</h2>
+                <p className="mt-3 text-sm leading-7 text-ink-soft">
+                  أخبرنا باسمك ورقم هاتفك لنفتح جلسة طاولتك ونجهز قائمتك.
+                </p>
+              </div>
+
+              {error && (
+                <div role="alert" className="mb-5 flex gap-3 rounded-2xl border border-brick/15 bg-brick/5 p-4 text-sm leading-6 text-brick">
+                  <AlertCircle className="mt-0.5 shrink-0" size={18} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label htmlFor="customer-name" className="mb-2 block text-sm font-semibold">الاسم</label>
+                  <div className="relative">
+                    <UserRound className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft/50" size={18} />
+                    <input
+                      id="customer-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      autoComplete="name"
+                      placeholder="مثلاً: أحمد"
+                      className="w-full rounded-2xl border border-ink/10 bg-white px-12 py-3.5 text-sm outline-none transition focus:border-copper focus:ring-4 focus:ring-copper/10"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="customer-phone" className="mb-2 block text-sm font-semibold">رقم الهاتف</label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft/50" size={18} />
+                    <input
+                      id="customer-phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
+                      autoComplete="tel"
+                      inputMode="tel"
+                      placeholder="05XXXXXXXX"
+                      className="w-full rounded-2xl border border-ink/10 bg-white px-12 py-3.5 text-sm outline-none transition focus:border-copper focus:ring-4 focus:ring-copper/10"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-4 text-sm font-bold text-paper shadow-lg transition hover:-translate-y-0.5 hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                >
+                  {loading ? "جارِ فتح الجلسة…" : "ابدأ الطلب"}
+                  {!loading && <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />}
+                </button>
+              </form>
+
+              <p className="mt-6 text-center text-xs leading-5 text-ink-soft/60">
+                بإكمال المتابعة، نستخدم البيانات المطلوبة لتشغيل جلسة الطلب على هذه الطاولة.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
