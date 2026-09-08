@@ -7,9 +7,9 @@ const TEAM = [
     icon: UsersRound,
   },
   {
-    name: "Eman Dahaoh",
-    role: "React Frontend Developer",
-    icon: Code2,
+    name: "علي عابد",
+    role: "Laravel Backend Developer",
+    icon: Database,
   },
   {
     name: "عمار يحيى عمر العرعير",
@@ -39,10 +39,10 @@ export default function TeamSection() {
             The Team
           </span>
           <h2 className="font-[Aref_Ruqaa] text-4xl font-normal leading-tight text-[#F3EFE5] md:text-5xl">
-            الفريق الذي يبني menuPilot
+            فريق menuPilot
           </h2>
           <p className="mt-5 text-sm leading-7 text-[#F3EFE5]/65 md:text-base">
-            فريق متعدد التخصصات يجمع بين تطوير الواجهات، الباك إند، والـ Full-Stack لبناء تجربة إدارة مطاعم متكاملة.
+            فريق شغوف يجمع خبرات تطوير الواجهات والخلفيات لابتكار حلول رقمية ذكية تجعل إدارة المطاعم أكثر سهولة وكفاءة.
           </p>
         </div>
 
