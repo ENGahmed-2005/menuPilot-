@@ -100,7 +100,7 @@ export default function Hero({ onNavigate }) {
             <div className="flex items-center justify-between border-b border-[#1F2420]/10 pb-5">
               <div>
                 <p className="text-xs font-bold text-[#4B5147]">لوحة المطعم</p>
-                <h2 className="mt-1 text-2xl font-black">EVAN Restaurant</h2>
+                <h2 className="mt-1 text-2xl font-black">YOUR Restaurant</h2>
               </div>
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#EEA122]"><QrCode size={25} /></span>
             </div>
