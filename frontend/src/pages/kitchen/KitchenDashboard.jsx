@@ -1,145 +1,21 @@
-/* ==========================================================================
-   KitchenDashboard.jsx — لوحة المطبخ الحية
-   يغطي: FR-18 (عرض فوري بدون refresh), FR-19 (تحديث الحالة),
-         FR-38 (مؤشر وقت منقضٍ), FR-39 (فرز حسب وقت التحضير المتوقع)
-   ========================================================================== */
-import { useEffect, useState } from "react";
-import { ChefHat, Clock3 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChefHat, Clock3, CheckCircle2, Flame, Filter } from "lucide-react";
 import { getKitchenOrders, updateOrderStatus } from "../../api/orders";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
 import EmptyState from "../../components/dashboard/EmptyState";
 import Badge from "../../components/ui/Badge";
 
-const POLL_INTERVAL_MS = 4000; // نفس منطق useOrderTracking، بدون استخراج hook منفصل بعد
-
-const STATUS_FLOW = ["Pending", "Preparing", "Ready", "Served"];
-
-const STATUS_LABEL_AR = {
-  Pending: "قيد الانتظار",
-  Preparing: "قيد التحضير",
-  Ready: "جاهز",
-  Served: "تم التقديم",
-};
-
-const STATUS_TONE = {
-  Pending: "warning",
-  Preparing: "warning",
-  Ready: "good",
-  Served: "neutral",
-};
-
-function nextStatus(current) {
-  const idx = STATUS_FLOW.indexOf(current);
-  return STATUS_FLOW[Math.min(idx + 1, STATUS_FLOW.length - 1)];
-}
-
-/** عدد الدقائق منذ إرسال الطلب — أساس مؤشر FR-38. */
-function minutesElapsed(submittedAt) {
-  return Math.floor((Date.now() - new Date(submittedAt).getTime()) / 60000);
-}
-
-export default function KitchenDashboard() {
-  const [orders, setOrders] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        // FR-39: فرز حسب وقت التحضير المتوقع، يُطلب من الـ backend مباشرة.
-        const data = await getKitchenOrders({ sortBy: "prepTime" });
-        if (!cancelled) setOrders(data ?? []);
-      } catch (err) {
-        if (!cancelled) setError(err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    poll();
-    const id = setInterval(poll, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
-
-  async function handleAdvanceStatus(order) {
-    try {
-      await updateOrderStatus(order.id, nextStatus(order.status));
-      setOrders((prev) =>
-        prev.map((o) => (o.id === order.id ? { ...o, status: nextStatus(o.status) } : o))
-      );
-    } catch (err) {
-      setError(err);
-    }
-  }
-
-  return (
-    <div>
-      <PageHeader title="المطبخ" subtitle="الطلبات الحية مرتّبة حسب وقت التحضير المتوقع." />
-
-      {error && (
-        <p role="alert" className="mb-4 rounded-lg bg-brick/10 px-3 py-2 text-sm text-brick">
-          {error.message}
-        </p>
-      )}
-
-      {loading ? null : orders.length === 0 ? (
-        <Card>
-          <EmptyState icon={ChefHat} title="لا توجد طلبات حاليًا" description="ستظهر الطلبات الجديدة هنا فور إرسالها من الزبائن." />
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {orders.map((order) => {
-            const elapsed = minutesElapsed(order.submittedAt);
-            // FR-38: مؤشر بصري (غير صوتي) للطلبات المتجاوزة لمتوسط وقت التحضير.
-            const isLate = elapsed > order.avgPrepTimeMinutes;
-
-            return (
-              <Card
-                key={order.id}
-                className={`flex flex-col gap-3 p-4 ${isLate ? "border-brick/40 bg-brick/5" : ""}`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-medium text-ink">
-                    طلب #{order.orderNumber} — طاولة {order.tableLabel}
-                  </span>
-                  <Badge tone={STATUS_TONE[order.status] || "neutral"}>
-                    {STATUS_LABEL_AR[order.status] || order.status}
-                  </Badge>
-                </div>
-
-                <span className={`flex items-center gap-1.5 text-sm ${isLate ? "font-medium text-brick" : "text-ink-soft"}`}>
-                  <Clock3 size={14} aria-hidden="true" />
-                  مضى {elapsed} دقيقة{isLate ? " ⚠️" : ""}
-                </span>
-
-                <ul className="space-y-1 border-t border-ink/8 pt-3 text-sm text-ink-soft">
-                  {order.items.map((it, i) => (
-                    <li key={i}>
-                      <span className="font-medium text-ink">{it.quantity}×</span> {it.name}
-                      {it.note && <span className="italic"> — {it.note}</span>}
-                    </li>
-                  ))}
-                </ul>
-
-                {order.status !== "Served" && (
-                  <button
-                    onClick={() => handleAdvanceStatus(order)}
-                    className="mt-1 rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-ink-soft"
-                  >
-                    تحويل إلى {STATUS_LABEL_AR[nextStatus(order.status)] || nextStatus(order.status)}
-                  </button>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+const flow=["Pending","Preparing","Ready","Served"], ar={Pending:"قيد الانتظار",Preparing:"قيد التحضير",Ready:"جاهز",Served:"تم التقديم"},tone={Pending:"warning",Preparing:"warning",Ready:"good",Served:"neutral"};
+const mins=t=>Math.max(0,Math.floor((Date.now()-new Date(t).getTime())/60000));
+export default function KitchenDashboard(){
+ const [orders,setOrders]=useState([]),[filter,setFilter]=useState("all"),[error,setError]=useState(null),[loading,setLoading]=useState(true);
+ useEffect(()=>{let stop=false;const load=()=>getKitchenOrders({sortBy:"prepTime"}).then(x=>!stop&&setOrders(x||[])).catch(e=>!stop&&setError(e)).finally(()=>!stop&&setLoading(false));load();const id=setInterval(load,4000);return()=>{stop=true;clearInterval(id)}},[]);
+ const counts=useMemo(()=>({all:orders.length,pending:orders.filter(o=>o.status==="Pending").length,preparing:orders.filter(o=>o.status==="Preparing").length,ready:orders.filter(o=>o.status==="Ready").length}),[orders]);
+ async function advance(o){try{const next=flow[Math.min(flow.indexOf(o.status)+1,3)];await updateOrderStatus(o.id,next);setOrders(x=>x.map(a=>a.id===o.id?{...a,status:next}:a));}catch(e){setError(e)}}
+ const shown=filter==="all"?orders:orders.filter(o=>o.status.toLowerCase()===filter);
+ return <div dir="rtl"><PageHeader title="مطبخ حي" subtitle="شاشة KDS لمتابعة الطلبات، الأولوية ووقت التحضير دون تحديث يدوي."/>{error&&<p className="mb-4 rounded-xl bg-brick/10 p-3 text-sm text-brick">{error.message}</p>}
+  <div className="mb-5 grid gap-3 sm:grid-cols-4">{[["all","كل الطلبات",counts.all,ChefHat],["pending","جديدة",counts.pending,Flame],["preparing","قيد التحضير",counts.preparing,Clock3],["ready","جاهزة",counts.ready,CheckCircle2]].map(([k,l,v,I])=><button key={k} onClick={()=>setFilter(k)} className={`rounded-2xl border p-4 text-right transition ${filter===k?"border-copper bg-copper/10":"border-ink/10 bg-paper"}`}><div className="flex items-center justify-between"><I size={18} className="text-copper"/><strong className="text-2xl">{v}</strong></div><span className="mt-2 block text-xs text-ink-soft/60">{l}</span></button>)}</div>
+  {loading?<div className="p-8 text-center">جارِ التحميل…</div>:shown.length===0?<Card><EmptyState icon={ChefHat} title="لا توجد طلبات" description="ستظهر الطلبات هنا فور وصولها."/></Card>:<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{shown.map(o=>{const elapsed=mins(o.submittedAt),late=elapsed>o.avgPrepTimeMinutes;return <Card key={o.id} className={`flex flex-col gap-3 p-5 ${late?"border-brick/40 bg-brick/5":""}`}><div className="flex justify-between gap-2"><div><strong>#{o.orderNumber}</strong><p className="mt-1 text-xs text-ink-soft/55">طاولة {o.tableLabel}</p></div><Badge tone={tone[o.status]}>{ar[o.status]}</Badge></div><div className={`flex items-center gap-2 text-sm ${late?"font-bold text-brick":"text-ink-soft"}`}><Clock3 size={15}/> {elapsed} دقيقة {late&&"• متأخر"}</div><ul className="space-y-1 border-t border-ink/8 pt-3 text-sm">{o.items.map((i,n)=><li key={n}><b>{i.quantity}×</b> {i.name}{i.note&&<span className="text-ink-soft"> • {i.note}</span>}</li>)}</ul>{o.status!=="Served"&&<button onClick={()=>advance(o)} className="mt-auto rounded-xl bg-ink px-4 py-3 text-sm font-bold text-paper hover:bg-ink-soft">{ar[flow[Math.min(flow.indexOf(o.status)+1,3)]]}</button>}</Card>})}</div>}
+ </div>;
 }
