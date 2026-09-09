@@ -11,7 +11,7 @@ import { createContext, useContext, useMemo, useState } from "react";
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  // كل عنصر: { menuItemId, name, price, quantity, note }
+  // كل عنصر: { menuItemId, name, price, quantity, note, imageUrl }
   const [items, setItems] = useState([]);
 
   function addItem(menuItem, quantity = 1, note = "") {
@@ -24,13 +24,21 @@ export function CartProvider({ children }) {
       }
       return [
         ...prev,
-        { menuItemId: menuItem.id, name: menuItem.name, price: menuItem.price, quantity, note },
+        {
+          menuItemId: menuItem.id,
+          name: menuItem.name,
+          price: Number(menuItem.price) || 0,
+          quantity,
+          note,
+          imageUrl: menuItem.imageUrl || "",
+        },
       ];
     });
   }
 
   function updateQuantity(index, quantity) {
-    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, quantity } : it)));
+    const nextQuantity = Math.max(1, Number(quantity) || 1);
+    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, quantity: nextQuantity } : it)));
   }
 
   function updateNote(index, note) {
@@ -46,7 +54,7 @@ export function CartProvider({ children }) {
   }
 
   const total = useMemo(
-    () => items.reduce((sum, it) => sum + it.price * it.quantity, 0),
+    () => items.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0),
     [items]
   );
 
