@@ -29,7 +29,6 @@ export default function Tables() {
 
   const atLimit = tables.length >= plan.limits.tables;
 
-  // --- حالة التعديل (Edit) ---
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState("");
   const [editSeats, setEditSeats] = useState(2);
@@ -37,6 +36,7 @@ export default function Tables() {
 
   function load() {
     setLoading(true);
+    setError(null);
     getTables()
       .then(setTables)
       .catch(setError)
@@ -48,7 +48,7 @@ export default function Tables() {
   async function handleAdd(e) {
     e.preventDefault();
     try {
-      await createTable({ label, seats: Number(seats) });
+      await createTable({ label: label.trim(), seats: Number(seats) });
       setLabel("");
       setSeats(2);
       load();
@@ -82,7 +82,7 @@ export default function Tables() {
     e.preventDefault();
     setSavingEdit(true);
     try {
-      await updateTable(tableId, { label: editLabel, seats: Number(editSeats) });
+      await updateTable(tableId, { label: editLabel.trim(), seats: Number(editSeats) });
       cancelEdit();
       load();
     } catch (err) {
@@ -112,36 +112,37 @@ export default function Tables() {
 
       <Card as="form" onSubmit={handleAdd} className={`mb-6 flex flex-wrap items-end gap-3 p-4 ${atLimit ? "opacity-50" : ""}`}>
         <fieldset disabled={atLimit} className="contents">
-        <div className="min-w-40 flex-1">
-          <label className="mb-1.5 block text-xs font-medium text-ink-soft">اسم الطاولة</label>
-          <input
-            placeholder="مثال: طاولة 07"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            required
-            className={fieldClass}
-          />
-        </div>
-        <div className="w-24">
-          <label className="mb-1.5 block text-xs font-medium text-ink-soft">المقاعد</label>
-          <input
-            type="number"
-            min={1}
-            value={seats}
-            onChange={(e) => setSeats(e.target.value)}
-            className={fieldClass}
-          />
-        </div>
-        <Button type="submit">
-          <Plus size={16} />
-          إضافة طاولة
-        </Button>
+          <div className="min-w-40 flex-1">
+            <label className="mb-1.5 block text-xs font-medium text-ink-soft">اسم الطاولة</label>
+            <input
+              placeholder="مثال: طاولة 07"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              required
+              className={fieldClass}
+            />
+          </div>
+          <div className="w-24">
+            <label className="mb-1.5 block text-xs font-medium text-ink-soft">المقاعد</label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={seats}
+              onChange={(e) => setSeats(e.target.value)}
+              className={fieldClass}
+            />
+          </div>
+          <Button type="submit">
+            <Plus size={16} />
+            إضافة طاولة
+          </Button>
         </fieldset>
       </Card>
 
       {error && (
         <p role="alert" className="mb-4 rounded-lg bg-brick/10 px-3 py-2 text-sm text-brick">
-          {error.message}
+          {error?.response?.data?.message || error?.message || "حدث خطأ أثناء تنفيذ العملية."}
         </p>
       )}
 
@@ -155,11 +156,11 @@ export default function Tables() {
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tables.map((t) => {
             const isEditing = editingId === t.id;
+            const isAvailable = String(t.status).toLowerCase() === "available";
 
             return (
               <Card key={t.id} as="li" className="flex flex-col gap-3 p-4">
                 {isEditing ? (
-                  /* ---------- وضع التعديل ---------- */
                   <form onSubmit={(e) => handleSaveEdit(e, t.id)} className="flex flex-col gap-3">
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-ink-soft">اسم الطاولة</label>
@@ -176,6 +177,7 @@ export default function Tables() {
                       <input
                         type="number"
                         min={1}
+                        max={100}
                         value={editSeats}
                         onChange={(e) => setEditSeats(e.target.value)}
                         className={fieldClass}
@@ -199,7 +201,6 @@ export default function Tables() {
                     </div>
                   </form>
                 ) : (
-                  /* ---------- وضع العرض ---------- */
                   <>
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -209,7 +210,7 @@ export default function Tables() {
                           {t.seats} مقاعد
                         </span>
                       </div>
-                      <Badge tone={t.status === "Available" ? "good" : "warning"}>{t.status}</Badge>
+                      <Badge tone={isAvailable ? "good" : "warning"}>{t.status}</Badge>
                     </div>
 
                     <div className="mt-1 flex items-center justify-between border-t border-ink/8 pt-3 text-sm">
