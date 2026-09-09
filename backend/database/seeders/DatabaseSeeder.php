@@ -1,0 +1,4 @@
+<?php
+namespace Database\Seeders;
+use App\Models\Category; use App\Models\Owner; use App\Models\Product; use App\Models\Restaurant; use App\Models\Table; use Illuminate\Database\Seeder;
+class DatabaseSeeder extends Seeder { public function run():void { $r=Restaurant::firstOrCreate(['name'=>'menuPilot Demo'],['plan'=>'pro']); $o=Owner::firstOrCreate(['email'=>'owner@menupilot.test'],['restaurant_id'=>$r->id,'name'=>'Demo Owner','password'=>'password123','role'=>'owner','active'=>true,'plan'=>'pro']); $cat=Category::firstOrCreate(['restaurant_id'=>$r->id,'name'=>'Main'],['display_order'=>1]); Product::firstOrCreate(['restaurant_id'=>$r->id,'name'=>'Demo Burger'],['category_id'=>$cat->id,'price'=>25,'is_available'=>true]); Table::firstOrCreate(['restaurant_id'=>$r->id,'label'=>'Table 01'],['seats'=>4,'code'=>'DEMO0001','is_active'=>true]); $this->command?->info('Demo login: owner@menupilot.test / password123'); } }
