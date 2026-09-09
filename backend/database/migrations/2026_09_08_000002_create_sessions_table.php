@@ -1,3 +1,0 @@
-<?php
-use Illuminate\Database\Migrations\Migration; use Illuminate\Database\Schema\Blueprint; use Illuminate\Support\Facades\Schema;
-return new class extends Migration { public function up():void{Schema::create('dining_sessions',function(Blueprint $t){$t->id();$t->unsignedBigInteger('restaurant_id');$t->foreignId('table_id')->constrained('tables')->cascadeOnDelete();$t->string('name')->nullable();$t->string('phone')->nullable();$t->string('status')->default('Opened');$t->timestamp('opened_at')->useCurrent();$t->timestamp('closed_at')->nullable();$t->timestamps();$t->index(['table_id','status']);});} public function down():void{Schema::dropIfExists('dining_sessions');} };
