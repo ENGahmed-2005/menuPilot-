@@ -1,0 +1,10 @@
+<?php
+namespace App\Http\Controllers;
+use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;
+class SessionController extends Controller{
+ private function out($d,$s=200){return response()->json(['data'=>$d],$s);}
+ public function open(Request $r,$code){$v=$r->validate(['name'=>'required|string|max:255','phone'=>'nullable|string|max:50']);$t=DB::table('restaurant_tables')->where('table_code',$code)->first();if(!$t)return response()->json(['message'=>'Invalid table code'],404);if(DB::table('dining_sessions')->where('restaurant_table_id',$t->id)->whereNull('closed_at')->exists())return response()->json(['message'=>'This table already has an active session'],409);$id=DB::table('dining_sessions')->insertGetId(['restaurant_table_id'=>$t->id,'customer_name'=>$v['name'],'customer_phone'=>$v['phone']??null,'status'=>'opened','opened_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);DB::table('restaurant_tables')->where('id',$t->id)->update(['status'=>'occupied','updated_at'=>now()]);return $this->out(DB::table('dining_sessions')->find($id),201);}
+ public function show($id){$s=DB::table('dining_sessions')->find($id);return $s?$this->out($s):response()->json(['message'=>'Session not found'],404);}
+ public function assistance($id){if(!DB::table('dining_sessions')->find($id))return response()->json(['message'=>'Session not found'],404);if(DB::table('assistance_requests')->where('dining_session_id',$id)->where('status','open')->exists())return response()->json(['message'=>'Assistance already requested'],409);$rid=DB::table('assistance_requests')->insertGetId(['dining_session_id'=>$id,'status'=>'open','created_at'=>now(),'updated_at'=>now()]);return $this->out(DB::table('assistance_requests')->find($rid),201);}
+ public function active(Request $r){return $this->out(DB::table('dining_sessions')->join('restaurant_tables','restaurant_tables.id','=','dining_sessions.restaurant_table_id')->where('restaurant_tables.user_id',$r->user()->id)->whereNull('dining_sessions.closed_at')->select('dining_sessions.*','restaurant_tables.label as table_label')->get());}
+}
