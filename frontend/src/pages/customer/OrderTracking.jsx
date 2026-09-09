@@ -23,16 +23,22 @@ const STEPS = [
 
 const STATUS_ORDER = { pending: 0, preparing: 1, ready: 2, served: 3 };
 
+function normalizeStatus(status) {
+  return String(status || "").trim().toLowerCase();
+}
+
 function statusMeta(status) {
-  return STATUS_META[status] || { label: status || "غير معروف", description: "يتم تحديث حالة طلبك." };
+  const normalized = normalizeStatus(status);
+  return STATUS_META[normalized] || { label: status || "غير معروف", description: "يتم تحديث حالة طلبك." };
 }
 
 function OrderProgress({ status }) {
-  if (status === "cancelled") {
+  const normalized = normalizeStatus(status);
+  if (normalized === "cancelled") {
     return <div className="flex items-center gap-3 rounded-2xl border border-brick/15 bg-brick/5 p-4 text-brick"><X size={18} /><span className="text-sm font-semibold">تم إلغاء هذا الطلب</span></div>;
   }
 
-  const current = STATUS_ORDER[status] ?? 0;
+  const current = STATUS_ORDER[normalized] ?? 0;
   return (
     <div className="mt-5 grid grid-cols-4 gap-2">
       {STEPS.map((step, index) => {
@@ -49,6 +55,7 @@ export default function OrderTracking() {
   const sessionId = searchParams.get("session");
   const { orders, loading, error } = useOrderTracking(sessionId);
   const [notice, setNotice] = useState("");
+  const [noticeType, setNoticeType] = useState("success");
   const [busy, setBusy] = useState("");
 
   useEffect(() => {
@@ -57,19 +64,29 @@ export default function OrderTracking() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const activeOrder = useMemo(
-    () => orders.find((order) => order.status !== "served" && order.status !== "cancelled") || orders[orders.length - 1],
+  const normalizedOrders = useMemo(
+    () => orders.map((order) => ({ ...order, normalizedStatus: normalizeStatus(order.status) })),
     [orders]
   );
+
+  const activeOrder = useMemo(
+    () => normalizedOrders.find((order) => order.normalizedStatus !== "served" && order.normalizedStatus !== "cancelled") || normalizedOrders[normalizedOrders.length - 1],
+    [normalizedOrders]
+  );
+
+  function showNotice(message, type = "success") {
+    setNoticeType(type);
+    setNotice(message);
+  }
 
   async function handleAskForHelp() {
     if (!sessionId) return;
     setBusy("help");
     try {
       await requestWaiterAssistance(sessionId);
-      setNotice("تم إشعار النادل بطلب المساعدة.");
+      showNotice("تم إشعار النادل بطلب المساعدة.");
     } catch (err) {
-      setNotice(err.message || "تعذّر إرسال طلب المساعدة.");
+      showNotice(err.message || "تعذّر إرسال طلب المساعدة.", "error");
     } finally {
       setBusy("");
     }
@@ -82,7 +99,7 @@ export default function OrderTracking() {
       await requestBill(sessionId);
       navigate(`/bill-request?session=${encodeURIComponent(sessionId)}`, { replace: true });
     } catch (err) {
-      setNotice(err.message || "تعذّر طلب الفاتورة.");
+      showNotice(err.message || "تعذّر طلب الفاتورة.", "error");
       setBusy("");
     }
   }
@@ -114,16 +131,16 @@ export default function OrderTracking() {
       </header>
 
       <div className="mx-auto max-w-3xl px-5 py-6 sm:px-8">
-        {notice && <div role="status" className="mb-5 flex items-center gap-3 rounded-2xl border border-brick/15 bg-brick/10 px-4 py-3 text-sm text-brick shadow-sm"><X size={18} /><span>{notice}</span></div>}
+        {notice && <div role="status" className={`mb-5 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm shadow-sm ${noticeType === "error" ? "border border-brick/15 bg-brick/10 text-brick" : "border border-herb/15 bg-herb/10 text-herb"}`}><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-current/10">{noticeType === "error" ? <X size={16} /> : <Check size={16} />}</span><span>{notice}</span></div>}
 
-        {orders.length === 0 ? (
+        {normalizedOrders.length === 0 ? (
           <section className="rounded-[2rem] border border-ink/10 bg-white p-8 text-center shadow-sm"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-copper/10 text-copper"><Clock3 /></div><h2 className="mt-5 font-display text-3xl">لا توجد طلبات بعد</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-ink-soft">عند إرسال أول طلب سيظهر هنا مباشرة مع تحديث حالته تلقائيًا.</p></section>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => {
-              const meta = statusMeta(order.status);
+            {normalizedOrders.map((order) => {
+              const meta = statusMeta(order.normalizedStatus);
               const isActive = activeOrder?.id === order.id;
-              return <article key={order.id} className={`rounded-[2rem] border bg-white p-5 shadow-sm transition sm:p-6 ${isActive ? "border-copper/30 shadow-md" : "border-ink/10"}`}><div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-xs font-bold text-ink-soft/60"><span>طلب</span><span className="text-ink">#{order.orderNumber}</span></div><h2 className="mt-2 text-lg font-bold">{meta.label}</h2><p className="mt-1 text-sm leading-6 text-ink-soft">{meta.description}</p></div><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-copper/10 text-copper">{order.status === "ready" ? <BellRing size={20} /> : <Clock3 size={20} />}</div></div><OrderProgress status={order.status} /></article>;
+              return <article key={order.id} className={`rounded-[2rem] border bg-white p-5 shadow-sm transition sm:p-6 ${isActive ? "border-copper/30 shadow-md" : "border-ink/10"}`}><div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-xs font-bold text-ink-soft/60"><span>طلب</span><span className="text-ink">#{order.orderNumber}</span></div><h2 className="mt-2 text-lg font-bold">{meta.label}</h2><p className="mt-1 text-sm leading-6 text-ink-soft">{meta.description}</p></div><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-copper/10 text-copper">{order.normalizedStatus === "ready" ? <BellRing size={20} /> : <Clock3 size={20} />}</div></div><OrderProgress status={order.normalizedStatus} /></article>;
             })}
           </div>
         )}
