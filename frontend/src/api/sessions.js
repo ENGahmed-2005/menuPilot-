@@ -1,34 +1,35 @@
-/* ==========================================================================
-   sessions.js — دورة حياة "جلسة الطعام" (Dining Session)
-   يغطي: FR-24, FR-25, FR-26, FR-41
-   حسب الـ SRS القسم 1.10: كل مسح QR يفتح جلسة، وتظل مفتوحة حتى إغلاقها
-   من الكاشير بعد تأكيد الدفع.
-   حالات الجلسة (1.10.1):
-   Opened → Ordering → Preparing → Ready → Served → Bill Requested →
-   Payment Pending → Paid → Closed
-   ========================================================================== */
+/* Dining session API. */
 import { api } from "./client";
 
-/**
- * فتح جلسة جديدة بعد مسح QR. FR-24.
- * الـ backend يرفض الطلب (409 مثلاً) لو في جلسة نشطة أصلاً لنفس الطاولة (FR-26).
- * @param {{ tableCode: string, name: string, phone: string }} payload
- */
-export const openSession = (payload) =>
-  api.post(`/public/tables/${payload.tableCode}/sessions`, {
+export const openSession = async (payload) => {
+  let position;
+
+  if (navigator.geolocation) {
+    position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000,
+      });
+    }).catch(() => null);
+  }
+
+  if (!position) {
+    const error = new Error("يجب السماح بتحديد الموقع للتأكد من وجودك داخل المطعم.");
+    error.status = 403;
+    error.code = "LOCATION_REQUIRED";
+    throw error;
+  }
+
+  return api.post(`/public/tables/${payload.tableCode}/sessions`, {
     name: payload.name,
     phone: payload.phone,
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
   });
+};
 
-/** جلب حالة الجلسة الحالية (لتحديث شاشة تتبع الطلب دون تسجيل دخول). */
 export const getSession = (sessionId) => api.get(`/public/sessions/${sessionId}`);
-
-/**
- * طلب مساعدة نادل بلمسة واحدة. FR-41.
- * الـ backend مسؤول عن منع التكرار طالما في طلب سابق غير محلول لنفس الجلسة.
- */
 export const requestWaiterAssistance = (sessionId) =>
   api.post(`/public/sessions/${sessionId}/assistance-requests`);
-
-/** لوحة النادل: كل الجلسات النشطة حاليًا عبر الطاولات. */
 export const getActiveSessions = () => api.get("/sessions?status=active");
