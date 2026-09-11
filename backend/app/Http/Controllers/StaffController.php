@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
@@ -57,23 +58,17 @@ class StaffController extends Controller
         });
 
         $staff->load('accountUser');
-
-        return $this->out([
-            'staff' => $this->serialize($staff),
-            'generated_password' => $plainPassword,
-        ], 201);
+        return $this->out(['staff' => $this->serialize($staff), 'generated_password' => $plainPassword], 201);
     }
 
     public function update(Request $request, $id)
     {
         $staff = $this->query($request)->where('id', $id)->first();
-        if (!$staff) {
-            return response()->json(['message' => 'Staff not found'], 404);
-        }
+        if (!$staff) return response()->json(['message' => 'Staff not found'], 404);
 
         $v = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|email|unique:users,email,' . ($staff->account_user_id ?? 'NULL'),
+            'email' => ['sometimes', 'required', 'email', Rule::unique('users', 'email')->ignore($staff->account_user_id)],
             'role' => 'sometimes|required|in:waiter,cashier,kitchen,manager',
             'active' => 'sometimes|boolean',
             'password' => 'nullable|string|min:6',
@@ -82,13 +77,9 @@ class StaffController extends Controller
         DB::transaction(function () use ($staff, $v) {
             $staffData = [];
             foreach (['name', 'email', 'role', 'active'] as $field) {
-                if (array_key_exists($field, $v)) {
-                    $staffData[$field] = $v[$field];
-                }
+                if (array_key_exists($field, $v)) $staffData[$field] = $v[$field];
             }
-            if ($staffData) {
-                $staff->update($staffData);
-            }
+            if ($staffData) $staff->update($staffData);
 
             if ($staff->account_user_id) {
                 $user = User::find($staff->account_user_id);
@@ -111,16 +102,12 @@ class StaffController extends Controller
     public function destroy(Request $request, $id)
     {
         $staff = $this->query($request)->where('id', $id)->first();
-        if (!$staff) {
-            return response()->json(['message' => 'Staff not found'], 404);
-        }
+        if (!$staff) return response()->json(['message' => 'Staff not found'], 404);
 
         DB::transaction(function () use ($staff) {
             $accountUserId = $staff->account_user_id;
             $staff->delete();
-            if ($accountUserId) {
-                User::where('id', $accountUserId)->delete();
-            }
+            if ($accountUserId) User::where('id', $accountUserId)->delete();
         });
 
         return $this->out(['message' => 'Deleted']);
