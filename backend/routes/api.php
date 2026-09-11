@@ -7,6 +7,7 @@ use App\Http\Controllers\TableController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminController;
@@ -25,8 +26,11 @@ Route::prefix('auth')->group(function () {
 Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
 Route::post('public/tables/{code}/sessions', [SessionController::class, 'open']);
 Route::get('public/sessions/{id}', [SessionController::class, 'show']);
-Route::post('public/sessions/{id}/orders', [OrderController::class, 'submit']);
+Route::patch('public/sessions/{id}/customer', [SessionController::class, 'updateCustomer']);
 Route::get('public/sessions/{id}/orders', [OrderController::class, 'session']);
+Route::get('public/sessions/{id}/orders/stream', [OrderController::class, 'stream']);
+Route::get('public/sessions/{id}/payment-options', [PaymentController::class, 'options']);
+Route::post('public/sessions/{id}/payment', [PaymentController::class, 'submit']);
 Route::post('public/sessions/{id}/assistance-requests', [SessionController::class, 'assistance']);
 Route::post('public/sessions/{id}/bill-request', [BillingController::class, 'request']);
 
@@ -35,11 +39,15 @@ Route::middleware('api.auth')->group(function () {
     Route::apiResource('tables', TableController::class)->except(['show', 'create']);
     Route::get('tables/{id}/status', [TableController::class, 'status']);
     Route::get('sessions', [SessionController::class, 'active']);
+    Route::get('sessions/stream', [SessionController::class, 'stream']);
     Route::get('kitchen/orders', [OrderController::class, 'kitchen']);
     Route::patch('kitchen/orders/{id}/status', [OrderController::class, 'status']);
     Route::get('owner/orders', [OrderController::class, 'owner']);
     Route::post('order-items/{id}/cancel', [OrderController::class, 'cancel']);
     Route::post('order-items/{id}/reassign', [OrderController::class, 'reassign']);
+    Route::get('payments/pending', [PaymentController::class, 'pending']);
+    Route::post('payments/{id}/verify', [PaymentController::class, 'verify']);
+    Route::post('payments/{id}/reject', [PaymentController::class, 'reject']);
     Route::get('sessions/{id}/bill', [BillingController::class, 'bill']);
     Route::post('sessions/{id}/payment', [BillingController::class, 'pay']);
     Route::patch('sessions/{sessionId}/bill-items/{item}', [BillingController::class, 'adjust']);

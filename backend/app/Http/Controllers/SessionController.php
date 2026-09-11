@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\StreamedEvent;
 use Illuminate\Support\Facades\DB;
 
 class SessionController extends Controller
@@ -34,48 +35,21 @@ class SessionController extends Controller
         ]);
 
         $result = DB::transaction(function () use ($v, $code) {
-            $table = DB::table('restaurant_tables')
-                ->where('table_code', $code)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$table) {
-                return response()->json(['message' => 'رمز الطاولة غير صالح.'], 404);
-            }
+            $table = DB::table('restaurant_tables')->where('table_code', $code)->lockForUpdate()->first();
+            if (!$table) return response()->json(['message' => 'رمز الطاولة غير صالح.'], 404);
 
             $restaurant = DB::table('users')->where('id', $table->user_id)->first();
             if (!$restaurant || $restaurant->latitude === null || $restaurant->longitude === null) {
-                return response()->json([
-                    'message' => 'لم يضبط المطعم موقعه الجغرافي بعد. يجب على صاحب المطعم تحديد موقع المطعم من الإعدادات.',
-                    'code' => 'RESTAURANT_LOCATION_NOT_CONFIGURED',
-                ], 503);
+                return response()->json(['message' => 'لم يضبط المطعم موقعه الجغرافي بعد. يجب على صاحب المطعم تحديد موقع المطعم من الإعدادات.', 'code' => 'RESTAURANT_LOCATION_NOT_CONFIGURED'], 503);
             }
 
-            $distance = $this->distanceMeters(
-                (float) $v['latitude'],
-                (float) $v['longitude'],
-                (float) $restaurant->latitude,
-                (float) $restaurant->longitude
-            );
-
+            $distance = $this->distanceMeters((float) $v['latitude'], (float) $v['longitude'], (float) $restaurant->latitude, (float) $restaurant->longitude);
             if ($distance > self::TABLE_RADIUS_METERS) {
-                return response()->json([
-                    'message' => 'أنت خارج نطاق المطعم. يجب أن تكون ضمن 200 متر من المطعم لفتح الطاولة.',
-                    'code' => 'TABLE_LOCATION_REQUIRED',
-                ], 403);
+                return response()->json(['message' => 'أنت خارج نطاق المطعم. يجب أن تكون ضمن 200 متر من المطعم لفتح الطاولة.', 'code' => 'TABLE_LOCATION_REQUIRED'], 403);
             }
 
-            $active = DB::table('dining_sessions')
-                ->where('restaurant_table_id', $table->id)
-                ->whereNull('closed_at')
-                ->first();
-
-            if ($active) {
-                return response()->json([
-                    'message' => 'هذه الطاولة مستخدمة حاليًا. اطلب مساعدة أحد أفراد الطاقم.',
-                    'code' => 'TABLE_ALREADY_OCCUPIED',
-                ], 409);
-            }
+            $active = DB::table('dining_sessions')->where('restaurant_table_id', $table->id)->whereNull('closed_at')->first();
+            if ($active) return response()->json(['message' => 'هذه الطاولة مستخدمة حاليًا. اطلب مساعدة أحد أفراد الطاقم.', 'code' => 'TABLE_ALREADY_OCCUPIED'], 409);
 
             $now = now();
             $id = DB::table('dining_sessions')->insertGetId([
@@ -88,11 +62,7 @@ class SessionController extends Controller
                 'updated_at' => $now,
             ]);
 
-            DB::table('restaurant_tables')->where('id', $table->id)->update([
-                'status' => 'occupied',
-                'updated_at' => $now,
-            ]);
-
+            DB::table('restaurant_tables')->where('id', $table->id)->update(['status' => 'occupied', 'updated_at' => $now]);
             return $this->out(DB::table('dining_sessions')->find($id), 201);
         });
 
@@ -105,32 +75,70 @@ class SessionController extends Controller
         return $s ? $this->out($s) : response()->json(['message' => 'Session not found'], 404);
     }
 
-    public function assistance($id)
+    public function updateCustomer(Request $request, $id)
     {
-        if (!DB::table('dining_sessions')->find($id)) {
-            return response()->json(['message' => 'Session not found'], 404);
-        }
-        if (DB::table('assistance_requests')->where('dining_session_id', $id)->where('status', 'open')->exists()) {
-            return response()->json(['message' => 'Assistance already requested'], 409);
-        }
-        $rid = DB::table('assistance_requests')->insertGetId([
-            'dining_session_id' => $id,
-            'status' => 'open',
-            'created_at' => now(),
+        $v = $request->validate([
+            'name' => 'required|string|min:2|max:255',
+            'phone' => 'required|string|min:7|max:50',
+        ]);
+
+        $updated = DB::table('dining_sessions')->where('id', $id)->whereNull('closed_at')->update([
+            'customer_name' => trim($v['name']),
+            'customer_phone' => trim($v['phone']),
             'updated_at' => now(),
         ]);
+
+        return $updated ? $this->out(DB::table('dining_sessions')->find($id)) : response()->json(['message' => 'Session not found'], 404);
+    }
+
+    public function assistance($id)
+    {
+        if (!DB::table('dining_sessions')->find($id)) return response()->json(['message' => 'Session not found'], 404);
+        if (DB::table('assistance_requests')->where('dining_session_id', $id)->where('status', 'open')->exists()) return response()->json(['message' => 'Assistance already requested'], 409);
+        $rid = DB::table('assistance_requests')->insertGetId(['dining_session_id' => $id, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()]);
         return $this->out(DB::table('assistance_requests')->find($rid), 201);
     }
 
     public function active(Request $request)
     {
-        return $this->out(
-            DB::table('dining_sessions')
-                ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
-                ->where('restaurant_tables.user_id', $request->user()->id)
-                ->whereNull('dining_sessions.closed_at')
-                ->select('dining_sessions.*', 'restaurant_tables.label as table_label')
-                ->get()
-        );
+        return $this->out($this->activeQuery($request->user()->id)->get());
+    }
+
+    public function stream(Request $request)
+    {
+        $restaurantId = $request->user()->id;
+
+        return response()->eventStream(function () use ($restaurantId) {
+            $last = null;
+            $startedAt = microtime(true);
+
+            while (microtime(true) - $startedAt < 55) {
+                $sessions = $this->activeQuery($restaurantId)->get()->map(function ($session) {
+                    $session->assistanceRequested = DB::table('assistance_requests')
+                        ->where('dining_session_id', $session->id)
+                        ->where('status', 'open')
+                        ->exists();
+                    return $session;
+                })->values()->all();
+
+                $fingerprint = md5(json_encode($sessions));
+                if ($fingerprint !== $last) {
+                    yield new StreamedEvent(event: 'sessions', data: json_encode($sessions, JSON_UNESCAPED_UNICODE));
+                    $last = $fingerprint;
+                }
+
+                yield new StreamedEvent(event: 'ping', data: now()->toIso8601String());
+                sleep(1);
+            }
+        });
+    }
+
+    private function activeQuery($restaurantId)
+    {
+        return DB::table('dining_sessions')
+            ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
+            ->where('restaurant_tables.user_id', $restaurantId)
+            ->whereNull('dining_sessions.closed_at')
+            ->select('dining_sessions.*', 'restaurant_tables.label as table_label');
     }
 }
