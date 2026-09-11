@@ -13,7 +13,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'restaurant_name', 'restaurant_phone', 'restaurant_description',
         'restaurant_address', 'latitude', 'longitude', 'email', 'password',
-        'plan', 'role', 'api_token', 'theme',
+        'plan', 'role', 'api_token', 'theme', 'payment_methods',
     ];
 
     protected $hidden = ['password', 'remember_token', 'api_token'];
@@ -24,6 +24,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'theme' => 'array',
+            'payment_methods' => 'array',
             'latitude' => 'float',
             'longitude' => 'float',
         ];
