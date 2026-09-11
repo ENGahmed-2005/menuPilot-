@@ -9,7 +9,21 @@ class Staff extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'email', 'role'];
+    protected $fillable = [
+        'user_id', 'account_user_id', 'name', 'email', 'role', 'active',
+    ];
 
-    public function user() { return $this->belongsTo(User::class); }
+    protected $casts = [
+        'active' => 'boolean',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function accountUser()
+    {
+        return $this->belongsTo(User::class, 'account_user_id');
+    }
 }
