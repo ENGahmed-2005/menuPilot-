@@ -13,14 +13,9 @@ export function useOrderTracking(sessionId) {
     let active = true;
     const source = new EventSource(`${BASE_URL}/public/sessions/${sessionId}/orders/stream`);
 
-    getSessionOrders(sessionId).then((data) => { if (active) { setOrders(data ?? []); setLoading(false); } }).catch((err) => { if (active) { setError(err); setLoading(false); } });
-
-    source.addEventListener("orders", (event) => {
-      if (!active) return;
-      try { setOrders(JSON.parse(event.data) || []); setError(null); setLoading(false); } catch { /* ignore malformed event */ }
-    });
-    source.onerror = () => { if (active) setError((current) => current || new Error("انقطع الاتصال اللحظي، سيحاول النظام إعادة الاتصال تلقائيًا.")); };
-
+    getSessionOrders(sessionId).then((data) => { if (active) { setOrders(data ?? []); setError(null); setLoading(false); } }).catch((err) => { if (active) { setError(err); setLoading(false); } });
+    source.addEventListener("orders", (event) => { if (!active) return; try { setOrders(JSON.parse(event.data) || []); setError(null); setLoading(false); } catch { /* ignore */ } });
+    source.onerror = () => { /* EventSource reconnects automatically. Keep the last known state visible. */ };
     return () => { active = false; source.close(); };
   }, [sessionId]);
 
