@@ -13,8 +13,8 @@ export const updateMenuItem = (itemId, payload) =>
 export const deleteMenuItem = (itemId) => api.delete(`/menu-items/${itemId}`);
 
 /**
- * Laravel يرجع القائمة العامة بالشكل { table, items } داخل data.
- * صفحة العميل تحتاج مصفوفة items فقط، مع توحيد اسم صورة الصنف.
+ * Laravel يرجع { table, items } داخل data.
+ * نوحّد شكل أصناف القائمة مع واجهة React.
  */
 export const getPublicMenuByTableCode = async (tableCode) => {
   const response = await api.get(
@@ -23,8 +23,11 @@ export const getPublicMenuByTableCode = async (tableCode) => {
 
   const items = Array.isArray(response) ? response : response?.items || [];
 
-  return items.map((item) => ({
-    ...item,
-    imageUrl: item.imageUrl ?? item.image_url ?? null,
-  }));
+  return {
+    table: Array.isArray(response) ? null : response?.table || null,
+    items: items.map((item) => ({
+      ...item,
+      imageUrl: item.imageUrl ?? item.image_url ?? null,
+    })),
+  };
 };
