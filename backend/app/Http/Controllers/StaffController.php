@@ -17,9 +17,19 @@ class StaffController extends Controller
         return response()->json(['data' => $data], $status);
     }
 
+    private function restaurantId(Request $request): int
+    {
+        $user = $request->user();
+        if ($user->role === 'owner' || $user->role === 'admin') {
+            return (int) $user->id;
+        }
+
+        return (int) Staff::where('account_user_id', $user->id)->value('user_id');
+    }
+
     private function query(Request $request)
     {
-        return Staff::where('user_id', $request->user()->id)->with('accountUser');
+        return Staff::where('user_id', $this->restaurantId($request))->with('accountUser');
     }
 
     public function index(Request $request)
@@ -37,18 +47,24 @@ class StaffController extends Controller
         ]);
 
         $plainPassword = $v['password'] ?? $this->generatePassword();
+        $restaurantId = $this->restaurantId($request);
 
-        $staff = DB::transaction(function () use ($request, $v, $plainPassword) {
+        $owner = User::find($restaurantId);
+        if (! $owner) {
+            return response()->json(['message' => 'Restaurant owner not found'], 404);
+        }
+
+        $staff = DB::transaction(function () use ($restaurantId, $owner, $v, $plainPassword) {
             $employee = User::create([
                 'name' => $v['name'],
                 'email' => $v['email'],
                 'password' => Hash::make($plainPassword),
                 'role' => $v['role'],
-                'plan' => $request->user()->plan,
+                'plan' => $owner->plan,
             ]);
 
             return Staff::create([
-                'user_id' => $request->user()->id,
+                'user_id' => $restaurantId,
                 'account_user_id' => $employee->id,
                 'name' => $v['name'],
                 'email' => $v['email'],
