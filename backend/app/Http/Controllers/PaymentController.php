@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -10,6 +11,16 @@ class PaymentController
     private function out($data, $status = 200)
     {
         return response()->json(['data' => $data], $status);
+    }
+
+    private function restaurantId(Request $request): int
+    {
+        $user = $request->user();
+        if ($user->role === 'owner' || $user->role === 'admin') {
+            return (int) $user->id;
+        }
+
+        return (int) Staff::where('account_user_id', $user->id)->value('user_id');
     }
 
     private function sessionWithRestaurant($sessionId)
@@ -80,12 +91,13 @@ class PaymentController
 
     public function pending(Request $request)
     {
-        return $this->out(DB::table('payments')->join('orders', 'orders.id', '=', 'payments.order_id')->join('dining_sessions', 'dining_sessions.id', '=', 'payments.dining_session_id')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('restaurant_tables.user_id', $request->user()->id)->where('payments.status', 'pending')->select('payments.*', 'orders.status as order_status', 'restaurant_tables.label as table_label', 'dining_sessions.customer_name')->latest('payments.id')->get());
+        $restaurantId = $this->restaurantId($request);
+        return $this->out(DB::table('payments')->join('orders', 'orders.id', '=', 'payments.order_id')->join('dining_sessions', 'dining_sessions.id', '=', 'payments.dining_session_id')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('restaurant_tables.user_id', $restaurantId)->where('payments.status', 'pending')->select('payments.*', 'orders.status as order_status', 'restaurant_tables.label as table_label', 'dining_sessions.customer_name')->latest('payments.id')->get());
     }
 
     public function verify(Request $request, $id)
     {
-        $payment = DB::table('payments')->join('dining_sessions', 'dining_sessions.id', '=', 'payments.dining_session_id')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('payments.id', $id)->where('restaurant_tables.user_id', $request->user()->id)->select('payments.*')->first();
+        $payment = DB::table('payments')->join('dining_sessions', 'dining_sessions.id', '=', 'payments.dining_session_id')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('payments.id', $id)->where('restaurant_tables.user_id', $this->restaurantId($request))->select('payments.*')->first();
         if (! $payment) {
             return response()->json(['message' => 'Payment not found'], 404);
         }
@@ -104,7 +116,7 @@ class PaymentController
     public function reject(Request $request, $id)
     {
         $v = $request->validate(['reason' => 'required|string|max:500']);
-        $payment = DB::table('payments')->join('dining_sessions', 'dining_sessions.id', '=', 'payments.dining_session_id')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('payments.id', $id)->where('restaurant_tables.user_id', $request->user()->id)->select('payments.*')->first();
+        $payment = DB::table('payments')->join('dining_sessions', 'dining_sessions.id', '=', 'payments.dining_session_id')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('payments.id', $id)->where('restaurant_tables.user_id', $this->restaurantId($request))->select('payments.*')->first();
         if (! $payment) {
             return response()->json(['message' => 'Payment not found'], 404);
         }
