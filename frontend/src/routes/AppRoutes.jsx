@@ -31,22 +31,61 @@ import TableSessions from "../pages/waiter/TableSessions";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import RestaurantsManagement from "../pages/admin/RestaurantsManagement";
 import OwnersManagement from "../pages/admin/OwnersManagement";
-import Checkout from "../pages/checkout/Checkout";
-import PaymentSuccess from "../pages/checkout/PaymentSuccess";
 
 export default function AppRoutes() {
-  return <Routes>
-    <Route path="/" element={<Landing />} /><Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
-    <Route path="/menu" element={<RestaurantMenu />} /><Route path="/t/:tableCode" element={<ScanEntry />} /><Route path="/t/:tableCode/menu" element={<Menu />} /><Route path="/t/:tableCode/cart" element={<Cart />} /><Route path="/t/:tableCode/payment" element={<PaymentFlow />} /><Route path="/order-tracking" element={<OrderTracking />} /><Route path="/bill-request" element={<BillRequest />} />
-    <Route path="/checkout" element={<Checkout />} /><Route path="/payment-success" element={<PaymentSuccess />} />
-    <Route element={<ProtectedRoute allow={["owner"]} />}>
-      <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} /><Route path="/owner/subscription/:planId" element={<DashboardShell><SubscriptionPlanPage /></DashboardShell>} /><Route path="/owner/settings" element={<DashboardShell><RestaurantSettings /></DashboardShell>} />
-      <Route path="/owner/branding" element={<DashboardShell><BrandingCustomization /></DashboardShell>} />
-      <Route path="/owner/tables" element={<FeatureProtectedRoute feature="tables"><DashboardShell><Tables /></DashboardShell></FeatureProtectedRoute>} /><Route path="/owner/menu" element={<FeatureProtectedRoute feature="menu"><DashboardShell><MenuManagement /></DashboardShell></FeatureProtectedRoute>} /><Route path="/owner/reports" element={<FeatureProtectedRoute feature="reports"><DashboardShell><Reports /></DashboardShell></FeatureProtectedRoute>} /><Route path="/owner/theme" element={<FeatureProtectedRoute feature="theme-presets"><DashboardShell><ThemeCustomization /></DashboardShell></FeatureProtectedRoute>} /><Route path="/owner/staff" element={<DashboardShell><StaffManagement /></DashboardShell>} />
-    </Route>
-    <Route element={<ProtectedRoute allow={["kitchen"]} />}><Route element={<FeatureProtectedRoute feature="kitchen" />}><Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} /></Route>
-    <Route element={<ProtectedRoute allow={["cashier"]} />}><Route element={<FeatureProtectedRoute feature="cashier" />}><Route path="/cashier/tables" element={<DashboardShell><TableStatus /></DashboardShell>} /><Route path="/cashier/billing/:sessionId" element={<DashboardShell><Billing /></DashboardShell>} /><Route path="/cashier/reports" element={<DashboardShell><SalesReports /></DashboardShell>} /></Route></Route>
-    <Route element={<ProtectedRoute allow={["waiter"]} />}><Route element={<FeatureProtectedRoute feature="waiter" />}><Route path="/waiter" element={<DashboardShell><TableSessions /></DashboardShell>} /></Route></Route>
-    <Route element={<ProtectedRoute allow={["admin"]} />}><Route path="/admin/dashboard" element={<DashboardShell><AdminDashboard /></DashboardShell>} /><Route path="/admin/restaurants" element={<DashboardShell><RestaurantsManagement /></DashboardShell>} /><Route path="/admin/owners" element={<DashboardShell><OwnersManagement /></DashboardShell>} /></Route>
-  </Routes>;
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      <Route path="/menu" element={<RestaurantMenu />} />
+      <Route path="/t/:tableCode" element={<ScanEntry />} />
+      <Route path="/t/:tableCode/menu" element={<Menu />} />
+      <Route path="/t/:tableCode/cart" element={<Cart />} />
+      <Route path="/t/:tableCode/payment" element={<PaymentFlow />} />
+      <Route path="/order-tracking" element={<OrderTracking />} />
+      <Route path="/bill-request" element={<BillRequest />} />
+
+      <Route element={<ProtectedRoute allow={["owner"]} />}>
+        <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} />
+        <Route path="/owner/subscription/:planId" element={<DashboardShell><SubscriptionPlanPage /></DashboardShell>} />
+        <Route path="/owner/settings" element={<DashboardShell><RestaurantSettings /></DashboardShell>} />
+        <Route path="/owner/branding" element={<DashboardShell><BrandingCustomization /></DashboardShell>} />
+        <Route path="/owner/tables" element={<FeatureProtectedRoute feature="tables"><DashboardShell><Tables /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/menu" element={<FeatureProtectedRoute feature="menu"><DashboardShell><MenuManagement /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/reports" element={<FeatureProtectedRoute feature="reports"><DashboardShell><Reports /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/theme" element={<FeatureProtectedRoute feature="theme-presets"><DashboardShell><ThemeCustomization /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/staff" element={<DashboardShell><StaffManagement /></DashboardShell>} />
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["kitchen"]} />}>
+        <Route element={<FeatureProtectedRoute feature="kitchen" />}>
+          <Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["cashier"]} />}>
+        <Route element={<FeatureProtectedRoute feature="cashier" />}>
+          <Route path="/cashier/tables" element={<DashboardShell><TableStatus /></DashboardShell>} />
+          <Route path="/cashier/billing/:sessionId" element={<DashboardShell><Billing /></DashboardShell>} />
+          <Route path="/cashier/reports" element={<DashboardShell><SalesReports /></DashboardShell>} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["waiter"]} />}>
+        <Route element={<FeatureProtectedRoute feature="waiter" />}>
+          <Route path="/waiter" element={<DashboardShell><TableSessions /></DashboardShell>} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["admin"]} />}>
+        <Route path="/admin/dashboard" element={<DashboardShell><AdminDashboard /></DashboardShell>} />
+        <Route path="/admin/restaurants" element={<DashboardShell><RestaurantsManagement /></DashboardShell>} />
+        <Route path="/admin/owners" element={<DashboardShell><OwnersManagement /></DashboardShell>} />
+      </Route>
+    </Routes>
+  );
 }
