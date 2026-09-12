@@ -66,12 +66,15 @@ class User extends Authenticatable
     public function hasFeature(string $feature): bool
     {
         if ($this->role === 'admin' || $this->trialActive()) return true;
+
         return match ($feature) {
             'branding' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
             'background' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
             'full-colors' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
             'custom-font' => $this->plan === 'premium' && $this->subscriptionActive(),
             'remove-branding' => $this->plan === 'premium' && $this->subscriptionActive(),
+            'theme-presets' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
+            'custom-theme' => $this->plan === 'premium' && $this->subscriptionActive(),
             'presets' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
             default => false,
         };
