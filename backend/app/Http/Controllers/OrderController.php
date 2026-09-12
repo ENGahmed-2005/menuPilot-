@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use Illuminate\Http\Request;
-use Illuminate\Http\StreamedEvent;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
@@ -131,7 +130,7 @@ class OrderController extends Controller
 
     public function stream($sid)
     {
-        return response()->eventStream(function () use ($sid) {
+        return response()->stream(function () use ($sid) {
             $last = null;
             $startedAt = microtime(true);
 
@@ -144,14 +143,25 @@ class OrderController extends Controller
                 $payload = json_encode($orders->values()->all(), JSON_UNESCAPED_UNICODE);
                 $fingerprint = md5($payload);
                 if ($fingerprint !== $last) {
-                    yield new StreamedEvent(event: 'orders', data: $payload);
+                    echo 'event: orders\n';
+                    echo 'data: '.$payload.'\n\n';
                     $last = $fingerprint;
                 }
 
-                yield new StreamedEvent(event: 'ping', data: now()->toIso8601String());
+                echo 'event: ping\n';
+                echo 'data: '.json_encode(now()->toIso8601String()).'\n\n';
+                if (function_exists('ob_flush')) {
+                    @ob_flush();
+                }
+                flush();
                 sleep(1);
             }
-        });
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     public function kitchen(Request $r)
