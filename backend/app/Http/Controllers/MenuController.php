@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\RestaurantSetting;
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,9 +14,19 @@ class MenuController extends Controller
         return response()->json(['data' => $d], $s);
     }
 
-    private function q($r)
+    private function restaurantId(Request $request): int
     {
-        return DB::table('menu_items')->where('user_id', $r->user()->id);
+        $user = $request->user();
+        if ($user->role === 'owner' || $user->role === 'admin') {
+            return (int) $user->id;
+        }
+
+        return (int) Staff::where('account_user_id', $user->id)->value('user_id');
+    }
+
+    private function q(Request $r)
+    {
+        return DB::table('menu_items')->where('user_id', $this->restaurantId($r));
     }
 
     public function index(Request $r)
@@ -34,7 +45,7 @@ class MenuController extends Controller
         ]);
 
         $id = DB::table('menu_items')->insertGetId([
-            'user_id' => $r->user()->id,
+            'user_id' => $this->restaurantId($r),
             'name' => $v['name'],
             'price' => $v['price'],
             'category' => $v['category'] ?? null,
@@ -51,7 +62,9 @@ class MenuController extends Controller
     public function update(Request $r, $id)
     {
         $item = $this->q($r)->find($id);
-        if (!$item) return response()->json(['message' => 'Menu item not found'], 404);
+        if (! $item) {
+            return response()->json(['message' => 'Menu item not found'], 404);
+        }
 
         $v = $r->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -64,9 +77,13 @@ class MenuController extends Controller
 
         $data = [];
         foreach (['name', 'price', 'category', 'description', 'is_available'] as $k) {
-            if (array_key_exists($k, $v)) $data[$k] = $v[$k];
+            if (array_key_exists($k, $v)) {
+                $data[$k] = $v[$k];
+            }
         }
-        if (array_key_exists('imageUrl', $v)) $data['image_url'] = $v['imageUrl'];
+        if (array_key_exists('imageUrl', $v)) {
+            $data['image_url'] = $v['imageUrl'];
+        }
         $data['updated_at'] = now();
 
         $this->q($r)->where('id', $id)->update($data);
@@ -84,7 +101,9 @@ class MenuController extends Controller
     public function publicMenu($code)
     {
         $t = DB::table('restaurant_tables')->where('table_code', $code)->first();
-        if (!$t) return response()->json(['message' => 'Invalid table code'], 404);
+        if (! $t) {
+            return response()->json(['message' => 'Invalid table code'], 404);
+        }
 
         $owner = DB::table('users')->where('id', $t->user_id)->first();
         $branding = RestaurantSetting::where('user_id', $t->user_id)->first();
