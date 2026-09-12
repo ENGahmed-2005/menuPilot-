@@ -17,6 +17,7 @@ import BillRequest from "../pages/customer/BillRequest";
 import SubscriptionDashboard from "../pages/owner/SubscriptionDashboard";
 import SubscriptionPlanPage from "../pages/owner/SubscriptionPlanPage";
 import ThemeCustomization from "../pages/owner/ThemeCustomization";
+import BrandingCustomization from "../pages/owner/BrandingCustomization";
 import RestaurantSettings from "../pages/owner/RestaurantSettings";
 import Tables from "../pages/owner/Tables";
 import MenuManagement from "../pages/owner/MenuManagement";
@@ -40,9 +41,10 @@ export default function AppRoutes() {
     <Route path="/checkout" element={<Checkout />} /><Route path="/payment-success" element={<PaymentSuccess />} />
     <Route element={<ProtectedRoute allow={["owner"]} />}>
       <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} /><Route path="/owner/subscription/:planId" element={<DashboardShell><SubscriptionPlanPage /></DashboardShell>} /><Route path="/owner/settings" element={<DashboardShell><RestaurantSettings /></DashboardShell>} />
-      <Route element={<FeatureProtectedRoute feature="tables" />}><Route path="/owner/tables" element={<DashboardShell><Tables /></DashboardShell>} /></Route><Route element={<FeatureProtectedRoute feature="menu" />}><Route path="/owner/menu" element={<DashboardShell><MenuManagement /></DashboardShell>} /></Route><Route element={<FeatureProtectedRoute feature="reports" />}><Route path="/owner/reports" element={<DashboardShell><Reports /></DashboardShell>} /></Route><Route element={<FeatureProtectedRoute feature="theme-presets" />}><Route path="/owner/theme" element={<DashboardShell><ThemeCustomization /></DashboardShell>} /></Route><Route path="/owner/staff" element={<DashboardShell><StaffManagement /></DashboardShell>} />
+      <Route path="/owner/branding" element={<DashboardShell><BrandingCustomization /></DashboardShell>} />
+      <Route path="/owner/tables" element={<FeatureProtectedRoute feature="tables"><DashboardShell><Tables /></DashboardShell></FeatureProtectedRoute>} /><Route path="/owner/menu" element={<FeatureProtectedRoute feature="menu"><DashboardShell><MenuManagement /></DashboardShell></FeatureProtectedRoute>} /><Route path="/owner/reports" element={<FeatureProtectedRoute feature="reports"><DashboardShell><Reports /></DashboardShell></FeatureProtectedRoute>} /><Route path="/owner/theme" element={<FeatureProtectedRoute feature="theme-presets"><DashboardShell><ThemeCustomization /></DashboardShell></FeatureProtectedRoute>} /><Route path="/owner/staff" element={<DashboardShell><StaffManagement /></DashboardShell>} />
     </Route>
-    <Route element={<ProtectedRoute allow={["kitchen"]} />}><Route element={<FeatureProtectedRoute feature="kitchen" />}><Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} /></Route></Route>
+    <Route element={<ProtectedRoute allow={["kitchen"]} />}><Route element={<FeatureProtectedRoute feature="kitchen" />}><Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} /></Route>
     <Route element={<ProtectedRoute allow={["cashier"]} />}><Route element={<FeatureProtectedRoute feature="cashier" />}><Route path="/cashier/tables" element={<DashboardShell><TableStatus /></DashboardShell>} /><Route path="/cashier/billing/:sessionId" element={<DashboardShell><Billing /></DashboardShell>} /><Route path="/cashier/reports" element={<DashboardShell><SalesReports /></DashboardShell>} /></Route></Route>
     <Route element={<ProtectedRoute allow={["waiter"]} />}><Route element={<FeatureProtectedRoute feature="waiter" />}><Route path="/waiter" element={<DashboardShell><TableSessions /></DashboardShell>} /></Route></Route>
     <Route element={<ProtectedRoute allow={["admin"]} />}><Route path="/admin/dashboard" element={<DashboardShell><AdminDashboard /></DashboardShell>} /><Route path="/admin/restaurants" element={<DashboardShell><RestaurantsManagement /></DashboardShell>} /><Route path="/admin/owners" element={<DashboardShell><OwnersManagement /></DashboardShell>} /></Route>
