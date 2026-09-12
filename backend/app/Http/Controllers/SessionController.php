@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use Illuminate\Http\Request;
-use Illuminate\Http\StreamedEvent;
 use Illuminate\Support\Facades\DB;
 
 class SessionController extends Controller
@@ -131,7 +130,7 @@ class SessionController extends Controller
     {
         $restaurantId = $this->restaurantId($request);
 
-        return response()->eventStream(function () use ($restaurantId) {
+        return response()->stream(function () use ($restaurantId) {
             $last = null;
             $startedAt = microtime(true);
 
@@ -147,14 +146,25 @@ class SessionController extends Controller
 
                 $fingerprint = md5(json_encode($sessions));
                 if ($fingerprint !== $last) {
-                    yield new StreamedEvent(event: 'sessions', data: json_encode($sessions, JSON_UNESCAPED_UNICODE));
+                    echo 'event: sessions\n';
+                    echo 'data: '.json_encode($sessions, JSON_UNESCAPED_UNICODE).'\n\n';
                     $last = $fingerprint;
                 }
 
-                yield new StreamedEvent(event: 'ping', data: now()->toIso8601String());
+                echo 'event: ping\n';
+                echo 'data: '.json_encode(now()->toIso8601String()).'\n\n';
+                if (function_exists('ob_flush')) {
+                    @ob_flush();
+                }
+                flush();
                 sleep(1);
             }
-        });
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     private function activeQuery($restaurantId)
