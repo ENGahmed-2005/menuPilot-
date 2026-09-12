@@ -58,13 +58,16 @@ class StaffController extends Controller
         });
 
         $staff->load('accountUser');
+
         return $this->out(['staff' => $this->serialize($staff), 'generated_password' => $plainPassword], 201);
     }
 
     public function update(Request $request, $id)
     {
         $staff = $this->query($request)->where('id', $id)->first();
-        if (!$staff) return response()->json(['message' => 'Staff not found'], 404);
+        if (! $staff) {
+            return response()->json(['message' => 'Staff not found'], 404);
+        }
 
         $v = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -77,37 +80,58 @@ class StaffController extends Controller
         DB::transaction(function () use ($staff, $v) {
             $staffData = [];
             foreach (['name', 'email', 'role', 'active'] as $field) {
-                if (array_key_exists($field, $v)) $staffData[$field] = $v[$field];
+                if (array_key_exists($field, $v)) {
+                    $staffData[$field] = $v[$field];
+                }
             }
-            if ($staffData) $staff->update($staffData);
+            if ($staffData) {
+                $staff->update($staffData);
+            }
 
             if ($staff->account_user_id) {
                 $user = User::find($staff->account_user_id);
                 if ($user) {
                     $userData = [];
-                    if (isset($v['name'])) $userData['name'] = $v['name'];
-                    if (isset($v['email'])) $userData['email'] = $v['email'];
-                    if (isset($v['role'])) $userData['role'] = $v['role'];
-                    if (!empty($v['password'])) $userData['password'] = Hash::make($v['password']);
-                    if (array_key_exists('active', $v) && !$v['active']) $userData['api_token'] = null;
-                    if ($userData) $user->update($userData);
+                    if (isset($v['name'])) {
+                        $userData['name'] = $v['name'];
+                    }
+                    if (isset($v['email'])) {
+                        $userData['email'] = $v['email'];
+                    }
+                    if (isset($v['role'])) {
+                        $userData['role'] = $v['role'];
+                    }
+                    if (! empty($v['password'])) {
+                        $userData['password'] = Hash::make($v['password']);
+                    }
+                    if (array_key_exists('active', $v) && ! $v['active']) {
+                        $userData['api_token'] = null;
+                    }
+                    if ($userData) {
+                        $user->update($userData);
+                    }
                 }
             }
         });
 
         $staff->refresh()->load('accountUser');
+
         return $this->out($this->serialize($staff));
     }
 
     public function destroy(Request $request, $id)
     {
         $staff = $this->query($request)->where('id', $id)->first();
-        if (!$staff) return response()->json(['message' => 'Staff not found'], 404);
+        if (! $staff) {
+            return response()->json(['message' => 'Staff not found'], 404);
+        }
 
         DB::transaction(function () use ($staff) {
             $accountUserId = $staff->account_user_id;
             $staff->delete();
-            if ($accountUserId) User::where('id', $accountUserId)->delete();
+            if ($accountUserId) {
+                User::where('id', $accountUserId)->delete();
+            }
         });
 
         return $this->out(['message' => 'Deleted']);
@@ -115,7 +139,7 @@ class StaffController extends Controller
 
     private function generatePassword(): string
     {
-        return 'MP-' . Str::upper(Str::random(5)) . '-' . random_int(100, 999);
+        return 'MP-'.Str::upper(Str::random(5)).'-'.random_int(100, 999);
     }
 
     private function serialize(Staff $staff): array

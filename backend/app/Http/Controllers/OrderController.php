@@ -35,7 +35,9 @@ class OrderController extends Controller
             ->where('dining_sessions.id', $sid)
             ->select('dining_sessions.*', 'restaurant_tables.user_id')
             ->first();
-        if (!$s) return response()->json(['message' => 'Session not found'], 404);
+        if (! $s) {
+            return response()->json(['message' => 'Session not found'], 404);
+        }
 
         $oid = DB::table('orders')->insertGetId([
             'dining_session_id' => $sid,
@@ -47,39 +49,47 @@ class OrderController extends Controller
         ]);
         foreach ($v['items'] as $i) {
             $m = DB::table('menu_items')->where('id', $i['menuItemId'])->where('user_id', $s->user_id)->where('is_available', true)->first();
-            if ($m) DB::table('order_items')->insert([
-                'order_id' => $oid,
-                'menu_item_id' => $m->id,
-                'quantity' => $i['quantity'],
-                'unit_price' => $m->price,
-                'note' => $i['note'] ?? null,
-                'status' => 'active',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            if ($m) {
+                DB::table('order_items')->insert([
+                    'order_id' => $oid,
+                    'menu_item_id' => $m->id,
+                    'quantity' => $i['quantity'],
+                    'unit_price' => $m->price,
+                    'note' => $i['note'] ?? null,
+                    'status' => 'active',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
         DB::table('dining_sessions')->where('id', $sid)->update(['status' => 'ordering', 'updated_at' => now()]);
         $o = DB::table('orders')->find($oid);
         $o->items = $this->items($oid);
+
         return $this->out($o, 201);
     }
 
     public function session($sid)
     {
         $orders = DB::table('orders')->where('dining_session_id', $sid)->latest()->get();
-        foreach ($orders as $o) $o->items = $this->items($o->id);
+        foreach ($orders as $o) {
+            $o->items = $this->items($o->id);
+        }
+
         return $this->out($orders);
     }
 
     public function stream($sid)
     {
-        return response()->eventStream(function () use ($sid) {
+        return response()->stream(function () use ($sid) {
             $last = null;
             $startedAt = microtime(true);
 
             while (microtime(true) - $startedAt < 55) {
                 $orders = DB::table('orders')->where('dining_session_id', $sid)->latest()->get();
-                foreach ($orders as $order) $order->items = $this->items($order->id);
+                foreach ($orders as $order) {
+                    $order->items = $this->items($order->id);
+                }
 
                 $payload = json_encode($orders->values()->all(), JSON_UNESCAPED_UNICODE);
                 $fingerprint = md5($payload);
@@ -104,7 +114,10 @@ class OrderController extends Controller
             ->select('orders.*', 'restaurant_tables.label as table_label', 'dining_sessions.customer_name')
             ->orderBy('orders.submitted_at');
         $orders = $q->get();
-        foreach ($orders as $o) $o->items = $this->items($o->id);
+        foreach ($orders as $o) {
+            $o->items = $this->items($o->id);
+        }
+
         return $this->out($orders);
     }
 
@@ -116,6 +129,7 @@ class OrderController extends Controller
             'ready_at' => $v['status'] === 'ready' ? now() : null,
             'updated_at' => now(),
         ]);
+
         return $n ? $this->out(DB::table('orders')->find($id)) : response()->json(['message' => 'Order not found'], 404);
     }
 
@@ -127,7 +141,10 @@ class OrderController extends Controller
             ->where('restaurant_tables.user_id', $r->user()->id)
             ->select('orders.*', 'restaurant_tables.label as table_label', 'dining_sessions.customer_name')
             ->latest('orders.id');
-        if ($r->query('status')) $q->where('orders.status', $r->query('status'));
+        if ($r->query('status')) {
+            $q->where('orders.status', $r->query('status'));
+        }
+
         return $this->out($q->get());
     }
 
@@ -135,6 +152,7 @@ class OrderController extends Controller
     {
         $v = $r->validate(['reason' => 'required|string|max:500']);
         $n = DB::table('order_items')->where('id', $id)->update(['status' => 'cancelled', 'cancel_reason' => $v['reason'], 'updated_at' => now()]);
+
         return $n ? $this->out(DB::table('order_items')->find($id)) : response()->json(['message' => 'Order item not found'], 404);
     }
 
@@ -142,6 +160,7 @@ class OrderController extends Controller
     {
         $v = $r->validate(['target_session_id' => 'required|integer|exists:dining_sessions,id']);
         $n = DB::table('order_items')->where('id', $id)->update(['reassigned_to_session_id' => $v['target_session_id'], 'status' => 'active', 'updated_at' => now()]);
+
         return $n ? $this->out(DB::table('order_items')->find($id)) : response()->json(['message' => 'Order item not found'], 404);
     }
 }

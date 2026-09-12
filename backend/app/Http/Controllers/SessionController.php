@@ -22,6 +22,7 @@ class SessionController extends Controller
         $dLng = deg2rad($lng2 - $lng1);
         $a = sin($dLat / 2) ** 2
             + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
         return 2 * $earthRadius * asin(min(1, sqrt($a)));
     }
 
@@ -36,10 +37,12 @@ class SessionController extends Controller
 
         $result = DB::transaction(function () use ($v, $code) {
             $table = DB::table('restaurant_tables')->where('table_code', $code)->lockForUpdate()->first();
-            if (!$table) return response()->json(['message' => 'رمز الطاولة غير صالح.'], 404);
+            if (! $table) {
+                return response()->json(['message' => 'رمز الطاولة غير صالح.'], 404);
+            }
 
             $restaurant = DB::table('users')->where('id', $table->user_id)->first();
-            if (!$restaurant || $restaurant->latitude === null || $restaurant->longitude === null) {
+            if (! $restaurant || $restaurant->latitude === null || $restaurant->longitude === null) {
                 return response()->json(['message' => 'لم يضبط المطعم موقعه الجغرافي بعد. يجب على صاحب المطعم تحديد موقع المطعم من الإعدادات.', 'code' => 'RESTAURANT_LOCATION_NOT_CONFIGURED'], 503);
             }
 
@@ -49,7 +52,9 @@ class SessionController extends Controller
             }
 
             $active = DB::table('dining_sessions')->where('restaurant_table_id', $table->id)->whereNull('closed_at')->first();
-            if ($active) return response()->json(['message' => 'هذه الطاولة مستخدمة حاليًا. اطلب مساعدة أحد أفراد الطاقم.', 'code' => 'TABLE_ALREADY_OCCUPIED'], 409);
+            if ($active) {
+                return response()->json(['message' => 'هذه الطاولة مستخدمة حاليًا. اطلب مساعدة أحد أفراد الطاقم.', 'code' => 'TABLE_ALREADY_OCCUPIED'], 409);
+            }
 
             $now = now();
             $id = DB::table('dining_sessions')->insertGetId([
@@ -63,6 +68,7 @@ class SessionController extends Controller
             ]);
 
             DB::table('restaurant_tables')->where('id', $table->id)->update(['status' => 'occupied', 'updated_at' => $now]);
+
             return $this->out(DB::table('dining_sessions')->find($id), 201);
         });
 
@@ -72,6 +78,7 @@ class SessionController extends Controller
     public function show($id)
     {
         $s = DB::table('dining_sessions')->find($id);
+
         return $s ? $this->out($s) : response()->json(['message' => 'Session not found'], 404);
     }
 
@@ -93,9 +100,14 @@ class SessionController extends Controller
 
     public function assistance($id)
     {
-        if (!DB::table('dining_sessions')->find($id)) return response()->json(['message' => 'Session not found'], 404);
-        if (DB::table('assistance_requests')->where('dining_session_id', $id)->where('status', 'open')->exists()) return response()->json(['message' => 'Assistance already requested'], 409);
+        if (! DB::table('dining_sessions')->find($id)) {
+            return response()->json(['message' => 'Session not found'], 404);
+        }
+        if (DB::table('assistance_requests')->where('dining_session_id', $id)->where('status', 'open')->exists()) {
+            return response()->json(['message' => 'Assistance already requested'], 409);
+        }
         $rid = DB::table('assistance_requests')->insertGetId(['dining_session_id' => $id, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()]);
+
         return $this->out(DB::table('assistance_requests')->find($rid), 201);
     }
 
@@ -108,7 +120,7 @@ class SessionController extends Controller
     {
         $restaurantId = $request->user()->id;
 
-        return response()->eventStream(function () use ($restaurantId) {
+        return response()->stream(function () use ($restaurantId) {
             $last = null;
             $startedAt = microtime(true);
 
@@ -118,6 +130,7 @@ class SessionController extends Controller
                         ->where('dining_session_id', $session->id)
                         ->where('status', 'open')
                         ->exists();
+
                     return $session;
                 })->values()->all();
 
