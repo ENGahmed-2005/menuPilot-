@@ -39,13 +39,7 @@ Route::middleware('api.auth')->group(function () {
     Route::middleware('role:manager')->group(function () {
         Route::apiResource('menu-items', MenuController::class)->except(['show', 'create']);
         Route::apiResource('tables', TableController::class)->except(['show', 'create']);
-        Route::get('tables/{id}/status', [TableController::class, 'status']);
         Route::apiResource('staff', StaffController::class)->except(['show', 'create']);
-        Route::get('me/restaurant', [AccountController::class, 'show']);
-        Route::patch('me/restaurant', [AccountController::class, 'updateRestaurant']);
-        Route::get('me/branding', [BrandingController::class, 'show']);
-        Route::post('me/branding', [BrandingController::class, 'update']);
-        Route::post('me/branding/reset', [BrandingController::class, 'reset']);
     });
 
     Route::middleware('role:manager,kitchen,cashier,waiter')->group(function () {
@@ -77,8 +71,13 @@ Route::middleware('api.auth')->group(function () {
     });
 
     Route::middleware('role:owner')->group(function () {
+        Route::get('me/restaurant', [AccountController::class, 'show']);
+        Route::patch('me/restaurant', [AccountController::class, 'updateRestaurant']);
         Route::patch('me/plan', [AccountController::class, 'plan']);
         Route::patch('me/theme', [AccountController::class, 'theme']);
+        Route::get('me/branding', [BrandingController::class, 'show']);
+        Route::post('me/branding', [BrandingController::class, 'update']);
+        Route::post('me/branding/reset', [BrandingController::class, 'reset']);
     });
 
     Route::middleware('role:admin')->group(function () {
