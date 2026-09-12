@@ -16,6 +16,14 @@ class RoleAccess
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
+        if (in_array('admin', $roles, true)) {
+            if ($user->role !== 'admin') {
+                return response()->json(['message' => 'Admin access required.'], 403);
+            }
+
+            return $next($request);
+        }
+
         if ($user->role === 'admin' || $user->role === 'owner') {
             return $next($request);
         }
