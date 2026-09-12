@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Http\StreamedEvent;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,16 @@ class SessionController extends Controller
     private function out($data, $status = 200)
     {
         return response()->json(['data' => $data], $status);
+    }
+
+    private function restaurantId(Request $request): int
+    {
+        $user = $request->user();
+        if ($user->role === 'owner' || $user->role === 'admin') {
+            return (int) $user->id;
+        }
+
+        return (int) Staff::where('account_user_id', $user->id)->value('user_id');
     }
 
     private function distanceMeters(float $lat1, float $lng1, float $lat2, float $lng2): float
@@ -113,14 +124,14 @@ class SessionController extends Controller
 
     public function active(Request $request)
     {
-        return $this->out($this->activeQuery($request->user()->id)->get());
+        return $this->out($this->activeQuery($this->restaurantId($request))->get());
     }
 
     public function stream(Request $request)
     {
-        $restaurantId = $request->user()->id;
+        $restaurantId = $this->restaurantId($request);
 
-        return response()->stream(function () use ($restaurantId) {
+        return response()->eventStream(function () use ($restaurantId) {
             $last = null;
             $startedAt = microtime(true);
 
