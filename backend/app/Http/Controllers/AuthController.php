@@ -49,8 +49,8 @@ class AuthController extends Controller
         }
         if ($u->role !== 'owner' && $u->role !== 'admin') {
             $staff = Staff::where('account_user_id', $u->id)->first();
-            if ($staff && ! $staff->active) {
-                return response()->json(['message' => 'This staff account is disabled.'], 403);
+            if (! $staff || ! $staff->active || $staff->role !== $u->role) {
+                return response()->json(['message' => 'This staff account is disabled or not linked to a restaurant.'], 403);
             }
         }
         $u->refreshSubscriptionStatus();
@@ -91,7 +91,7 @@ class AuthController extends Controller
         if (! $row || ! hash_equals($row->token, hash('sha256', $v['token']))) {
             return response()->json(['message' => 'Invalid reset token.'], 422);
         }
-        User::where('email', $v['email'])->update(['password' => Hash::make($v['password'])]);
+        User::where('email', $v['email'])->update(['password' => Hash::make($v['password']), 'api_token' => null]);
         DB::table('password_reset_tokens')->where('email', $v['email'])->delete();
 
         return $this->out(['message' => 'Password reset successfully']);
