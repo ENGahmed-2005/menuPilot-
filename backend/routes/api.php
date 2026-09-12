@@ -11,6 +11,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\BrandingController;
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
@@ -56,6 +57,10 @@ Route::middleware('api.auth')->group(function () {
     Route::patch('me/restaurant', [AccountController::class, 'updateRestaurant']);
     Route::patch('me/plan', [AccountController::class, 'plan']);
     Route::patch('me/theme', [AccountController::class, 'theme']);
+    Route::get('me/branding', [BrandingController::class, 'show']);
+    Route::post('me/branding', [BrandingController::class, 'update']);
+    Route::post('me/branding/reset', [BrandingController::class, 'reset']);
     Route::get('admin/restaurants', [AdminController::class, 'restaurants']);
     Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
+    Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);
 });
