@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -14,9 +15,19 @@ class TableController extends Controller
         return response()->json(['data' => $data], $status);
     }
 
+    private function restaurantId(Request $request): int
+    {
+        $user = $request->user();
+        if ($user->role === 'owner' || $user->role === 'admin') {
+            return (int) $user->id;
+        }
+
+        return (int) Staff::where('account_user_id', $user->id)->value('user_id');
+    }
+
     private function query(Request $request)
     {
-        return DB::table('restaurant_tables')->where('user_id', $request->user()->id);
+        return DB::table('restaurant_tables')->where('user_id', $this->restaurantId($request));
     }
 
     private function withQr($table)
@@ -50,9 +61,10 @@ class TableController extends Controller
 
     public function store(Request $request)
     {
+        $restaurantId = $this->restaurantId($request);
         $validator = Validator::make($request->all(), [
-            'label' => ['required', 'string', 'max:100', function ($attribute, $value, $fail) use ($request) {
-                if (DB::table('restaurant_tables')->where('user_id', $request->user()->id)->whereRaw('LOWER(label) = ?', [Str::lower(trim($value))])->exists()) {
+            'label' => ['required', 'string', 'max:100', function ($attribute, $value, $fail) use ($restaurantId) {
+                if (DB::table('restaurant_tables')->where('user_id', $restaurantId)->whereRaw('LOWER(label) = ?', [Str::lower(trim($value))])->exists()) {
                     $fail('اسم الطاولة مستخدم مسبقًا.');
                 }
             }],
@@ -65,7 +77,7 @@ class TableController extends Controller
         } while (DB::table('restaurant_tables')->where('table_code', $code)->exists());
 
         $id = DB::table('restaurant_tables')->insertGetId([
-            'user_id' => $request->user()->id,
+            'user_id' => $restaurantId,
             'label' => trim($v['label']),
             'seats' => $v['seats'],
             'table_code' => $code,
@@ -79,14 +91,15 @@ class TableController extends Controller
 
     public function update(Request $request, $id)
     {
+        $restaurantId = $this->restaurantId($request);
         $table = $this->query($request)->where('id', $id)->first();
         if (! $table) {
             return response()->json(['message' => 'Table not found'], 404);
         }
 
         $validator = Validator::make($request->all(), [
-            'label' => ['sometimes', 'required', 'string', 'max:100', function ($attribute, $value, $fail) use ($request, $id) {
-                if (DB::table('restaurant_tables')->where('user_id', $request->user()->id)->where('id', '!=', $id)->whereRaw('LOWER(label) = ?', [Str::lower(trim($value))])->exists()) {
+            'label' => ['sometimes', 'required', 'string', 'max:100', function ($attribute, $value, $fail) use ($restaurantId, $id) {
+                if (DB::table('restaurant_tables')->where('user_id', $restaurantId)->where('id', '!=', $id)->whereRaw('LOWER(label) = ?', [Str::lower(trim($value))])->exists()) {
                     $fail('اسم الطاولة مستخدم مسبقًا.');
                 }
             }],
@@ -104,6 +117,9 @@ class TableController extends Controller
 
     public function destroy(Request $request, $id)
     {
+        if (! $this->query($request)->where('id', $id)->exists()) {
+            return response()->json(['message' => 'Table not found'], 404);
+        }
         if (DB::table('dining_sessions')->where('restaurant_table_id', $id)->whereNull('closed_at')->exists()) {
             return response()->json(['message' => 'لا يمكن حذف طاولة عليها جلسة نشطة.'], 409);
         }
