@@ -84,5 +84,6 @@ Route::middleware('api.auth')->group(function () {
         Route::get('admin/restaurants', [AdminController::class, 'restaurants']);
         Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
         Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);
+        Route::patch('admin/owners/{id}', [AdminController::class, 'updateOwner']);
     });
 });
