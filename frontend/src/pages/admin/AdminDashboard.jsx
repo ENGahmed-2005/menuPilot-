@@ -1,34 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import {
-  Activity,
-  BarChart3,
-  Bell,
-  Building2,
-  Check,
-  ChevronDown,
-  CircleDollarSign,
-  FileText,
-  LayoutDashboard,
-  Menu,
-  Pencil,
-  Plus,
-  Search,
-  Settings,
-  Store,
-  ToggleLeft,
-  ToggleRight,
-  Users,
-  X,
-} from "lucide-react";
+import { Activity, BarChart3, Bell, Building2, CalendarPlus, ChevronDown, FileText, LayoutDashboard, Menu, Search, Settings, Store, Users, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { api } from "../../api/client";
 import "./AdminDashboard.css";
-
-const initialRestaurants = [
-  { id: 1, name: "مطعم الشذا", owner: "أحمد محمود", plan: "Pro", tables: 12, revenue: 12450, active: true },
-  { id: 2, name: "كافيه البسمة", owner: "سارة خالد", plan: "Standard", tables: 8, revenue: 6200, active: true },
-  { id: 3, name: "مطعم دمشق الأصيل", owner: "محمود علي", plan: "Enterprise", tables: 20, revenue: 0, active: false },
-];
 
 const menuItems = [
   { label: "لوحة التحكم", icon: LayoutDashboard, to: "/admin/dashboard" },
@@ -38,179 +13,120 @@ const menuItems = [
   { label: "التقارير", icon: BarChart3, to: "/admin/dashboard" },
 ];
 
-function money(value) {
-  return `${new Intl.NumberFormat("ar-SA").format(value)} ر.س`;
+const planLabels = { basic: "Basic", pro: "Pro", premium: "Premium", trial: "Trial" };
+const planOptions = ["basic", "pro", "premium"];
+
+function formatDate(value) {
+  if (!value) return "غير محدد";
+  return new Intl.DateTimeFormat("ar", { year: "numeric", month: "short", day: "numeric" }).format(new Date(value));
 }
 
-function StatCard({ title, value, icon: Icon, color }) {
-  return (
-    <div className="admin-stat-card">
-      <div className={`admin-stat-icon ${color}`}><Icon size={22} /></div>
-      <div><p>{title}</p><strong>{value}</strong><small>محدث هذا الشهر</small></div>
-    </div>
-  );
+function StatCard({ title, value, icon: Icon, color, note }) {
+  return <div className="admin-stat-card"><div className={`admin-stat-icon ${color}`}><Icon size={22} /></div><div><p>{title}</p><strong>{value}</strong><small>{note}</small></div></div>;
 }
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [restaurants, setRestaurants] = useState(initialRestaurants);
+  const [restaurants, setRestaurants] = useState([]);
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", owner: "", plan: "Pro", tables: 10, revenue: 0 });
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState(null);
+  const [message, setMessage] = useState("");
+  const [trialModal, setTrialModal] = useState(null);
+  const [trialDays, setTrialDays] = useState(14);
+
+  async function loadRestaurants() {
+    setLoading(true);
+    try {
+      const data = await api.get("/admin/restaurants");
+      setRestaurants(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setMessage(error.message || "تعذر تحميل بيانات المطاعم");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadRestaurants(); }, []);
 
   const filteredRestaurants = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return restaurants;
-    return restaurants.filter((restaurant) =>
-      `${restaurant.name} ${restaurant.owner} ${restaurant.plan}`.toLowerCase().includes(query),
-    );
+    return restaurants.filter((restaurant) => `${restaurant.restaurant_name || ""} ${restaurant.email || ""} ${restaurant.plan || ""}`.toLowerCase().includes(query));
   }, [restaurants, search]);
 
-  const activeRestaurants = restaurants.filter((restaurant) => restaurant.active).length;
-  const totalTables = restaurants.reduce((sum, restaurant) => sum + Number(restaurant.tables), 0);
-  const totalRevenue = restaurants.reduce((sum, restaurant) => sum + Number(restaurant.revenue), 0);
+  const activeRestaurants = restaurants.filter((r) => r.plan === "trial" || ["basic", "pro", "premium"].includes(r.plan)).length;
+  const trialRestaurants = restaurants.filter((r) => r.plan === "trial").length;
+  const premiumRestaurants = restaurants.filter((r) => r.plan === "premium").length;
+  const paidRestaurants = restaurants.filter((r) => ["basic", "pro", "premium"].includes(r.plan)).length;
 
-  function openAddModal() {
-    setEditing(null);
-    setForm({ name: "", owner: "", plan: "Pro", tables: 10, revenue: 0 });
-    setModalOpen(true);
+  async function changePlan(id, plan) {
+    setSavingId(id); setMessage("");
+    try {
+      const data = await api.patch(`/admin/restaurants/${id}/plan`, { plan });
+      setRestaurants((current) => current.map((r) => r.id === id ? { ...r, ...data } : r));
+      setMessage("تم تحديث الباقة بنجاح.");
+    } catch (error) {
+      setMessage(error.message || "تعذر تحديث الباقة");
+    } finally { setSavingId(null); }
   }
 
-  function openEditModal(restaurant) {
-    setEditing(restaurant);
-    setForm({ name: restaurant.name, owner: restaurant.owner, plan: restaurant.plan, tables: restaurant.tables, revenue: restaurant.revenue });
-    setModalOpen(true);
-  }
-
-  function saveRestaurant(event) {
-    event.preventDefault();
-    if (!form.name.trim() || !form.owner.trim()) {
-      window.alert("يرجى إدخال اسم المطعم واسم المالك");
-      return;
-    }
-
-    if (editing) {
-      setRestaurants((current) => current.map((restaurant) => restaurant.id === editing.id
-        ? { ...restaurant, name: form.name, owner: form.owner, plan: form.plan, tables: Number(form.tables), revenue: Number(form.revenue) }
-        : restaurant));
-    } else {
-      setRestaurants((current) => [...current, {
-        id: Date.now(), name: form.name, owner: form.owner, plan: form.plan,
-        tables: Number(form.tables), revenue: Number(form.revenue), active: true,
-      }]);
-    }
-    setModalOpen(false);
-    setEditing(null);
-  }
-
-  function toggleRestaurant(id) {
-    setRestaurants((current) => current.map((restaurant) =>
-      restaurant.id === id ? { ...restaurant, active: !restaurant.active } : restaurant,
-    ));
+  async function extendTrial() {
+    if (!trialModal) return;
+    setSavingId(trialModal.id); setMessage("");
+    try {
+      const data = await api.post(`/admin/restaurants/${trialModal.id}/trial/extend`, { days: Number(trialDays) });
+      setRestaurants((current) => current.map((r) => r.id === trialModal.id ? { ...r, ...data } : r));
+      setTrialModal(null);
+      setMessage(`تم تمديد التجربة ${trialDays} يومًا.`);
+    } catch (error) {
+      setMessage(error.message || "تعذر تمديد التجربة");
+    } finally { setSavingId(null); }
   }
 
   return (
     <div className="admin-dashboard" dir="rtl">
       <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="admin-brand">
-          <div className="admin-logo">m</div>
-          <div><strong>menu<span>Pilot</span></strong><small>نظام إدارة المطاعم</small></div>
-          <button className="admin-sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="إغلاق القائمة"><X size={20} /></button>
-        </div>
-
+        <div className="admin-brand"><div className="admin-logo">m</div><div><strong>menu<span>Pilot</span></strong><small>نظام إدارة المطاعم</small></div><button className="admin-sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="إغلاق القائمة"><X size={20} /></button></div>
         <p className="admin-menu-title">القائمة الرئيسية</p>
-        <nav className="admin-nav">
-          {menuItems.map(({ label, icon: Icon, to }) => (
-            <NavLink key={label} to={to} onClick={() => setSidebarOpen(false)} className={({ isActive }) => `admin-nav-item ${isActive ? "selected" : ""}`}>
-              <Icon size={19} /><span>{label}</span>{label === "المطاعم" && <em>{restaurants.length}</em>}
-            </NavLink>
-          ))}
-        </nav>
-
+        <nav className="admin-nav">{menuItems.map(({ label, icon: Icon, to }) => <NavLink key={label} to={to} onClick={() => setSidebarOpen(false)} className={({ isActive }) => `admin-nav-item ${isActive ? "selected" : ""}`}><Icon size={19} /><span>{label}</span>{label === "المطاعم" && <em>{restaurants.length}</em>}</NavLink>)}</nav>
         <p className="admin-menu-title admin-account-title">إدارة الحساب</p>
-        <nav className="admin-nav">
-          <button className="admin-nav-item" onClick={() => navigate("/admin/dashboard")}><Settings size={19} /><span>الإعدادات</span></button>
-          <button className="admin-nav-item" onClick={() => navigate("/admin/dashboard")}><Bell size={19} /><span>الإشعارات</span></button>
-        </nav>
-
-        <div className="admin-user-box">
-          <div className="admin-user-avatar">{(user?.name || "م").charAt(0)}</div>
-          <div><strong>{user?.name || "مدير النظام"}</strong><small>{user?.email || "مدير النظام"}</small></div>
-          <ChevronDown size={16} />
-        </div>
+        <nav className="admin-nav"><button className="admin-nav-item" onClick={() => navigate("/admin/dashboard")}><Settings size={19} /><span>الإعدادات</span></button><button className="admin-nav-item" onClick={() => navigate("/admin/dashboard")}><Bell size={19} /><span>الإشعارات</span></button></nav>
+        <div className="admin-user-box"><div className="admin-user-avatar">{(user?.name || "م").charAt(0)}</div><div><strong>{user?.name || "مدير النظام"}</strong><small>{user?.email || "مدير النظام"}</small></div><ChevronDown size={16} /></div>
         <button className="admin-logout" onClick={logout}>تسجيل الخروج</button>
       </aside>
-
       {sidebarOpen && <button className="admin-overlay" onClick={() => setSidebarOpen(false)} aria-label="إغلاق القائمة" />}
 
       <main className="admin-main">
-        <header className="admin-topbar">
-          <button className="admin-mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="فتح القائمة"><Menu size={22} /></button>
-          <div className="admin-breadcrumb">الرئيسية <span>/</span> <b>لوحة التحكم</b></div>
-          <div className="admin-date"><Bell size={17} /> menuPilot Admin</div>
-        </header>
-
+        <header className="admin-topbar"><button className="admin-mobile-menu" onClick={() => setSidebarOpen(true)} aria-label="فتح القائمة"><Menu size={22} /></button><div className="admin-breadcrumb">الرئيسية <span>/</span> <b>لوحة التحكم</b></div><div className="admin-date"><Bell size={17} /> menuPilot Admin</div></header>
         <div className="admin-content">
-          <section className="admin-heading">
-            <div><p className="admin-overline"><Activity size={14} /> نظرة عامة لحظية</p><h1>لوحة تحكم المسؤول العام</h1><p>إدارة المطاعم والاشتراكات والأرباح من مكان واحد.</p></div>
-            <button className="admin-primary-button" onClick={openAddModal}><Plus size={18} /> إضافة مطعم جديد</button>
-          </section>
+          <section className="admin-heading"><div><p className="admin-overline"><Activity size={14} /> بيانات حقيقية من النظام</p><h1>لوحة تحكم المسؤول العام</h1><p>إدارة المطاعم والاشتراكات والتجارب مباشرة من قاعدة البيانات.</p></div><button className="admin-primary-button" onClick={loadRestaurants} disabled={loading}>{loading ? "جارٍ التحديث…" : "تحديث البيانات"}</button></section>
 
           <section className="admin-stats-grid">
-            <StatCard title="إجمالي المطاعم" value={restaurants.length} icon={Building2} color="orange" />
-            <StatCard title="المطاعم النشطة" value={activeRestaurants} icon={Store} color="blue" />
-            <StatCard title="إجمالي الأرباح" value={money(totalRevenue)} icon={CircleDollarSign} color="green" />
-            <StatCard title="إجمالي الطاولات" value={totalTables} icon={Users} color="purple" />
+            <StatCard title="إجمالي المطاعم" value={restaurants.length} icon={Building2} color="orange" note="من قاعدة البيانات" />
+            <StatCard title="الحسابات النشطة" value={activeRestaurants} icon={Store} color="blue" note={`${paidRestaurants} باقات مدفوعة`} />
+            <StatCard title="التجارب المجانية" value={trialRestaurants} icon={CalendarPlus} color="green" note="تحتاج متابعة" />
+            <StatCard title="Premium" value={premiumRestaurants} icon={Users} color="purple" note="اشتراكات Premium" />
           </section>
 
           <section className="admin-table-card">
-            <div className="admin-table-heading">
-              <div><p>إدارة الحسابات</p><h2>قائمة المطاعم المسجلة</h2></div>
-              <span className="admin-live"><i /> البيانات محدثة الآن</span>
-            </div>
-
-            <div className="admin-toolbar">
-              <div className="admin-search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث باسم المطعم أو المالك..." />{search && <button onClick={() => setSearch("")} aria-label="مسح البحث"><X size={15} /></button>}</div>
-              <span>عرض {filteredRestaurants.length} من {restaurants.length} مطاعم</span>
-            </div>
-
+            <div className="admin-table-heading"><div><p>إدارة الحسابات</p><h2>المطاعم المسجلة فعليًا</h2></div><span className="admin-live"><i /> متصل بالباكند</span></div>
+            <div className="admin-toolbar"><div className="admin-search"><Search size={18} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث باسم المطعم أو البريد..." />{search && <button onClick={() => setSearch("")} aria-label="مسح البحث"><X size={15} /></button>}</div><span>عرض {filteredRestaurants.length} من {restaurants.length} مطاعم</span></div>
+            {message && <div style={{ margin: "0 24px 14px", padding: "10px 12px", borderRadius: 8, background: "#f1fbf4", color: "#3e9b75", fontSize: 11, fontWeight: 700 }}>{message}</div>}
             <div className="admin-table-wrapper">
-              <table className="admin-table">
-                <thead><tr><th>اسم المطعم</th><th>المالك</th><th>الباقة</th><th>عدد الطاولات</th><th>إجمالي الإيرادات</th><th>الحالة</th><th>إجراءات التحكم</th></tr></thead>
-                <tbody>
-                  {filteredRestaurants.map((restaurant) => (
-                    <tr key={restaurant.id}>
-                      <td><strong>{restaurant.name}</strong></td><td>{restaurant.owner}</td><td><span className="admin-plan">{restaurant.plan}</span></td>
-                      <td>{restaurant.tables} طاولات</td><td className="admin-revenue">{money(restaurant.revenue)}</td>
-                      <td><span className={`admin-status ${restaurant.active ? "active" : "inactive"}`}><i /> {restaurant.active ? "نشط" : "قيد الإيقاف"}</span></td>
-                      <td><div className="admin-actions"><button className="admin-edit" onClick={() => openEditModal(restaurant)}><Pencil size={14} /> تعديل</button><button className={restaurant.active ? "admin-disable" : "admin-enable"} onClick={() => toggleRestaurant(restaurant.id)}>{restaurant.active ? <ToggleLeft size={15} /> : <ToggleRight size={15} />}{restaurant.active ? "تعطيل" : "تفعيل"}</button></div></td>
-                    </tr>
-                  ))}
-                </tbody>
+              <table className="admin-table"><thead><tr><th>اسم المطعم</th><th>البريد الإلكتروني</th><th>الباقة</th><th>حالة الحساب</th><th>انتهاء التجربة</th><th>تاريخ الاشتراك</th><th>الإجراءات</th></tr></thead>
+                <tbody>{filteredRestaurants.map((restaurant) => { const trial = restaurant.plan === "trial"; const active = trial || ["basic", "pro", "premium"].includes(restaurant.plan); return <tr key={restaurant.id}><td><strong>{restaurant.restaurant_name || "بدون اسم"}</strong></td><td>{restaurant.email}</td><td><select value={restaurant.plan} disabled={savingId === restaurant.id || trial} onChange={(e) => changePlan(restaurant.id, e.target.value)} style={{ border: 0, borderRadius: 6, padding: "5px 7px", color: "#6571a4", background: "#f0f1ff", fontSize: 9, fontWeight: 700 }}><option value="trial">Trial</option>{planOptions.map((plan) => <option key={plan} value={plan}>{planLabels[plan]}</option>)}</select></td><td><span className={`admin-status ${active ? "active" : "inactive"}`}><i /> {active ? "نشط" : "غير نشط"}</span></td><td>{trial ? formatDate(restaurant.trial_ends_at) : "—"}</td><td>{formatDate(restaurant.subscription_started_at)}</td><td><div className="admin-actions">{trial && <button className="admin-edit" disabled={savingId === restaurant.id} onClick={() => { setTrialDays(14); setTrialModal(restaurant); }}><CalendarPlus size={14} /> تمديد</button>}{!trial && <button className="admin-edit" disabled={savingId === restaurant.id} onClick={() => changePlan(restaurant.id, restaurant.plan === "premium" ? "pro" : "premium")}>{restaurant.plan === "premium" ? "Pro" : "Premium"}</button>}</div></td></tr>; })}</tbody>
               </table>
-              {filteredRestaurants.length === 0 && <div className="admin-empty">لا توجد نتائج مطابقة للبحث</div>}
+              {!loading && filteredRestaurants.length === 0 && <div className="admin-empty">لا توجد مطاعم مطابقة للبحث</div>}
+              {loading && <div className="admin-empty">جارٍ تحميل بيانات المطاعم...</div>}
             </div>
           </section>
         </div>
       </main>
 
-      {modalOpen && (
-        <div className="admin-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && (setModalOpen(false), setEditing(null))}>
-          <div className="admin-modal">
-            <div className="admin-modal-header"><div><small>إدارة المطاعم</small><h2>{editing ? "تعديل المطعم" : "إضافة مطعم جديد"}</h2></div><button onClick={() => { setModalOpen(false); setEditing(null); }} aria-label="إغلاق"><X size={19} /></button></div>
-            <form onSubmit={saveRestaurant}>
-              <label>اسم المطعم<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="مثال: مطعم الشذا" /></label>
-              <label>اسم المالك<input value={form.owner} onChange={(event) => setForm({ ...form, owner: event.target.value })} placeholder="مثال: أحمد محمود" /></label>
-              <div className="admin-form-row"><label>الباقة<select value={form.plan} onChange={(event) => setForm({ ...form, plan: event.target.value })}><option>Pro</option><option>Standard</option><option>Enterprise</option></select></label><label>عدد الطاولات<input type="number" min="1" value={form.tables} onChange={(event) => setForm({ ...form, tables: event.target.value })} /></label></div>
-              <label>الإيرادات الشهرية<input type="number" min="0" value={form.revenue} onChange={(event) => setForm({ ...form, revenue: event.target.value })} /></label>
-              <div className="admin-modal-actions"><button type="button" onClick={() => { setModalOpen(false); setEditing(null); }}>إلغاء</button><button type="submit"><Check size={16} /> حفظ المطعم</button></div>
-            </form>
-          </div>
-        </div>
-      )}
+      {trialModal && <div className="admin-modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setTrialModal(null)}><div className="admin-modal"><div className="admin-modal-header"><div><small>إدارة التجربة</small><h2>تمديد تجربة {trialModal.restaurant_name || "المطعم"}</h2></div><button onClick={() => setTrialModal(null)} aria-label="إغلاق"><X size={19} /></button></div><div className="admin-modal form" style={{ padding: "20px 24px 24px" }}><label>عدد الأيام<input type="number" min="1" max="365" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} /></label><div className="admin-modal-actions"><button type="button" onClick={() => setTrialModal(null)}>إلغاء</button><button type="button" onClick={extendTrial}>تأكيد التمديد</button></div></div></div></div>}
     </div>
   );
 }
