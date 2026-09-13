@@ -7,6 +7,7 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OwnerReportsController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\StaffController;
@@ -72,6 +73,7 @@ Route::middleware('api.auth')->group(function () {
         Route::get('me/branding', [BrandingController::class, 'show']);
         Route::post('me/branding', [BrandingController::class, 'update']);
         Route::post('me/branding/reset', [BrandingController::class, 'reset']);
+        Route::get('owner/reports/sales-trend', [OwnerReportsController::class, 'salesTrend']);
     });
     Route::middleware('role:admin')->group(function () {
         Route::get('admin/restaurants', [AdminController::class, 'restaurants']);
