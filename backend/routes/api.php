@@ -41,23 +41,19 @@ Route::middleware('api.auth')->group(function () {
         Route::apiResource('tables', TableController::class)->except(['show', 'create']);
         Route::apiResource('staff', StaffController::class)->except(['show', 'create']);
     });
-
     Route::middleware('role:manager,kitchen,cashier,waiter')->group(function () {
         Route::get('sessions', [SessionController::class, 'active']);
         Route::get('sessions/stream', [SessionController::class, 'stream']);
         Route::get('owner/orders', [OrderController::class, 'owner']);
     });
-
     Route::middleware('role:manager,kitchen')->group(function () {
         Route::get('kitchen/orders', [OrderController::class, 'kitchen']);
         Route::patch('kitchen/orders/{id}/status', [OrderController::class, 'status']);
     });
-
     Route::middleware('role:manager,waiter')->group(function () {
         Route::post('order-items/{id}/cancel', [OrderController::class, 'cancel']);
         Route::post('order-items/{id}/reassign', [OrderController::class, 'reassign']);
     });
-
     Route::middleware('role:manager,cashier')->group(function () {
         Route::get('payments/pending', [PaymentController::class, 'pending']);
         Route::post('payments/{id}/verify', [PaymentController::class, 'verify']);
@@ -65,11 +61,9 @@ Route::middleware('api.auth')->group(function () {
         Route::post('sessions/{id}/payment', [BillingController::class, 'pay']);
         Route::patch('sessions/{sessionId}/bill-items/{item}', [BillingController::class, 'adjust']);
     });
-
     Route::middleware('role:manager,cashier,waiter')->group(function () {
         Route::get('sessions/{id}/bill', [BillingController::class, 'bill']);
     });
-
     Route::middleware('role:owner')->group(function () {
         Route::get('me/restaurant', [AccountController::class, 'show']);
         Route::patch('me/restaurant', [AccountController::class, 'updateRestaurant']);
@@ -79,9 +73,9 @@ Route::middleware('api.auth')->group(function () {
         Route::post('me/branding', [BrandingController::class, 'update']);
         Route::post('me/branding/reset', [BrandingController::class, 'reset']);
     });
-
     Route::middleware('role:admin')->group(function () {
         Route::get('admin/restaurants', [AdminController::class, 'restaurants']);
+        Route::get('admin/reports', [AdminController::class, 'reports']);
         Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
         Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);
         Route::patch('admin/owners/{id}', [AdminController::class, 'updateOwner']);
