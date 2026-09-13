@@ -82,7 +82,7 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allow={["admin"]} />}>
-        <Route path="/admin/dashboard" element={<DashboardShell><AdminDashboard /></DashboardShell>} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/restaurants" element={<DashboardShell><RestaurantsManagement /></DashboardShell>} />
         <Route path="/admin/owners" element={<DashboardShell><OwnersManagement /></DashboardShell>} />
       </Route>
