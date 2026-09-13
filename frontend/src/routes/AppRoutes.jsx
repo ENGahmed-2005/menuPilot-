@@ -29,6 +29,7 @@ import TableStatus from "../pages/cashier/TableStatus";
 import SalesReports from "../pages/cashier/SalesReports";
 import TableSessions from "../pages/waiter/TableSessions";
 import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminReports from "../pages/admin/AdminReports";
 import RestaurantsManagement from "../pages/admin/RestaurantsManagement";
 import OwnersManagement from "../pages/admin/OwnersManagement";
 
@@ -40,7 +41,6 @@ export default function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-
       <Route path="/menu" element={<RestaurantMenu />} />
       <Route path="/t/:tableCode" element={<ScanEntry />} />
       <Route path="/t/:tableCode/menu" element={<Menu />} />
@@ -62,11 +62,8 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allow={["kitchen"]} />}>
-        <Route element={<FeatureProtectedRoute feature="kitchen" />}>
-          <Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} />
-        </Route>
+        <Route element={<FeatureProtectedRoute feature="kitchen" />}><Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} /></Route>
       </Route>
-
       <Route element={<ProtectedRoute allow={["cashier"]} />}>
         <Route element={<FeatureProtectedRoute feature="cashier" />}>
           <Route path="/cashier/tables" element={<DashboardShell><TableStatus /></DashboardShell>} />
@@ -74,15 +71,13 @@ export default function AppRoutes() {
           <Route path="/cashier/reports" element={<DashboardShell><SalesReports /></DashboardShell>} />
         </Route>
       </Route>
-
       <Route element={<ProtectedRoute allow={["waiter"]} />}>
-        <Route element={<FeatureProtectedRoute feature="waiter" />}>
-          <Route path="/waiter" element={<DashboardShell><TableSessions /></DashboardShell>} />
-        </Route>
+        <Route element={<FeatureProtectedRoute feature="waiter" />}><Route path="/waiter" element={<DashboardShell><TableSessions /></DashboardShell>} /></Route>
       </Route>
 
       <Route element={<ProtectedRoute allow={["admin"]} />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/reports" element={<AdminReports />} />
         <Route path="/admin/restaurants" element={<DashboardShell><RestaurantsManagement /></DashboardShell>} />
         <Route path="/admin/owners" element={<DashboardShell><OwnersManagement /></DashboardShell>} />
       </Route>
