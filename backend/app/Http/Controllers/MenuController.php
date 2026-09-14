@@ -6,6 +6,8 @@ use App\Models\RestaurantSetting;
 use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MenuController extends Controller
 {
@@ -29,9 +31,73 @@ class MenuController extends Controller
         return DB::table('menu_items')->where('user_id', $this->restaurantId($r));
     }
 
+    /**
+     * Store a base64 image sent by the current frontend as a real file and
+     * return a short public URL. This keeps image_url small and avoids the
+     * previous 2048-character validation/database limitation.
+     */
+    private function storeImage(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        // Already a stored URL/path: keep it unchanged.
+        if (! Str::startsWith($value, 'data:image/')) {
+            return $value;
+        }
+
+        if (! preg_match('/^data:image\/(jpeg|jpg|png|webp|gif);base64,(.+)$/s', $value, $matches)) {
+            throw new \InvalidArgumentException('Invalid image data.');
+        }
+
+        $extension = $matches[1] === 'jpeg' ? 'jpg' : $matches[1];
+        $decoded = base64_decode($matches[2], true);
+
+        if ($decoded === false) {
+            throw new \InvalidArgumentException('Invalid image data.');
+        }
+
+        // Keep the same 3 MB limit already shown by the Owner UI.
+        if (strlen($decoded) > 3 * 1024 * 1024) {
+            throw new \InvalidArgumentException('Image must not be larger than 3 MB.');
+        }
+
+        $path = 'menu-items/' . Str::uuid() . '.' . $extension;
+        Storage::disk('public')->put($path, $decoded);
+
+        return asset('storage/' . $path);
+    }
+
+    private function deleteStoredImage(?string $value): void
+    {
+        if (! $value || Str::startsWith($value, 'data:image/')) {
+            return;
+        }
+
+        $prefix = rtrim(asset('storage/'), '/') . '/';
+        if (Str::startsWith($value, $prefix)) {
+            $path = Str::after($value, $prefix);
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+    }
+
+    private function normalizeItem($item)
+    {
+        if (! $item) {
+            return null;
+        }
+
+        $item->imageUrl = $item->image_url;
+        unset($item->image_url);
+        return $item;
+    }
+
     public function index(Request $r)
     {
-        return $this->out($this->q($r)->latest()->get());
+        return $this->out($this->q($r)->latest()->get()->map(fn ($item) => $this->normalizeItem($item)));
     }
 
     public function store(Request $r)
@@ -41,8 +107,14 @@ class MenuController extends Controller
             'price' => 'required|numeric|min:0',
             'category' => 'nullable|string',
             'description' => 'nullable|string',
-            'imageUrl' => 'nullable|string|max:2048',
+            'imageUrl' => 'nullable|string',
         ]);
+
+        try {
+            $imageUrl = $this->storeImage($v['imageUrl'] ?? null);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $id = DB::table('menu_items')->insertGetId([
             'user_id' => $this->restaurantId($r),
@@ -50,13 +122,13 @@ class MenuController extends Controller
             'price' => $v['price'],
             'category' => $v['category'] ?? null,
             'description' => $v['description'] ?? null,
-            'image_url' => $v['imageUrl'] ?? null,
+            'image_url' => $imageUrl,
             'is_available' => true,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        return $this->out(DB::table('menu_items')->find($id), 201);
+        return $this->out($this->normalizeItem(DB::table('menu_items')->find($id)), 201);
     }
 
     public function update(Request $r, $id)
@@ -71,7 +143,7 @@ class MenuController extends Controller
             'price' => 'sometimes|required|numeric|min:0',
             'category' => 'nullable|string',
             'description' => 'nullable|string',
-            'imageUrl' => 'nullable|string|max:2048',
+            'imageUrl' => 'nullable|string',
             'is_available' => 'sometimes|boolean',
         ]);
 
@@ -81,21 +153,37 @@ class MenuController extends Controller
                 $data[$k] = $v[$k];
             }
         }
-        if (array_key_exists('imageUrl', $v)) {
-            $data['image_url'] = $v['imageUrl'];
-        }
-        $data['updated_at'] = now();
 
+        if (array_key_exists('imageUrl', $v)) {
+            try {
+                $newImageUrl = $this->storeImage($v['imageUrl']);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            if ($newImageUrl !== $item->image_url) {
+                $this->deleteStoredImage($item->image_url);
+            }
+            $data['image_url'] = $newImageUrl;
+        }
+
+        $data['updated_at'] = now();
         $this->q($r)->where('id', $id)->update($data);
-        return $this->out(DB::table('menu_items')->find($id));
+
+        return $this->out($this->normalizeItem(DB::table('menu_items')->find($id)));
     }
 
     public function destroy(Request $r, $id)
     {
-        $n = $this->q($r)->where('id', $id)->delete();
-        return $n
-            ? $this->out(['message' => 'Deleted'])
-            : response()->json(['message' => 'Menu item not found'], 404);
+        $item = $this->q($r)->where('id', $id)->first();
+        if (! $item) {
+            return response()->json(['message' => 'Menu item not found'], 404);
+        }
+
+        $this->deleteStoredImage($item->image_url);
+        $this->q($r)->where('id', $id)->delete();
+
+        return $this->out(['message' => 'Deleted']);
     }
 
     public function publicMenu($code)
@@ -107,6 +195,13 @@ class MenuController extends Controller
 
         $owner = DB::table('users')->where('id', $t->user_id)->first();
         $branding = RestaurantSetting::where('user_id', $t->user_id)->first();
+        $items = DB::table('menu_items')
+            ->where('user_id', $t->user_id)
+            ->where('is_available', true)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($item) => $this->normalizeItem($item));
 
         return $this->out([
             'table' => $t,
@@ -116,12 +211,7 @@ class MenuController extends Controller
                 'theme' => $owner?->theme,
                 'branding' => $branding,
             ],
-            'items' => DB::table('menu_items')
-                ->where('user_id', $t->user_id)
-                ->where('is_available', true)
-                ->orderBy('category')
-                ->orderBy('name')
-                ->get(),
+            'items' => $items,
         ]);
     }
 }
