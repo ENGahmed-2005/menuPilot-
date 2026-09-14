@@ -3,12 +3,25 @@
    ========================================================================== */
 import { api } from "./client";
 
-export const getMenuItems = () => api.get("/menu-items");
+const normalizeMenuItem = (item) => ({
+  ...item,
+  imageUrl: item.imageUrl ?? item.image_url ?? null,
+});
 
-export const createMenuItem = (payload) => api.post("/menu-items", payload);
+export const getMenuItems = async () => {
+  const response = await api.get("/menu-items");
+  return Array.isArray(response) ? response.map(normalizeMenuItem) : [];
+};
 
-export const updateMenuItem = (itemId, payload) =>
-  api.put(`/menu-items/${itemId}`, payload);
+export const createMenuItem = async (payload) => {
+  const response = await api.post("/menu-items", payload);
+  return normalizeMenuItem(response);
+};
+
+export const updateMenuItem = async (itemId, payload) => {
+  const response = await api.put(`/menu-items/${itemId}`, payload);
+  return normalizeMenuItem(response);
+};
 
 export const deleteMenuItem = (itemId) => api.delete(`/menu-items/${itemId}`);
 
@@ -28,9 +41,6 @@ export const getPublicMenuByTableCode = async (tableCode) => {
   return {
     table: isArrayResponse ? null : response?.table || null,
     restaurant: isArrayResponse ? null : response?.restaurant || null,
-    items: items.map((item) => ({
-      ...item,
-      imageUrl: item.imageUrl ?? item.image_url ?? null,
-    })),
+    items: items.map(normalizeMenuItem),
   };
 };
