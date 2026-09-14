@@ -32,6 +32,9 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminReports from "../pages/admin/AdminReports";
 import RestaurantsManagement from "../pages/admin/RestaurantsManagement";
 import OwnersManagement from "../pages/admin/OwnersManagement";
+import AdminSubscriptions from "../pages/admin/AdminSubscriptions";
+import AdminSettings from "../pages/admin/AdminSettings";
+import AdminNotifications from "../pages/admin/AdminNotifications";
 
 export default function AppRoutes() {
   return (
@@ -78,8 +81,11 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute allow={["admin"]} />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/reports" element={<AdminReports />} />
-        <Route path="/admin/restaurants" element={<DashboardShell><RestaurantsManagement /></DashboardShell>} />
-        <Route path="/admin/owners" element={<DashboardShell><OwnersManagement /></DashboardShell>} />
+        <Route path="/admin/restaurants" element={<RestaurantsManagement />} />
+        <Route path="/admin/owners" element={<OwnersManagement />} />
+        <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
+        <Route path="/admin/notifications" element={<AdminNotifications />} />
       </Route>
     </Routes>
   );
