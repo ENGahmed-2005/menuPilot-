@@ -1,23 +1,17 @@
-/* ==========================================================================
-   index.css — نقطة الدخول الوحيدة لـ Tailwind + هوية menuPilot البصرية
-   --------------------------------------------------------------------------
-   @import "tailwindcss" يجلب base/components/utilities دفعة واحدة (v4).
-   @theme يعرّف متغيرات التصميم (ألوان/خطوط) كـ utility classes جاهزة:
-   مثلاً --color-ink يصير bg-ink / text-ink / border-ink تلقائيًا.
-   الباليت والخطوط منسوخة من صفحة الـ Landing (src/pages/landing/landing.jsx)
-   عشان يبقى شكل التطبيق كله متسق مع هوية العلامة.
-   ========================================================================== */
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #1f2420;
-  --color-ink-soft: #4b5147;
-  --color-paper: #f3efe5;
-  --color-paper-2: #f3efe5;
-  --color-copper: #eea122;
-  --color-copper-deep: #e67e22;
-  --color-herb: #5b7a52;
-  --color-brick: #b33f32;
+  --color-ink: #182920;
+  --color-ink-soft: #405047;
+  --color-paper: #f4efe6;
+  --color-paper-2: #f4efe6;
+  --color-copper: #e67e22;
+  --color-copper-deep: #cf6410;
+  --color-herb: #3f6650;
+  --color-brick: #b94736;
+  --color-brand-green: #182920;
+  --color-brand-orange: #e67e22;
+  --color-brand-cream: #f4efe6;
 
   --font-display: "Instrument Serif", serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -26,19 +20,8 @@
   --font-mono-ticket: "Space Mono", monospace;
 }
 
-/* box-sizing: border-box لكل العناصر — أساسي قبل أي تخطيط. */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  min-height: 100%;
-}
-
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
 body {
   margin: 0;
   background: var(--color-ink);
@@ -47,57 +30,34 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  font-weight: 400;
-}
-
-img,
-svg {
-  display: block;
-  max-width: 100%;
-}
-
-/* نسخة عربي: خط Cairo للنصوص، Aref Ruqaa للعناوين — يُفعَّل بـ dir="rtl" أو class="lang-ar" */
-[dir="rtl"],
-.lang-ar {
-  font-family: var(--font-arabic);
-}
-[dir="rtl"] h1,
-[dir="rtl"] h2,
-[dir="rtl"] h3,
-.lang-ar h1,
-.lang-ar h2,
-.lang-ar h3 {
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
+img, svg { display: block; max-width: 100%; }
+[dir="rtl"], .lang-ar { font-family: var(--font-arabic); }
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, .lang-ar h1, .lang-ar h2, .lang-ar h3 {
   font-family: var(--font-arabic-display);
   letter-spacing: 0;
 }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+:focus-visible { outline: 2px solid var(--color-copper); outline-offset: 3px; }
 
-@media (prefers-reduced-motion: no-preference) {
-  html {
-    scroll-behavior: smooth;
-  }
-}
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
-  }
-}
+/* menuPilot brand tokens: the new logo is #182920 + #E67E22 + warm cream. */
+.brand-logo { object-fit: contain; }
+.brand-logo-surface { background: var(--color-paper); border-radius: 12px; padding: 4px 8px; }
 
-:focus-visible {
-  outline: 2px solid var(--color-copper);
-  outline-offset: 3px;
-}
-
-/* حركة "float" لبطاقة معاينة الـ Hero في صفحة الهبوط (LandingPage.jsx) —
-   Tailwind مفيهوش keyframe جاهز بالاسم ده، فعرّفناه هنا واستخدمناه بصيغة
-   animate-[float_6s_ease-in-out_infinite]. */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
+/* Keep older Tailwind arbitrary-color classes aligned with the new logo identity. */
+.bg-\[\#1F2420\] { background-color: #182920 !important; }
+.bg-\[\#EEA122\] { background-color: #E67E22 !important; }
+.bg-\[\#E67E22\] { background-color: #E67E22 !important; }
+.bg-\[\#F3EFE5\] { background-color: #F4EFE6 !important; }
+.text-\[\#1F2420\] { color: #182920 !important; }
+.text-\[\#F3EFE5\] { color: #F4EFE6 !important; }
+.text-\[\#EEA122\] { color: #E67E22 !important; }
+.text-\[\#E67E22\] { color: #E67E22 !important; }
+.border-\[\#F3EFE5\] { border-color: #F4EFE6 !important; }
+.hover\:text-\[\#EEA122\]:hover { color: #E67E22 !important; }
+.hover\:bg-\[\#E67E22\]:hover { background-color: #CF6410 !important; }
+.hover\:bg-\[\#E67E22\]:hover { background-color: #CF6410 !important; }
+".replace("\".replace", "")
