@@ -18,17 +18,9 @@
   --font-arabic-display: "Aref Ruqaa", serif;
   --font-mono-ticket: "Space Mono", monospace;
 }
-
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { min-height: 100%; }
-body {
-  margin: 0;
-  background: var(--color-ink);
-  color: var(--color-paper);
-  font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+body { margin: 0; background: var(--color-ink); color: var(--color-paper); font-family: var(--font-body); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
 img, svg { display: block; max-width: 100%; }
 [dir="rtl"], .lang-ar { font-family: var(--font-arabic); }
@@ -39,8 +31,7 @@ img, svg { display: block; max-width: 100%; }
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 .brand-logo { object-fit: contain; }
 .brand-logo-surface { background: var(--color-paper); border-radius: 12px; padding: 4px 8px; }
-
-/* Legacy palette aliases used by existing landing/dashboard components. */
+/* Legacy palette aliases */
 .bg-\[\#1F2420\] { background-color: #182920 !important; }
 .bg-\[\#EEA122\] { background-color: #E67E22 !important; }
 .bg-\[\#E67E22\] { background-color: #E67E22 !important; }
@@ -52,3 +43,6 @@ img, svg { display: block; max-width: 100%; }
 .border-\[\#F3EFE5\] { border-color: #F4EFE6 !important; }
 .hover\:text-\[\#EEA122\]:hover { color: #E67E22 !important; }
 .hover\:bg-\[\#E67E22\]:hover { background-color: #CF6410 !important; }
+/* Existing dashboard header text marks now render the official logo asset. */
+aside > div:first-child span:first-child { font-size: 0 !important; width: 160px; height: 42px; padding: 4px 8px; border-radius: 12px; background: #f4efe6 url('/menuPilot-logo.svg') center/contain no-repeat; color: transparent; }
+.bg-ink.px-4.py-3 > span:first-child { font-size: 0 !important; width: 150px; height: 38px; padding: 3px 7px; border-radius: 11px; background: #f4efe6 url('/menuPilot-logo.svg') center/contain no-repeat; color: transparent; }
