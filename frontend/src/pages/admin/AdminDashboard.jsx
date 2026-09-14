@@ -9,7 +9,7 @@ const menuItems = [
   { label: "لوحة التحكم", icon: LayoutDashboard, to: "/admin/dashboard" },
   { label: "المطاعم", icon: Store, to: "/admin/restaurants" },
   { label: "المستخدمون", icon: Users, to: "/admin/owners" },
-  { label: "الاشتراكات", icon: FileText, to: "/admin/restaurants" },
+  { label: "الاشتراكات", icon: FileText, to: "/admin/subscriptions" },
   { label: "التقارير", icon: BarChart3, to: "/admin/reports" },
 ];
 const planLabels = { basic: "Basic", pro: "Pro", premium: "Premium", trial: "Trial" };
@@ -31,9 +31,9 @@ export default function AdminDashboard() {
   async function extendTrial() { if (!trialModal) return; setSavingId(trialModal.id); setMessage(""); try { const data = await api.post(`/admin/restaurants/${trialModal.id}/trial/extend`, { days: Number(trialDays) }); setRestaurants((current) => current.map((r) => r.id === trialModal.id ? { ...r, ...data } : r)); setTrialModal(null); setMessage(`تم تمديد التجربة ${trialDays} يومًا.`); } catch (error) { setMessage(error.message || "تعذر تمديد التجربة"); } finally { setSavingId(null); } }
   return <div className="admin-dashboard" dir="rtl">
     <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
-      <div className="admin-brand"><div className="admin-logo">m</div><div><strong>menu<span>Pilot</span></strong><small>نظام إدارة المطاعم</small></div><button className="admin-sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="إغلاق القائمة"><X size={20} /></button></div>
-      <p className="admin-menu-title">القائمة الرئيسية</p><nav className="admin-nav">{menuItems.map(({ label, icon: Icon, to }) => <NavLink key={label} to={to} onClick={() => setSidebarOpen(false)} className={({ isActive }) => `admin-nav-item ${isActive ? "selected" : ""}`}><Icon size={19} /><span>{label}</span>{label === "المطاعم" && <em>{restaurants.length}</em>}</NavLink>)}</nav>
-      <p className="admin-menu-title admin-account-title">إدارة الحساب</p><nav className="admin-nav"><button className="admin-nav-item" onClick={() => navigate("/admin/dashboard")}><Settings size={19} /><span>الإعدادات</span></button><button className="admin-nav-item" onClick={() => navigate("/admin/dashboard")}><Bell size={19} /><span>الإشعارات</span></button></nav>
+      <div className="admin-brand"><div className="admin-logo">m</div><div><strong>menu<span>Pilot</span></strong><small>لوحة الإدارة العامة</small></div><button className="admin-sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="إغلاق القائمة"><X size={20} /></button></div>
+      <p className="admin-menu-title">إدارة المنصة</p><nav className="admin-nav">{menuItems.map(({ label, icon: Icon, to }) => <NavLink key={label} to={to} onClick={() => setSidebarOpen(false)} className={({ isActive }) => `admin-nav-item ${isActive ? "selected" : ""}`}><Icon size={19} /><span>{label}</span>{label === "المطاعم" && <em>{restaurants.length}</em>}</NavLink>)}</nav>
+      <p className="admin-menu-title admin-account-title">النظام</p><nav className="admin-nav"><button className="admin-nav-item" onClick={() => navigate("/admin/settings")}><Settings size={19} /><span>الإعدادات</span></button><button className="admin-nav-item" onClick={() => navigate("/admin/notifications")}><Bell size={19} /><span>الإشعارات</span></button></nav>
       <div className="admin-user-box"><div className="admin-user-avatar">{(user?.name || "م").charAt(0)}</div><div><strong>{user?.name || "مدير النظام"}</strong><small>{user?.email || "مدير النظام"}</small></div><ChevronDown size={16} /></div><button className="admin-logout" onClick={logout}>تسجيل الخروج</button>
     </aside>
     {sidebarOpen && <button className="admin-overlay" onClick={() => setSidebarOpen(false)} aria-label="إغلاق القائمة" />}
