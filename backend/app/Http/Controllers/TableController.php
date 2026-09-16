@@ -30,6 +30,12 @@ class TableController extends Controller
         return DB::table('restaurant_tables')->where('user_id', $this->restaurantId($request));
     }
 
+    private function qrImageUrl(string $tableCode): string
+    {
+        $menuUrl = url('/t/'.$tableCode);
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=640x640&margin=16&data='.rawurlencode($menuUrl);
+    }
+
     private function withQr($table)
     {
         if (! $table) {
@@ -45,6 +51,7 @@ class TableController extends Controller
         $table->activeSessionId = $activeSession?->id;
         $table->status = $activeSession ? 'occupied' : 'available';
         $table->qrCodeUrl = '/t/'.$table->table_code;
+        $table->qrImageUrl = $table->qr_image_url ?: $this->qrImageUrl($table->table_code);
 
         return $table;
     }
@@ -76,11 +83,14 @@ class TableController extends Controller
             $code = Str::upper(Str::random(10));
         } while (DB::table('restaurant_tables')->where('table_code', $code)->exists());
 
+        $qrImageUrl = $this->qrImageUrl($code);
+
         $id = DB::table('restaurant_tables')->insertGetId([
             'user_id' => $restaurantId,
             'label' => trim($v['label']),
             'seats' => $v['seats'],
             'table_code' => $code,
+            'qr_image_url' => $qrImageUrl,
             'status' => 'available',
             'created_at' => now(),
             'updated_at' => now(),
@@ -121,11 +131,31 @@ class TableController extends Controller
             return response()->json(['message' => 'Table not found'], 404);
         }
         if (DB::table('dining_sessions')->where('restaurant_table_id', $id)->whereNull('closed_at')->exists()) {
-            return response()->json(['message' => 'لا يمكن حذف طاولة عليها جلسة نشطة.'], 409);
+            return response()->json(['message' => 'Cannot delete a table with an active dining session.'], 409);
         }
         $deleted = $this->query($request)->where('id', $id)->delete();
 
         return $deleted ? $this->out(['message' => 'Deleted']) : response()->json(['message' => 'Table not found'], 404);
+    }
+
+    public function qr(Request $request, $id)
+    {
+        $table = $this->query($request)->where('id', $id)->first();
+        if (! $table) {
+            return response()->json(['message' => 'Table not found'], 404);
+        }
+
+        $qrImageUrl = $table->qr_image_url ?: $this->qrImageUrl($table->table_code);
+        if (! $table->qr_image_url) {
+            DB::table('restaurant_tables')->where('id', $id)->update(['qr_image_url' => $qrImageUrl, 'updated_at' => now()]);
+        }
+
+        return $this->out([
+            'table_id' => $table->id,
+            'table_code' => $table->table_code,
+            'menu_url' => url('/t/'.$table->table_code),
+            'qr_image_url' => $qrImageUrl,
+        ]);
     }
 
     public function status(Request $request, $id)
