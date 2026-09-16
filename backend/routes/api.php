@@ -40,6 +40,7 @@ Route::middleware('api.auth')->group(function () {
     Route::middleware('role:manager')->group(function () {
         Route::apiResource('menu-items', MenuController::class)->except(['show', 'create']);
         Route::apiResource('tables', TableController::class)->except(['show', 'create']);
+        Route::get('tables/{id}/qr', [TableController::class, 'qr']);
         Route::apiResource('staff', StaffController::class)->except(['show', 'create']);
     });
     Route::middleware('role:manager,kitchen,cashier,waiter')->group(function () {
