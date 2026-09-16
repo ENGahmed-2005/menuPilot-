@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #182920;
+  --color-ink-soft: #405047;
+  --color-paper: #f4efe6;
+  --color-paper-2: #f4efe6;
+  --color-copper: #e67e22;
+  --color-copper-deep: #cf6410;
+  --color-herb: #3f6650;
+  --color-brick: #b94736;
+  --color-brand-green: #182920;
+  --color-brand-orange: #e67e22;
+  --color-brand-cream: #f4efe6;
+  --font-display: "Instrument Serif", serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-arabic: "Cairo", sans-serif;
+  --font-arabic-display: "Aref Ruqaa", serif;
+  --font-mono-ticket: "Space Mono", monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+body { margin: 0; background: var(--color-ink); color: var(--color-paper); font-family: var(--font-body); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
+img, svg { display: block; max-width: 100%; }
+[dir="rtl"], .lang-ar { font-family: var(--font-arabic); }
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, .lang-ar h1, .lang-ar h2, .lang-ar h3 { font-family: var(--font-arabic-display); letter-spacing: 0; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+:focus-visible { outline: 2px solid var(--color-copper); outline-offset: 3px; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.brand-logo { object-fit: contain; }
+.brand-logo-surface { background: var(--color-paper); border-radius: 12px; padding: 4px 8px; }
+
+/* Legacy palette aliases */
+.bg-\[\#1F2420\] { background-color: #182920 !important; }
+.bg-\[\#EEA122\] { background-color: #E67E22 !important; }
+.bg-\[\#E67E22\] { background-color: #E67E22 !important; }
+.bg-\[\#F3EFE5\] { background-color: #F4EFE6 !important; }
+.text-\[\#1F2420\] { color: #182920 !important; }
+.text-\[\#F3EFE5\] { color: #F4EFE6 !important; }
+.text-\[\#EEA122\] { color: #E67E22 !important; }
+.text-\[\#E67E22\] { color: #E67E22 !important; }
+.border-\[\#F3EFE5\] { border-color: #F4EFE6 !important; }
+.hover\:text-\[\#EEA122\]:hover { color: #E67E22 !important; }
+.hover\:bg-\[\#E67E22\]:hover { background-color: #CF6410 !important; }
+
+/* Shared dashboard branding */
+aside > div:first-child span:first-child { font-size: 0 !important; width: 160px; height: 42px; padding: 4px 8px; border-radius: 12px; background: #f4efe6 url('/menuPilot-logo.svg') center/contain no-repeat; color: transparent; }
+.bg-ink.px-4.py-3 > span:first-child { font-size: 0 !important; width: 150px; height: 38px; padding: 3px 7px; border-radius: 11px; background: #f4efe6 url('/menuPilot-logo.svg') center/contain no-repeat; color: transparent; }
+
+/* Auth pages: replace text-only home marks with the transparent brand logo. */
+main[dir="rtl"] a[href="/"]:not(:has(img)) { display: inline-flex; align-items: center; width: 170px; height: 46px; padding: 5px 10px; border-radius: 12px; background: #f4efe6 url('/menuPilot-logo.svg') center/contain no-repeat; font-size: 0 !important; color: transparent !important; text-decoration: none; }
+
+/* Customer entry branding */
+main[dir="rtl"] aside .relative.z-10 > div.flex.items-center.gap-3[dir="ltr"] > span:first-child { display: none; }
+main[dir="rtl"] aside .relative.z-10 > div.flex.items-center.gap-3[dir="ltr"] > span.text-xl.font-black { width: 160px; height: 42px; padding: 5px 10px; border-radius: 12px; background: #f4efe6 url('/menuPilot-logo.svg') center/contain no-repeat; font-size: 0 !important; color: transparent !important; }
+main[dir="rtl"] section > div > div.mb-8.flex.items-center.justify-between.lg\:hidden > div.flex.items-center.gap-2[dir="ltr"] > span:first-child { display: none; }
+main[dir="rtl"] section > div > div.mb-8.flex.items-center.justify-between.lg\:hidden > div.flex.items-center.gap-2[dir="ltr"] > span.font-black { width: 145px; height: 38px; padding: 4px 8px; border-radius: 11px; background: #f4efe6 url('/menuPilot-logo.svg') center/contain no-repeat; font-size: 0 !important; color: transparent !important; }
+
+/* Customer pages footer/header brand marks. */
+main[dir="rtl"] .text-\[10px\].font-bold.tracking-\[0\.18em\] { display: block; width: 150px; height: 30px; background: url('/menuPilot-logo.svg') center/contain no-repeat; font-size: 0 !important; color: transparent !important; letter-spacing: 0 !important; }
+main[dir="rtl"] p.mt-8.text-center.text-\[11px\].opacity-40 { width: 150px; height: 32px; margin-left: auto; margin-right: auto; background: url('/menuPilot-logo.svg') center/contain no-repeat; font-size: 0 !important; color: transparent !important; }

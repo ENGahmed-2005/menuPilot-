@@ -1,0 +1,92 @@
+import { Route, Routes } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
+import FeatureProtectedRoute from "./FeatureProtectedRoute";
+import DashboardShell from "../components/layout/DashboardShell";
+import Landing from "../pages/landing/LandingPage";
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import ResetPassword from "../pages/auth/ResetPassword";
+import ScanEntry from "../pages/customer/ScanEntry";
+import Menu from "../pages/customer/Menu";
+import RestaurantMenu from "../pages/customer/RestaurantMenu";
+import Cart from "../pages/customer/Cart";
+import PaymentFlow from "../pages/customer/PaymentFlow";
+import OrderTracking from "../pages/customer/OrderTracking";
+import BillRequest from "../pages/customer/BillRequest";
+import SubscriptionDashboard from "../pages/owner/SubscriptionDashboard";
+import SubscriptionPlanPage from "../pages/owner/SubscriptionPlanPage";
+import ThemeCustomization from "../pages/owner/ThemeCustomization";
+import BrandingCustomization from "../pages/owner/BrandingCustomization";
+import RestaurantSettings from "../pages/owner/RestaurantSettings";
+import Tables from "../pages/owner/Tables";
+import MenuManagement from "../pages/owner/MenuManagement";
+import Reports from "../pages/owner/Reports";
+import StaffManagement from "../pages/owner/StaffManagement";
+import KitchenDashboard from "../pages/kitchen/KitchenDashboard";
+import Billing from "../pages/cashier/Billing";
+import TableStatus from "../pages/cashier/TableStatus";
+import SalesReports from "../pages/cashier/SalesReports";
+import TableSessions from "../pages/waiter/TableSessions";
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminReports from "../pages/admin/AdminReports";
+import RestaurantsManagement from "../pages/admin/RestaurantsManagement";
+import OwnersManagement from "../pages/admin/OwnersManagement";
+import AdminSubscriptions from "../pages/admin/AdminSubscriptions";
+import AdminSettings from "../pages/admin/AdminSettings";
+import AdminNotifications from "../pages/admin/AdminNotifications";
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/menu" element={<RestaurantMenu />} />
+      <Route path="/t/:tableCode" element={<ScanEntry />} />
+      <Route path="/t/:tableCode/menu" element={<Menu />} />
+      <Route path="/t/:tableCode/cart" element={<Cart />} />
+      <Route path="/t/:tableCode/payment" element={<PaymentFlow />} />
+      <Route path="/order-tracking" element={<OrderTracking />} />
+      <Route path="/bill-request" element={<BillRequest />} />
+
+      <Route element={<ProtectedRoute allow={["owner"]} />}>
+        <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} />
+        <Route path="/owner/subscription/:planId" element={<DashboardShell><SubscriptionPlanPage /></DashboardShell>} />
+        <Route path="/owner/settings" element={<DashboardShell><RestaurantSettings /></DashboardShell>} />
+        <Route path="/owner/branding" element={<DashboardShell><BrandingCustomization /></DashboardShell>} />
+        <Route path="/owner/tables" element={<FeatureProtectedRoute feature="tables"><DashboardShell><Tables /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/menu" element={<FeatureProtectedRoute feature="menu"><DashboardShell><MenuManagement /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/reports" element={<FeatureProtectedRoute feature="reports"><DashboardShell><Reports /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/theme" element={<FeatureProtectedRoute feature="theme-presets"><DashboardShell><ThemeCustomization /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/staff" element={<DashboardShell><StaffManagement /></DashboardShell>} />
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["kitchen"]} />}>
+        <Route element={<FeatureProtectedRoute feature="kitchen" />}><Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} /></Route>
+      </Route>
+      <Route element={<ProtectedRoute allow={["cashier"]} />}>
+        <Route element={<FeatureProtectedRoute feature="cashier" />}>
+          <Route path="/cashier/tables" element={<DashboardShell><TableStatus /></DashboardShell>} />
+          <Route path="/cashier/billing/:sessionId" element={<DashboardShell><Billing /></DashboardShell>} />
+          <Route path="/cashier/reports" element={<DashboardShell><SalesReports /></DashboardShell>} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allow={["waiter"]} />}>
+        <Route element={<FeatureProtectedRoute feature="waiter" />}><Route path="/waiter" element={<DashboardShell><TableSessions /></DashboardShell>} /></Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["admin"]} />}>
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/reports" element={<AdminReports />} />
+        <Route path="/admin/restaurants" element={<RestaurantsManagement />} />
+        <Route path="/admin/owners" element={<OwnersManagement />} />
+        <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
+        <Route path="/admin/notifications" element={<AdminNotifications />} />
+      </Route>
+    </Routes>
+  );
+}

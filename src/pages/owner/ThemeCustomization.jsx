@@ -1,0 +1,24 @@
+/* Theme customization remains for the dashboard shell. Trial users receive the same UI capabilities as Premium for 14 days. */
+import { useState } from "react";
+import { Check, Loader2, Lock, Palette, RotateCcw } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { getSubscriptionPlan, hasPlanFeature } from "../../config/subscriptions";
+import { THEME_PRESETS } from "../../config/themes";
+import { saveTheme } from "../../api/theme";
+
+export default function ThemeCustomization() {
+  const { user, updateUser } = useAuth();
+  const planId = user?.plan === "trial" ? "premium" : (user?.plan || "basic");
+  const plan = getSubscriptionPlan(planId);
+  const canPresets = hasPlanFeature(planId, "theme-presets");
+  const canCustom = hasPlanFeature(planId, "custom-theme");
+  const [selectedPreset, setSelectedPreset] = useState(user?.theme?.preset && user.theme.preset !== "custom" ? user.theme.preset : "menuPilot");
+  const [custom, setCustom] = useState(user?.theme?.preset === "custom" && user.theme.colors ? user.theme.colors : { primary: "#B8793E", secondary: "#5B7A52", background: "#F7F3E9" });
+  const [saving,setSaving]=useState(null),[savedFlash,setSavedFlash]=useState(false);
+  async function applyPreset(id){setSelectedPreset(id);setSaving("preset");try{const updated=await saveTheme({preset:id});updateUser(updated);flashSaved();}finally{setSaving(null)}}
+  async function applyCustom(){setSaving("custom");try{const updated=await saveTheme({preset:"custom",colors:custom});updateUser(updated);flashSaved();}finally{setSaving(null)}}
+  async function resetToDefault(){setSaving("preset");try{const updated=await saveTheme(null);updateUser(updated);setSelectedPreset("menuPilot");flashSaved();}finally{setSaving(null)}}
+  function flashSaved(){setSavedFlash(true);setTimeout(()=>setSavedFlash(false),2200)}
+  const activePreset=user?.theme?.preset&&user.theme.preset!=="custom"?user.theme.preset:"menuPilot",isCustomActive=user?.theme?.preset==="custom";
+  return <div dir="rtl" className="space-y-7"><header className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-copper"><Palette size={18}/><span className="text-sm font-black">هوية لوحة التحكم</span></div><h1 className="mt-2 text-3xl font-black">تخصيص الثيم</h1><p className="mt-2 text-sm leading-7 text-ink-soft/60">خصّص ألوان لوحة التحكم. مستخدمو Trial يحصلون على جميع خيارات Premium خلال 14 يومًا.</p></div>{user?.theme&&<button type="button" onClick={resetToDefault} disabled={saving!==null} className="flex items-center gap-2 rounded-full border border-ink/12 px-4 py-2.5 text-xs font-bold"><RotateCcw size={14}/>الافتراضي</button>}</header>{savedFlash&&<div className="flex items-center gap-2 rounded-2xl border border-herb/25 bg-herb/10 px-4 py-3 text-sm font-bold text-herb"><Check size={16}/>تم حفظ الثيم وتطبيقه.</div>}{canPresets&&<section><h2 className="mb-4 text-xl font-black">الثيمات الجاهزة</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{THEME_PRESETS.map(item=>{const active=!isCustomActive&&activePreset===item.id;return <button type="button" key={item.id} onClick={()=>applyPreset(item.id)} disabled={saving!==null} className={`rounded-3xl border bg-paper p-4 text-right ${active?"border-copper ring-2 ring-copper/20":"border-ink/8"}`}><div className="h-24 rounded-2xl" style={{background:item.background}}><div className="flex gap-2 p-3"><span className="h-8 w-8 rounded-full" style={{background:item.primary}}/><span className="h-8 w-8 rounded-full" style={{background:item.secondary}}/></div></div><div className="mt-3 flex items-center justify-between font-black"><span>{item.name}</span>{saving==="preset"&&selectedPreset===item.id?<Loader2 size={17} className="animate-spin text-copper"/>:active&&<Check size={17} className="text-copper"/>}</div></button>})}</div></section>}{canCustom&&<section className="rounded-3xl border border-ink/8 bg-paper p-6"><h2 className="text-xl font-black">ألوان مخصّصة</h2><div className="mt-6 grid gap-4 md:grid-cols-3">{[["primary","الأساسي"],["secondary","الثانوي"],["background","الخلفية"]].map(([key,label])=><label key={key} className="block text-sm font-bold">{label}<div className="mt-2 flex items-center gap-3 rounded-2xl border border-ink/10 p-2"><input type="color" value={custom[key]} onChange={e=>setCustom({...custom,[key]:e.target.value})} className="h-10 w-12"/><code className="text-xs">{custom[key]}</code></div></label>)}</div><button type="button" onClick={applyCustom} disabled={saving!==null} className="mt-6 flex items-center gap-2 rounded-full bg-copper px-5 py-3 text-sm font-black text-ink">{saving==="custom"?<Loader2 size={16} className="animate-spin"/>:<Palette size={16}/>}تطبيق الألوان</button></section>}{!canPresets&&!canCustom&&<div className="rounded-3xl border border-dashed p-6"><Lock className="text-copper"/>ترقية الباقة مطلوبة لتخصيص الثيم.</div>}</div>;
+}
