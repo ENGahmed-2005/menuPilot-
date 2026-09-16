@@ -13,7 +13,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'restaurant_name', 'restaurant_phone', 'restaurant_description',
         'restaurant_address', 'latitude', 'longitude', 'email', 'password',
-        'plan', 'role', 'api_token', 'theme', 'payment_methods',
+        'plan', 'role', 'api_token', 'login_failed_attempts', 'login_locked_until', 'theme', 'payment_methods',
         'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at',
     ];
 
@@ -32,6 +32,7 @@ class User extends Authenticatable
             'trial_ends_at' => 'datetime',
             'subscription_started_at' => 'datetime',
             'subscription_ends_at' => 'datetime',
+            'login_locked_until' => 'datetime',
         ];
     }
 
