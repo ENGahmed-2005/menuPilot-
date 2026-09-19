@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
 
 return new class extends Migration
 {
@@ -88,22 +88,14 @@ return new class extends Migration
             $t->timestamp('paid_at')->useCurrent();
             $t->timestamps();
         });
-        Schema::create('bill_adjustments', function (Blueprint $t) {
-            $t->id();
-            $t->foreignId('dining_session_id')->constrained()->cascadeOnDelete();
-            $t->foreignId('order_item_id')->constrained()->cascadeOnDelete();
-            $t->decimal('old_price', 10, 2);
-            $t->decimal('new_price', 10, 2);
-            $t->foreignId('cashier_id')->constrained('users')->cascadeOnDelete();
-            $t->timestamps();
-        });
     }
 
     public function down(): void
     {
-        foreach (['bill_adjustments', 'payments', 'assistance_requests', 'order_items', 'orders', 'dining_sessions', 'staff', 'menu_items', 'restaurant_tables'] as $t) {
+        foreach (['payments', 'assistance_requests', 'order_items', 'orders', 'dining_sessions', 'staff', 'menu_items', 'restaurant_tables'] as $t) {
             Schema::dropIfExists($t);
-        }Schema::table('users', function (Blueprint $t) {
+        }
+        Schema::table('users', function (Blueprint $t) {
             $t->dropColumn(['restaurant_name', 'plan', 'role', 'api_token', 'theme']);
         });
     }
