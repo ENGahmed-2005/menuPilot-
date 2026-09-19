@@ -25,11 +25,12 @@ WORKDIR /var/www
 
 COPY composer.json composer.lock* ./
 
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
 COPY . .
 
-RUN php artisan config:clear \
+RUN composer dump-autoload --optimize \
+    && php artisan config:clear \
     && php artisan route:clear \
     && php artisan view:clear
 
