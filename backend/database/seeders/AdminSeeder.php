@@ -8,18 +8,25 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminSeeder extends Seeder
 {
-    /**
-     * Create or update the development admin account.
-     */
     public function run(): void
     {
+        $email = env('ADMIN_EMAIL');
+        $password = env('ADMIN_PASSWORD');
+
+        if (!$email || !$password) {
+            return;
+        }
+
         User::updateOrCreate(
-            ['email' => 'admin@menupilot.test'],
+            ['email' => $email],
             [
                 'name' => 'MenuPilot Admin',
-                'password' => Hash::make('Admin@12345'),
+                'restaurant_name' => 'MenuPilot Admin',
+                'password' => Hash::make($password),
                 'role' => 'admin',
                 'plan' => 'premium',
+                'login_failed_attempts' => 0,
+                'login_locked_until' => null,
             ]
         );
     }
