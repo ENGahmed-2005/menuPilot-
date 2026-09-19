@@ -11,6 +11,12 @@ const plans = [
 
 const inputClass = "w-full rounded-2xl border border-[#4B5147]/20 bg-white px-4 py-3.5 text-sm text-[#1F2420] outline-none transition placeholder:text-[#4B5147]/45 focus:border-[#EEA122] focus:ring-4 focus:ring-[#EEA122]/10";
 
+const Logo = ({ className = "h-10" }) => (
+  <span className="brand-logo-surface inline-flex shrink-0 items-center">
+    <img src="/menuPilot-logo.svg" alt="menuPilot" className={`brand-logo ${className} w-auto`} />
+  </span>
+);
+
 export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -78,9 +84,8 @@ export default function Register() {
         <aside className="relative hidden overflow-hidden bg-[#1F2420] p-10 text-[#F3EFE5] lg:flex lg:flex-col lg:justify-between xl:p-14">
           <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[#EEA122]/10 blur-3xl" />
           <div className="absolute -bottom-32 -right-20 h-80 w-80 rounded-full bg-[#5B7A52]/10 blur-3xl" />
-          <Link to="/" className="relative z-10 flex w-fit items-center gap-3 text-xl font-black no-underline text-[#F3EFE5]" dir="ltr">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEA122] text-[#1F2420]">m</span>
-            menuPilot
+          <Link to="/" className="relative z-10 flex w-fit items-center no-underline" dir="ltr">
+            <Logo />
           </Link>
           <div className="relative z-10 max-w-md">
             <span className="mb-5 inline-flex rounded-full border border-[#EEA122]/30 bg-[#EEA122]/10 px-3 py-1 text-xs font-bold text-[#EEA122]">ابدأ الآن</span>
@@ -98,7 +103,9 @@ export default function Register() {
         <section className="flex min-h-screen items-start justify-center px-4 py-6 sm:px-8 sm:py-10">
           <div className="w-full max-w-2xl">
             <div className="mb-7 flex items-center justify-between">
-              <Link to="/" className="text-lg font-black text-[#1F2420] no-underline lg:hidden" dir="ltr">menuPilot</Link>
+              <Link to="/" className="lg:hidden" dir="ltr" aria-label="menuPilot">
+                <Logo className="h-9" />
+              </Link>
               <Link to="/login" className="flex items-center gap-2 text-sm font-bold text-[#4B5147] transition hover:text-[#E67E22]">لديك حساب؟ تسجيل الدخول <ArrowLeft size={16} /></Link>
             </div>
 
