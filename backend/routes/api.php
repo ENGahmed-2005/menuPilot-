@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OwnerReportsController;
 use App\Http\Controllers\PaymentController;
@@ -41,6 +42,7 @@ Route::post('public/sessions/{id}/bill-request', [BillingController::class, 'req
 Route::middleware('api.auth')->group(function () {
     Route::middleware('role:manager')->group(function () {
         Route::apiResource('menu-items', MenuController::class)->except(['show', 'create']);
+        Route::apiResource('menu-categories', MenuCategoryController::class)->except(['show', 'create']);
         Route::apiResource('tables', TableController::class)->except(['show', 'create']);
         Route::get('tables/{id}/qr', [TableController::class, 'qr']);
         Route::apiResource('staff', StaffController::class)->except(['show', 'create']);
