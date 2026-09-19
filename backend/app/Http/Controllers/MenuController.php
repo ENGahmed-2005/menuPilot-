@@ -195,7 +195,7 @@ class MenuController extends Controller
     {
         $t = DB::table('restaurant_tables')->where('table_code', $code)->first();
         if (! $t) {
-            return response()->json(['message' => 'Invalid table code'], 404);
+            return response()->json(['message' => 'This QR code is invalid or no longer active. Please ask a staff member for help.'], 404);
         }
 
         $owner = DB::table('users')->where('id', $t->user_id)->first();
