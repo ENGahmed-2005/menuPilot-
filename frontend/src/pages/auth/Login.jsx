@@ -111,18 +111,6 @@ export default function Login() {
               </form>
             </div>
 
-            {/* بيانات وهمية للاختبار فقط — راجع src/api/mockServer.js. */}
-            <div className="mt-5 rounded-2xl border border-[#EEA122]/20 bg-[#EEA122]/5 p-4 text-xs leading-relaxed text-[#4B5147]">
-              <strong className="mb-1.5 block text-[#1F2420]">حسابات تجريبية (بيانات وهمية)</strong>
-              <div className="grid gap-1">
-                <span>owner@menupilot.test <span className="text-[#4B5147]/50">— باقة Premium</span></span>
-                <span>owner.pro@menupilot.test <span className="text-[#4B5147]/50">— باقة Pro</span></span>
-                <span>owner.basic@menupilot.test <span className="text-[#4B5147]/50">— باقة Basic</span></span>
-                <span>kitchen@ / cashier@ / waiter@menupilot.test</span>
-                <span>admin@menupilot.test <span className="text-[#4B5147]/50">— لوحة مسؤول المنصة</span></span>
-              </div>
-              كلمة المرور للجميع: <strong className="text-[#1F2420]">password123</strong>
-            </div>
           </div>
         </section>
       </div>
