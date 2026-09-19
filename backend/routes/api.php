@@ -26,6 +26,8 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
+// SRS-compatible public QR menu endpoint. Alias of the table-code menu route.
+Route::get('menu/{table_token}', [MenuController::class, 'publicMenu']);
 Route::post('public/tables/{code}/sessions', [SessionController::class, 'open']);
 Route::get('public/sessions/{id}', [SessionController::class, 'show']);
 Route::patch('public/sessions/{id}/customer', [SessionController::class, 'updateCustomer']);
