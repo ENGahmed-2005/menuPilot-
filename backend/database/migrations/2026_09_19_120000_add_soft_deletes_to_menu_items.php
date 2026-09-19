@@ -8,15 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('menu_items', function (Blueprint $table) {
-            $table->timestamp('deleted_at')->nullable()->index()->after('updated_at');
-        });
+        if (!Schema::hasColumn('menu_items', 'deleted_at')) {
+            Schema::table('menu_items', function (Blueprint $table) {
+                $table->timestamp('deleted_at')->nullable()->index();
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('menu_items', function (Blueprint $table) {
-            $table->dropColumn('deleted_at');
-        });
+        if (Schema::hasColumn('menu_items', 'deleted_at')) {
+            Schema::table('menu_items', function (Blueprint $table) {
+                $table->dropColumn('deleted_at');
+            });
+        }
     }
 };
