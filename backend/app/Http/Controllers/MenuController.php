@@ -28,7 +28,7 @@ class MenuController extends Controller
 
     private function q(Request $r)
     {
-        return DB::table('menu_items')->where('user_id', $this->restaurantId($r));
+        return DB::table('menu_items')->where('user_id', $this->restaurantId($r))->whereNull('deleted_at');
     }
 
     /**
@@ -104,7 +104,7 @@ class MenuController extends Controller
     {
         $v = $r->validate([
             'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
+            'price' => 'required|numeric|gt:0',
             'category' => 'nullable|string',
             'description' => 'nullable|string',
             'imageUrl' => 'nullable|string',
@@ -140,7 +140,7 @@ class MenuController extends Controller
 
         $v = $r->validate([
             'name' => 'sometimes|required|string|max:255',
-            'price' => 'sometimes|required|numeric|min:0',
+            'price' => 'sometimes|required|numeric|gt:0',
             'category' => 'nullable|string',
             'description' => 'nullable|string',
             'imageUrl' => 'nullable|string',
@@ -180,8 +180,13 @@ class MenuController extends Controller
             return response()->json(['message' => 'Menu item not found'], 404);
         }
 
-        $this->deleteStoredImage($item->image_url);
-        $this->q($r)->where('id', $id)->delete();
+        // Soft-delete the item so historical order_items keep their menu_item_id.
+        // The item is automatically excluded from owner/public menu queries by q()/whereNull(deleted_at).
+        DB::table('menu_items')->where('id', $id)->update([
+            'is_available' => false,
+            'deleted_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         return $this->out(['message' => 'Deleted']);
     }
@@ -197,6 +202,7 @@ class MenuController extends Controller
         $branding = RestaurantSetting::where('user_id', $t->user_id)->first();
         $items = DB::table('menu_items')
             ->where('user_id', $t->user_id)
+            ->whereNull('deleted_at')
             ->where('is_available', true)
             ->orderBy('category')
             ->orderBy('name')
