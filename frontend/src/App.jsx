@@ -9,7 +9,6 @@ import LoadingScreen from "./components/loading/LoadingScreen";
 
 const LOGTO_ENDPOINT = import.meta.env.VITE_LOGTO_ENDPOINT || "https://mxodny.logto.app/";
 const LOGTO_APP_ID = import.meta.env.VITE_LOGTO_APP_ID || "6cdahvzsdobmzftwzlbrd";
-const LOGTO_API_RESOURCE = import.meta.env.VITE_LOGTO_API_RESOURCE || "https://api.menupilot.local";
 
 const logtoConfig = {
   endpoint: LOGTO_ENDPOINT,
