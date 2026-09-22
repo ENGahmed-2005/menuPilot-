@@ -24,7 +24,6 @@ return [
 
     'logto' => [
         'userinfo_uri' => env('LOGTO_USERINFO_URI', 'https://mxodny.logto.app/oidc/me'),
-        'app_id' => env('LOGTO_APP_ID', '6cdahvzsdobmzftwzlbrd'),
     ],
 
     'ses' => [
