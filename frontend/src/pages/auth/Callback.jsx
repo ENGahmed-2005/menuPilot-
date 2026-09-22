@@ -5,12 +5,12 @@ import { bootstrap } from "../../api/auth";
 import { getRoleHome } from "../../utils/roleHome";
 
 export default function Callback(){
-  const navigate=useNavigate(); const {getIdTokenClaims,getAccessToken}=useLogto(); const [error,setError]=useState("");
+  const navigate=useNavigate(); const {getAccessToken}=useLogto(); const [error,setError]=useState("");
   const {isLoading}=useHandleSignInCallback(async()=>{
     try{
-      const claims=await getIdTokenClaims(); const accessToken=await getAccessToken(API_RESOURCE);
+      const accessToken=await getAccessToken();
       const pending=JSON.parse(sessionStorage.getItem("menupilot_pending_signup")||"null");
-      const data=await bootstrap({id_token:claims?.__raw,access_token:accessToken,restaurant_name:pending?.restaurantName||claims?.name||"مطعمي",restaurant_type:pending?.restaurantType||null,plan:pending?.plan||"trial"});
+      const data=await bootstrap({access_token:accessToken,restaurant_name:pending?.restaurantName||"مطعمي",restaurant_type:pending?.restaurantType||null,plan:pending?.plan||"trial"});
       sessionStorage.removeItem("menupilot_pending_signup");
       const returnTo=sessionStorage.getItem("menupilot_login_return"); sessionStorage.removeItem("menupilot_login_return");
       navigate(returnTo||getRoleHome(data?.user?.role),{replace:true});
