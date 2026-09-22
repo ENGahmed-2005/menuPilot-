@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
         const pending = JSON.parse(sessionStorage.getItem(PENDING_KEY) || "null");
 
         const data = await bootstrap({
-          id_token: claims?.__raw,
+          id_claims: claims,
           access_token: accessToken,
           restaurant_name: pending?.restaurantName || claims?.name || "مطعمي",
           restaurant_type: pending?.restaurantType || null,
