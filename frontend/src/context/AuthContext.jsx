@@ -4,7 +4,6 @@ import { bootstrap } from "../api/auth";
 import { setAccessTokenGetter } from "../api/client";
 
 const AuthContext = createContext(null);
-const API_RESOURCE = import.meta.env.VITE_LOGTO_API_RESOURCE || "https://api.menupilot.local";
 const PENDING_KEY = "menupilot_pending_signup";
 
 export function AuthProvider({ children }) {
@@ -13,7 +12,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setAccessTokenGetter(isAuthenticated ? () => getAccessToken(API_RESOURCE) : null);
+    setAccessTokenGetter(isAuthenticated ? () => getAccessToken() : null);
     return () => setAccessTokenGetter(null);
   }, [getAccessToken, isAuthenticated]);
 
@@ -34,11 +33,11 @@ export function AuthProvider({ children }) {
       setLoading(true);
       try {
         const claims = await getIdTokenClaims();
-        const accessToken = await getAccessToken(API_RESOURCE);
+        const accessToken = await getAccessToken();
         const pending = JSON.parse(sessionStorage.getItem(PENDING_KEY) || "null");
 
         const data = await bootstrap({
-          id_claims: claims,
+          
           access_token: accessToken,
           restaurant_name: pending?.restaurantName || claims?.name || "مطعمي",
           restaurant_type: pending?.restaurantType || null,
