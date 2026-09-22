@@ -22,7 +22,7 @@ async function consumeStream(url, onSessions, signal) {
       const eventName = block.match(/^event:\s*(.+)$/m)?.[1]?.trim();
       const data = block.match(/^data:\s*(.+)$/m)?.[1]?.trim();
       if (eventName === "sessions" && data) {
-        try { onSessions(JSON.parse(data)); } catch { /* ignore malformed event */ }
+        try { onSessions(JSON.parse(data).map((s) => ({ ...s, tableLabel: s.tableLabel ?? s.table_label ?? "", customerName: s.customerName ?? s.customer_name ?? "", assistanceRequested: Boolean(s.assistanceRequested ?? s.assistance_requested) }))); } catch { /* ignore malformed event */ }
       }
     }
   }
