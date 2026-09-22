@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
         const data = await bootstrap({
           
           access_token: accessToken,
-          restaurant_name: pending?.restaurantName || claims?.name || "مطعمي",
+          restaurant_name: pending?.restaurantName || "مطعمي",
           restaurant_type: pending?.restaurantType || null,
           plan: pending?.plan || "trial",
         });
@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [getAccessToken, getIdTokenClaims, isAuthenticated, logtoLoading]);
+  }, [getAccessToken, isAuthenticated, logtoLoading]);
 
   async function login(options = {}) {
     if (options.returnTo) sessionStorage.setItem("menupilot_login_return", options.returnTo); else sessionStorage.removeItem("menupilot_login_return");
