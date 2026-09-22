@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
   }, [getAccessToken, getIdTokenClaims, isAuthenticated, logtoLoading]);
 
   async function login(options = {}) {
-    sessionStorage.setItem("menupilot_login_return", options.returnTo || window.location.pathname);
+    if (options.returnTo) sessionStorage.setItem("menupilot_login_return", options.returnTo); else sessionStorage.removeItem("menupilot_login_return");
     await signIn({
       redirectUri: `${window.location.origin}/callback`,
       firstScreen: "sign_in",
