@@ -16,17 +16,12 @@ use App\Http\Controllers\TableController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('reset-password', [AuthController::class, 'resetPassword']);
-    Route::get('verification-status', [AuthController::class, 'verifyStatus']);
-    Route::post('verification/send', [AuthController::class, 'sendVerificationCode']);
-    Route::post('verification/check', [AuthController::class, 'verifyCode']);
+    Route::post('bootstrap', [AuthController::class, 'bootstrap']);
     Route::middleware('api.auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
     });
+});
 });
 
 Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
