@@ -1,69 +1,633 @@
-import { Link } from "react-router-dom";
-import { Activity, AlertTriangle, ArrowUpLeft, BarChart3, Building2, CheckCircle2, ClipboardList, Clock3, CreditCard, DollarSign, QrCode, Users, UtensilsCrossed } from "lucide-react";
-import Card from "../../components/dashboard/Card";
+import { useMemo, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  Activity,
+  BarChart3,
+  Bell,
+  Building2,
+  Check,
+  ChevronDown,
+  CircleDollarSign,
+  FileText,
+  LayoutDashboard,
+  Menu,
+  Pencil,
+  Plus,
+  Search,
+  Settings,
+  Store,
+  ToggleLeft,
+  ToggleRight,
+  Users,
+  X,
+} from "lucide-react";
+import "./AdminDashboard.css";
 
-// Mock data for the frontend MVP. It mirrors the entities and flows defined in menuPilot SRS.
-const restaurants = [
-  { id: 1, name: "مطعم الذوق", owner: "محمد أحمد", plan: "Premium", status: "نشط", tables: 18, activeSessions: 6, orders: 24 },
-  { id: 2, name: "Burger House", owner: "سارة خالد", plan: "Pro", status: "نشط", tables: 12, activeSessions: 4, orders: 18 },
-  { id: 3, name: "Italian Corner", owner: "أحمد سمير", plan: "Basic", status: "موقوف", tables: 8, activeSessions: 0, orders: 7 },
-  { id: 4, name: "Café Bloom", owner: "ليان يوسف", plan: "Pro", status: "نشط", tables: 15, activeSessions: 7, orders: 31 },
+const menuItems = [
+  { label: "لوحة التحكم", icon: LayoutDashboard, to: "/admin/dashboard" },
+  { label: "المطاعم", icon: Store, to: "/admin/restaurants" },
+  { label: "المستخدمون", icon: Users, to: "/admin/owners" },
+  { label: "الاشتراكات", icon: FileText, to: "/admin/subscriptions" },
+  { label: "التقارير والأرباح", icon: BarChart3, to: "/admin/reports" },
 ];
 
-const recentOrders = [
-  { no: "#1048", restaurant: "مطعم الذوق", table: "T-07", status: "Preparing", amount: 86, time: "منذ دقيقتين" },
-  { no: "#1047", restaurant: "Café Bloom", table: "T-03", status: "Ready", amount: 42, time: "منذ 6 دقائق" },
-  { no: "#1046", restaurant: "Burger House", table: "T-11", status: "Pending", amount: 57, time: "منذ 9 دقائق" },
-  { no: "#1045", restaurant: "مطعم الذوق", table: "T-02", status: "Served", amount: 113, time: "منذ 14 دقيقة" },
+const initialRestaurants = [
+  {
+    id: 1,
+    name: "مطعم الشذا",
+    owner: "أحمد محمود",
+    plan: "Pro",
+    tables: 12,
+    revenue: 12450,
+    active: true,
+  },
+  {
+    id: 2,
+    name: "كافيه البسمة",
+    owner: "سارة خالد",
+    plan: "Standard",
+    tables: 8,
+    revenue: 6200,
+    active: true,
+  },
+  {
+    id: 3,
+    name: "مطعم دمشق الأصيل",
+    owner: "محمود علي",
+    plan: "Enterprise",
+    tables: 20,
+    revenue: 0,
+    active: false,
+  },
 ];
 
-const salesTrend = [38, 52, 44, 68, 59, 81, 74];
-const statusLabel = { Pending: "قيد الانتظار", Preparing: "قيد التحضير", Ready: "جاهز", Served: "تم التقديم" };
-const statusClass = { Pending: "bg-amber-100 text-amber-700", Preparing: "bg-blue-100 text-blue-700", Ready: "bg-green-100 text-green-700", Served: "bg-ink/10 text-ink-soft" };
+function money(value) {
+  return `${new Intl.NumberFormat("ar-SA").format(
+    Number(value || 0)
+  )} ر.س`;
+}
 
-function StatCard({ icon: Icon, label, value, hint }) {
-  return <Card className="p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-ink-soft/60">{label}</p><strong className="mt-2 block text-3xl font-black">{value}</strong><p className="mt-2 text-xs text-ink-soft/50">{hint}</p></div><span className="grid h-12 w-12 place-items-center rounded-2xl bg-copper/10 text-copper"><Icon size={21}/></span></div></Card>;
+function StatCard({ title, value, icon: Icon, color }) {
+  return (
+    <div className="admin-stat-card">
+      <div className={`admin-stat-icon ${color}`}>
+        <Icon size={22} />
+      </div>
+
+      <div>
+        <p>{title}</p>
+        <strong>{value}</strong>
+        <small>محدث هذا الشهر</small>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminDashboard() {
-  const activeRestaurants = restaurants.filter(r => r.status === "نشط").length;
-  const activeSessions = restaurants.reduce((sum, r) => sum + r.activeSessions, 0);
-  const totalOrders = restaurants.reduce((sum, r) => sum + r.orders, 0);
-  const revenue = recentOrders.reduce((sum, order) => sum + order.amount, 0) + 624;
+  const navigate = useNavigate();
 
-  return <div dir="rtl" className="space-y-6">
-    <header className="relative overflow-hidden rounded-3xl bg-ink p-7 text-paper sm:p-8">
-      <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-copper/10 blur-3xl"/>
-      <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-        <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-copper">Platform control center</p><h1 className="mt-3 text-3xl font-black sm:text-4xl">مركز إدارة menuPilot</h1><p className="mt-3 max-w-2xl text-sm leading-7 text-paper/60">نظرة تشغيلية موحدة على المطاعم، جلسات الطعام، الطلبات، وحركة المبيعات في المنصة.</p></div>
-        <div className="flex flex-wrap gap-2"><Link to="/admin/restaurants" className="rounded-xl bg-copper px-4 py-2.5 text-sm font-black text-ink">إدارة المطاعم</Link><Link to="/admin/owners" className="rounded-xl border border-paper/15 px-4 py-2.5 text-sm font-bold text-paper hover:bg-paper/10">أصحاب المطاعم</Link></div>
-      </div>
-    </header>
+  const [restaurants, setRestaurants] = useState(initialRestaurants);
+  const [search, setSearch] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
 
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard icon={Building2} label="المطاعم المسجلة" value={restaurants.length} hint={`${activeRestaurants} مطاعم نشطة حاليًا`}/>
-      <StatCard icon={Users} label="الجلسات النشطة" value={activeSessions} hint="Dining Sessions مفتوحة"/>
-      <StatCard icon={ClipboardList} label="طلبات اليوم" value={totalOrders} hint="طلبات حالية وتجريبية"/>
-      <StatCard icon={DollarSign} label="المبيعات التجريبية" value={`₪${revenue}`} hint="مؤشر الإيرادات الحالي"/>
-    </section>
+  const [form, setForm] = useState({
+    name: "",
+    owner: "",
+    plan: "Pro",
+    tables: 10,
+    revenue: 0,
+  });
 
-    <section className="grid gap-6 xl:grid-cols-3">
-      <Card className="xl:col-span-2 p-5 sm:p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-black">اتجاه المبيعات</h2><p className="mt-1 text-xs text-ink-soft/55">حجم الطلبات والإيرادات خلال آخر 7 أيام — متطلب FR-40.</p></div><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><BarChart3 size={20}/></span></div><div className="mt-8 flex h-52 items-end justify-between gap-3">{salesTrend.map((value, index) => <div key={index} className="flex h-full flex-1 flex-col items-center justify-end gap-2"><div className="w-full rounded-t-xl bg-copper/20 px-1 transition hover:bg-copper/40" style={{height: `${value}%`}}><div className="h-full rounded-t-xl bg-copper"/></div><span className="text-[10px] text-ink-soft/50">{["سبت","أحد","اثنين","ثلاثاء","أربعاء","خميس","جمعة"][index]}</span></div>)}</div><div className="mt-4 flex items-center gap-4 border-t border-ink/8 pt-4 text-xs text-ink-soft/60"><span className="flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-copper"/>نشاط المبيعات</span><span className="flex items-center gap-2"><ArrowUpLeft size={14} className="text-green-600"/>+18% مقارنة بالفترة السابقة</span></div></Card>
-      <Card className="p-5 sm:p-6"><div className="flex items-center justify-between"><div><h2 className="text-lg font-black">حالة التشغيل</h2><p className="mt-1 text-xs text-ink-soft/55">متابعة التدفقات الأساسية.</p></div><Activity className="text-copper"/></div><div className="mt-6 space-y-4">{[["طلبات قيد الانتظار",5,"Pending"],["قيد التحضير",8,"Preparing"],["جاهزة للتقديم",4,"Ready"],["طلبات مكتملة",21,"Served"]].map(([label,value,status])=><div key={status}><div className="mb-2 flex justify-between text-sm"><span>{label}</span><b>{value}</b></div><div className="h-2 overflow-hidden rounded-full bg-ink/7"><div className={`h-full rounded-full ${status === "Ready" ? "bg-green-500" : status === "Preparing" ? "bg-blue-500" : status === "Pending" ? "bg-amber-500" : "bg-ink/40"}`} style={{width:`${Math.min(100, Number(value)*4)}%`}}/></div></div>)}</div></Card>
-    </section>
+  const filteredRestaurants = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-    <section className="grid gap-6 xl:grid-cols-3">
-      <Card className="xl:col-span-2 overflow-hidden"><div className="flex items-center justify-between border-b border-ink/10 px-5 py-5"><div><h2 className="font-black">أحدث الطلبات</h2><p className="mt-1 text-xs text-ink-soft/55">عرض تشغيلي للطلبات الحالية والسابقة وفق FR-21.</p></div><ClipboardList className="text-copper" size={20}/></div><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-right text-sm"><thead className="bg-ink/[.03] text-xs text-ink-soft/60"><tr><th className="px-5 py-3">الطلب</th><th>المطعم</th><th>الطاولة</th><th>الحالة</th><th>القيمة</th><th className="px-5">الوقت</th></tr></thead><tbody className="divide-y divide-ink/8">{recentOrders.map(order=><tr key={order.no}><td className="px-5 py-4 font-black">{order.no}</td><td className="py-4">{order.restaurant}</td><td className="py-4">{order.table}</td><td className="py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass[order.status]}`}>{statusLabel[order.status]}</span></td><td className="py-4 font-bold">₪{order.amount}</td><td className="px-5 py-4 text-xs text-ink-soft/55">{order.time}</td></tr>)}</tbody></table></div></Card>
-      <Card className="p-5"><h2 className="font-black">تنبيهات المنصة</h2><div className="mt-5 space-y-3"><div className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><div className="flex gap-3"><AlertTriangle className="shrink-0 text-amber-600" size={19}/><div><b className="text-sm">مطعم يحتاج متابعة</b><p className="mt-1 text-xs leading-5 text-ink-soft/65">Italian Corner موقوف حاليًا ولا توجد جلسات نشطة.</p></div></div></div><div className="rounded-2xl border border-green-200 bg-green-50 p-4"><div className="flex gap-3"><CheckCircle2 className="shrink-0 text-green-600" size={19}/><div><b className="text-sm">تدفق الطلبات طبيعي</b><p className="mt-1 text-xs leading-5 text-ink-soft/65">لا توجد طلبات تجريبية تجاوزت وقت التحضير المتوقع.</p></div></div></div></div></Card>
-    </section>
+    if (!query) {
+      return restaurants;
+    }
 
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <Link to="/admin/restaurants" className="group rounded-2xl border border-ink/10 bg-paper p-5 transition hover:-translate-y-1 hover:border-copper/40"><Building2 className="text-copper"/><h3 className="mt-4 font-black">إدارة المطاعم</h3><p className="mt-2 text-xs leading-6 text-ink-soft/55">إضافة وتعديل وحالة المطاعم.</p></Link>
-      <Link to="/admin/owners" className="group rounded-2xl border border-ink/10 bg-paper p-5 transition hover:-translate-y-1 hover:border-copper/40"><Users className="text-copper"/><h3 className="mt-4 font-black">أصحاب المطاعم</h3><p className="mt-2 text-xs leading-6 text-ink-soft/55">إدارة حسابات الملاك وربطها بالمطاعم.</p></Link>
-      <div className="rounded-2xl border border-ink/10 bg-paper p-5"><QrCode className="text-copper"/><h3 className="mt-4 font-black">الجلسات والطاولات</h3><p className="mt-2 text-xs leading-6 text-ink-soft/55">متابعة QR والجلسات النشطة وحالة الطاولات.</p></div>
-      <div className="rounded-2xl border border-ink/10 bg-paper p-5"><CreditCard className="text-copper"/><h3 className="mt-4 font-black">المدفوعات</h3><p className="mt-2 text-xs leading-6 text-ink-soft/55">عرض المدفوعات وطرق الدفع وسجل الإغلاق.</p></div>
-    </section>
+    return restaurants.filter((restaurant) =>
+      `${restaurant.name} ${restaurant.owner} ${restaurant.plan}`
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [restaurants, search]);
 
-    <section className="grid gap-4 lg:grid-cols-3"><Card className="p-5"><div className="flex items-center gap-3"><Clock3 className="text-copper"/><div><h3 className="font-black">الجلسات النشطة</h3><p className="text-xs text-ink-soft/55">من QR إلى إغلاق الجلسة.</p></div></div><b className="mt-5 block text-3xl">{activeSessions}</b></Card><Card className="p-5"><div className="flex items-center gap-3"><UtensilsCrossed className="text-copper"/><div><h3 className="font-black">المطابخ النشطة</h3><p className="text-xs text-ink-soft/55">استقبال الطلبات وتحديث الحالة.</p></div></div><b className="mt-5 block text-3xl">{activeRestaurants}</b></Card><Card className="p-5"><div className="flex items-center gap-3"><Activity className="text-copper"/><div><h3 className="font-black">حالة المنصة</h3><p className="text-xs text-ink-soft/55">واجهة تجريبية للمراقبة التشغيلية.</p></div></div><b className="mt-5 block text-3xl text-green-600">Online</b></Card></section>
-  </div>;
+  const activeRestaurants = restaurants.filter(
+    (restaurant) => restaurant.active
+  ).length;
+
+  const totalTables = restaurants.reduce(
+    (sum, restaurant) => sum + Number(restaurant.tables || 0),
+    0
+  );
+
+  const totalRevenue = restaurants.reduce(
+    (sum, restaurant) => sum + Number(restaurant.revenue || 0),
+    0
+  );
+
+  function openAddModal() {
+    setEditing(null);
+    setForm({
+      name: "",
+      owner: "",
+      plan: "Pro",
+      tables: 10,
+      revenue: 0,
+    });
+    setModalOpen(true);
+  }
+
+  function openEditModal(restaurant) {
+    setEditing(restaurant);
+    setForm({
+      name: restaurant.name,
+      owner: restaurant.owner,
+      plan: restaurant.plan,
+      tables: restaurant.tables,
+      revenue: restaurant.revenue,
+    });
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditing(null);
+  }
+
+  function saveRestaurant(event) {
+    event.preventDefault();
+
+    if (!form.name.trim() || !form.owner.trim()) {
+      window.alert("يرجى إدخال اسم المطعم واسم المالك");
+      return;
+    }
+
+    const restaurantData = {
+      name: form.name.trim(),
+      owner: form.owner.trim(),
+      plan: form.plan,
+      tables: Number(form.tables),
+      revenue: Number(form.revenue),
+    };
+
+    if (editing) {
+      setRestaurants((current) =>
+        current.map((restaurant) =>
+          restaurant.id === editing.id
+            ? { ...restaurant, ...restaurantData }
+            : restaurant
+        )
+      );
+    } else {
+      setRestaurants((current) => [
+        ...current,
+        {
+          id: Date.now(),
+          ...restaurantData,
+          active: true,
+        },
+      ]);
+    }
+
+    closeModal();
+  }
+
+  function toggleRestaurant(id) {
+    setRestaurants((current) =>
+      current.map((restaurant) =>
+        restaurant.id === id
+          ? { ...restaurant, active: !restaurant.active }
+          : restaurant
+      )
+    );
+  }
+
+  return (
+    <div className="admin-dashboard" dir="rtl">
+      <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
+        <div className="admin-brand">
+          <div className="admin-logo">m</div>
+
+          <div>
+            <strong>
+              menu<span>Pilot</span>
+            </strong>
+            <small>نظام إدارة المطاعم</small>
+          </div>
+
+          <button
+            type="button"
+            className="admin-sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="إغلاق القائمة"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <p className="admin-menu-title">القائمة الرئيسية</p>
+
+        <nav className="admin-nav">
+          {menuItems.map(({ label, icon: Icon, to }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `admin-nav-item ${isActive ? "selected" : ""}`
+              }
+            >
+              <Icon size={19} />
+              <span>{label}</span>
+
+              {label === "المطاعم" && <em>{restaurants.length}</em>}
+            </NavLink>
+          ))}
+        </nav>
+
+        <p className="admin-menu-title admin-account-title">
+          إدارة الحساب
+        </p>
+
+        <nav className="admin-nav">
+          <button
+            type="button"
+            className="admin-nav-item"
+            onClick={() => navigate("/admin/settings")}
+          >
+            <Settings size={19} />
+            <span>الإعدادات</span>
+          </button>
+
+          <button
+            type="button"
+            className="admin-nav-item"
+            onClick={() => navigate("/admin/notifications")}
+          >
+            <Bell size={19} />
+            <span>الإشعارات</span>
+          </button>
+        </nav>
+
+        <div className="admin-user-box">
+          <div className="admin-user-avatar">م</div>
+
+          <div>
+            <strong>محمد المدير</strong>
+            <small>مدير النظام</small>
+          </div>
+
+          <ChevronDown size={16} />
+        </div>
+
+        <button type="button" className="admin-logout">
+          تسجيل الخروج
+        </button>
+      </aside>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="admin-overlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="إغلاق القائمة"
+        />
+      )}
+
+      <main className="admin-main">
+        <header className="admin-topbar">
+          <button
+            type="button"
+            className="admin-mobile-menu"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="فتح القائمة"
+          >
+            <Menu size={22} />
+          </button>
+
+          <div className="admin-breadcrumb">
+            الرئيسية <span>/</span> <b>لوحة التحكم</b>
+          </div>
+
+          <div className="admin-date">
+            <Bell size={17} />
+            لوحة الإدارة
+          </div>
+        </header>
+
+        <div className="admin-content">
+          <section className="admin-heading">
+            <div>
+              <p className="admin-overline">
+                <Activity size={14} />
+                نظرة عامة لحظية
+              </p>
+
+              <h1>لوحة تحكم المسؤول العام</h1>
+
+              <p>إدارة المطاعم والاشتراكات والأرباح من مكان واحد.</p>
+            </div>
+
+            <button
+              type="button"
+              className="admin-primary-button"
+              onClick={openAddModal}
+            >
+              <Plus size={18} />
+              إضافة مطعم جديد
+            </button>
+          </section>
+
+          <section className="admin-stats-grid">
+            <StatCard
+              title="إجمالي المطاعم"
+              value={restaurants.length}
+              icon={Building2}
+              color="orange"
+            />
+
+            <StatCard
+              title="المطاعم النشطة"
+              value={activeRestaurants}
+              icon={Store}
+              color="blue"
+            />
+
+            <StatCard
+              title="إجمالي الأرباح"
+              value={money(totalRevenue)}
+              icon={CircleDollarSign}
+              color="green"
+            />
+
+            <StatCard
+              title="الجلسات النشطة حاليًا"
+              value={totalTables}
+              icon={Users}
+              color="purple"
+            />
+          </section>
+
+          <section className="admin-table-card">
+            <div className="admin-table-heading">
+              <div>
+                <p>إدارة الحسابات</p>
+                <h2>قائمة المطاعم المسجلة</h2>
+              </div>
+
+              <span className="admin-live">
+                <i />
+                البيانات محدثة الآن
+              </span>
+            </div>
+
+            <div className="admin-toolbar">
+              <div className="admin-search">
+                <Search size={18} />
+
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="ابحث باسم المطعم أو المالك..."
+                />
+
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    aria-label="مسح البحث"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+
+              <span>
+                عرض {filteredRestaurants.length} من {restaurants.length} مطاعم
+              </span>
+            </div>
+
+            <div className="admin-table-wrapper">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>اسم المطعم</th>
+                    <th>المالك</th>
+                    <th>الباقة</th>
+                    <th>عدد الطاولات</th>
+                    <th>إجمالي الأرباح</th>
+                    <th>الحالة</th>
+                    <th>إجراءات التحكم</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredRestaurants.map((restaurant) => (
+                    <tr key={restaurant.id}>
+                      <td>
+                        <strong>{restaurant.name}</strong>
+                      </td>
+
+                      <td>{restaurant.owner}</td>
+
+                      <td>
+                        <span className="admin-plan">
+                          {restaurant.plan}
+                        </span>
+                      </td>
+
+                      <td>{restaurant.tables} طاولات</td>
+
+                      <td className="admin-revenue">
+                        {money(restaurant.revenue)}
+                      </td>
+
+                      <td>
+                        <span
+                          className={`admin-status ${
+                            restaurant.active ? "active" : "inactive"
+                          }`}
+                        >
+                          <i />
+                          {restaurant.active ? "نشط" : "قيد الإيقاف"}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div className="admin-actions">
+                          <button
+                            type="button"
+                            className="admin-edit"
+                            onClick={() => openEditModal(restaurant)}
+                          >
+                            <Pencil size={14} />
+                            تعديل
+                          </button>
+
+                          <button
+                            type="button"
+                            className={
+                              restaurant.active
+                                ? "admin-disable"
+                                : "admin-enable"
+                            }
+                            onClick={() =>
+                              toggleRestaurant(restaurant.id)
+                            }
+                          >
+                            {restaurant.active ? (
+                              <ToggleLeft size={15} />
+                            ) : (
+                              <ToggleRight size={15} />
+                            )}
+
+                            {restaurant.active ? "تعطيل" : "تفعيل"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {filteredRestaurants.length === 0 && (
+                <div className="admin-empty">
+                  لا توجد نتائج مطابقة للبحث
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {modalOpen && (
+        <div
+          className="admin-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeModal();
+            }
+          }}
+        >
+          <div className="admin-modal">
+            <div className="admin-modal-header">
+              <div>
+                <small>إدارة المطاعم</small>
+
+                <h2>
+                  {editing ? "تعديل المطعم" : "إضافة مطعم جديد"}
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="إغلاق"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <form onSubmit={saveRestaurant}>
+              <label>
+                اسم المطعم
+
+                <input
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      name: event.target.value,
+                    })
+                  }
+                  placeholder="مثال: مطعم الشذا"
+                />
+              </label>
+
+              <label>
+                اسم المالك
+
+                <input
+                  value={form.owner}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      owner: event.target.value,
+                    })
+                  }
+                  placeholder="مثال: أحمد محمود"
+                />
+              </label>
+
+              <div className="admin-form-row">
+                <label>
+                  الباقة
+
+                  <select
+                    value={form.plan}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        plan: event.target.value,
+                      })
+                    }
+                  >
+                    <option>Pro</option>
+                    <option>Standard</option>
+                    <option>Enterprise</option>
+                  </select>
+                </label>
+
+                <label>
+                  عدد الطاولات
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.tables}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        tables: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+
+              <label>
+                الإيرادات الشهرية
+
+                <input
+                  type="number"
+                  min="0"
+                  value={form.revenue}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      revenue: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <div className="admin-modal-actions">
+                <button type="button" onClick={closeModal}>
+                  إلغاء
+                </button>
+
+                <button type="submit">
+                  <Check size={16} />
+                  حفظ المطعم
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
