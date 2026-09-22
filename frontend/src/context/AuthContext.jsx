@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
    *  بعد أي طلب PATCH بيرجّع نسخة محدّثة من user، زي تبديل الباقة أو حفظ
    *  الثيم، عشان الواجهة (Sidebar/DashboardShell...) تعكس التغيير فورًا. */
   function updateUser(patch) {
-    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+    setUser((prev) => (prev ? { ...prev, ...patch } : patch));
   }
 
   const value = {
