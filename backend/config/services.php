@@ -22,6 +22,13 @@ return [
         'key' => env('RESEND_API_KEY'),
     ],
 
+    'logto' => [
+        'issuer' => env('LOGTO_ISSUER', 'https://mxodny.logto.app/oidc'),
+        'jwks_uri' => env('LOGTO_JWKS_URI', 'https://mxodny.logto.app/oidc/jwks'),
+        'audience' => env('LOGTO_API_RESOURCE', 'https://api.menupilot.local'),
+        'app_id' => env('LOGTO_APP_ID', '6cdahvzsdobmzftwzlbrd'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
