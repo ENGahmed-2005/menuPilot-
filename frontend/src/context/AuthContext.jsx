@@ -7,7 +7,7 @@ const AuthContext = createContext(null);
 const PENDING_KEY = "menupilot_pending_signup";
 
 export function AuthProvider({ children }) {
-  const { isLoading: logtoLoading, isAuthenticated, getIdTokenClaims, getAccessToken, signIn, signOut } = useLogto();
+  const { isLoading: logtoLoading, isAuthenticated, getAccessToken, signIn, signOut } = useLogto();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,8 +32,7 @@ export function AuthProvider({ children }) {
 
       setLoading(true);
       try {
-        const claims = await getIdTokenClaims();
-        const accessToken = await getAccessToken();
+          const accessToken = await getAccessToken();
         const pending = JSON.parse(sessionStorage.getItem(PENDING_KEY) || "null");
 
         const data = await bootstrap({
