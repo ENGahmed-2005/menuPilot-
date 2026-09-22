@@ -4,8 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { bootstrap } from "../../api/auth";
 import { getRoleHome } from "../../utils/roleHome";
 
-const API_RESOURCE = import.meta.env.VITE_LOGTO_API_RESOURCE || "https://api.menupilot.local";
-
 export default function Callback(){
   const navigate=useNavigate(); const {getIdTokenClaims,getAccessToken}=useLogto(); const [error,setError]=useState("");
   const {isLoading}=useHandleSignInCallback(async()=>{
