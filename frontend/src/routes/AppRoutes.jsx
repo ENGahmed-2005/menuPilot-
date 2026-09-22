@@ -29,8 +29,12 @@ import TableStatus from "../pages/cashier/TableStatus";
 import SalesReports from "../pages/cashier/SalesReports";
 import TableSessions from "../pages/waiter/TableSessions";
 import AdminDashboard from "../pages/admin/AdminDashboard";
-import RestaurantsManagement from "../pages/admin/RestaurantsManagement";
+import AdminRestaurants from "../pages/admin/AdminRestaurants";
 import OwnersManagement from "../pages/admin/OwnersManagement";
+import AdminReports from "../pages/admin/AdminReports";
+import AdminLayout from "../pages/admin/AdminLayout";
+import AdminUsers from "../pages/admin/AdminUsers";
+import AdminSubscriptions from "../pages/admin/AdminSubscriptions";
 
 export default function AppRoutes() {
   return (
@@ -83,8 +87,13 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute allow={["admin"]} />}>
         <Route path="/admin/dashboard" element={<DashboardShell><AdminDashboard /></DashboardShell>} />
-        <Route path="/admin/restaurants" element={<DashboardShell><RestaurantsManagement /></DashboardShell>} />
+        <Route path="/admin/restaurants" element={<DashboardShell><AdminRestaurants /></DashboardShell>} />
         <Route path="/admin/owners" element={<DashboardShell><OwnersManagement /></DashboardShell>} />
+        <Route path="/admin/reports" element={<DashboardShell><AdminReports /></DashboardShell>} />
+        <Route element={<AdminLayout />}>
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+        </Route>
       </Route>
     </Routes>
   );

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, RefreshCw, Search, UserRound, X } from "lucide-react";
 import { api } from "../../api/client";
-import AdminPageShell from "../../components/layout/AdminPageShell";
+import AdminPageShell from "./AdminPageShell";
 
 const emptyForm = {
   name: "",
