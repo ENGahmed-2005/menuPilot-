@@ -25,7 +25,7 @@ export const getKitchenOrders = (params = {}) =>
 
 /** تحديث حالة الطلب: Pending → Preparing → Ready → Served. FR-19. */
 export const updateOrderStatus = (orderId, status) =>
-  api.patch(`/kitchen/orders/${orderId}/status`, { status });
+  api.patch(`/kitchen/orders/${orderId}/status`, { status: String(status).toLowerCase() });
 
 /**
  * إلغاء/تعديل صنف بعد إرساله للمطبخ — يتطلب سببًا إلزاميًا. FR-34.
