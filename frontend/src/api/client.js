@@ -1,28 +1,37 @@
-import { mockRequest } from './mockServer';
+import { mockRequest } from "./mockServer";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
-const TOKEN_KEY = 'menupilot_token';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+let accessTokenGetter = null;
+
+export function setAccessTokenGetter(getter) {
+  accessTokenGetter = typeof getter === "function" ? getter : null;
 }
 
-export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+export async function getToken() {
+  if (!accessTokenGetter) return null;
+  try {
+    return await accessTokenGetter();
+  } catch {
+    return null;
+  }
+}
+
+export async function setToken() {
+  // Logto owns authentication tokens. Kept as a no-op for legacy callers.
 }
 
 export async function request(path, options = {}) {
-  const token = getToken();
+  const token = await getToken();
 
   if (USE_MOCKS) {
-    return mockRequest(options.method || 'GET', path, options.body, token);
+    return mockRequest(options.method || "GET", path, options.body, token);
   }
 
   const headers = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
@@ -33,7 +42,7 @@ export async function request(path, options = {}) {
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  const isJson = response.headers.get('content-type')?.includes('application/json');
+  const isJson = response.headers.get("content-type")?.includes("application/json");
   const data = isJson ? await response.json().catch(() => null) : null;
 
   if (!response.ok) {
@@ -44,13 +53,13 @@ export async function request(path, options = {}) {
     throw error;
   }
 
-  return data && Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data;
+  return data && Object.prototype.hasOwnProperty.call(data, "data") ? data.data : data;
 }
 
 export const api = {
-  get: (p) => request(p, { method: 'GET' }),
-  post: (p, b) => request(p, { method: 'POST', body: b }),
-  put: (p, b) => request(p, { method: 'PUT', body: b }),
-  patch: (p, b) => request(p, { method: 'PATCH', body: b }),
-  delete: (p) => request(p, { method: 'DELETE' }),
+  get: (p) => request(p, { method: "GET" }),
+  post: (p, b) => request(p, { method: "POST", body: b }),
+  put: (p, b) => request(p, { method: "PUT", body: b }),
+  patch: (p, b) => request(p, { method: "PATCH", body: b }),
+  delete: (p) => request(p, { method: "DELETE" }),
 };
