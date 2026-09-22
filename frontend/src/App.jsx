@@ -1,15 +1,22 @@
-/* ========================================================================
-   App.jsx — المكوّن الأعلى في التطبيق
-   ------------------------------------------------------------------------
-   يجمع Providers ويجعل العربية RTL بشكل افتراضي على مستوى التطبيق كله.
-   ======================================================================== */
 import { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
+import { LogtoProvider, UserScope } from "@logto/react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext";
 import { CartProvider } from "./context/CartContext";
 import AppRoutes from "./routes/AppRoutes";
 import LoadingScreen from "./components/loading/LoadingScreen";
+
+const LOGTO_ENDPOINT = import.meta.env.VITE_LOGTO_ENDPOINT || "https://mxodny.logto.app/";
+const LOGTO_APP_ID = import.meta.env.VITE_LOGTO_APP_ID || "6cdahvzsdobmzftwzlbrd";
+const LOGTO_API_RESOURCE = import.meta.env.VITE_LOGTO_API_RESOURCE || "https://api.menupilot.local";
+
+const logtoConfig = {
+  endpoint: LOGTO_ENDPOINT,
+  appId: LOGTO_APP_ID,
+  scopes: [UserScope.Email],
+  resources: [LOGTO_API_RESOURCE],
+};
 
 function DirectionController() {
   const { lang, dir } = useLanguage();
@@ -22,9 +29,6 @@ function DirectionController() {
   return null;
 }
 
-/** بوابة قبل عرض التطبيق: لحد ما AuthContext يخلص من فحص التوكن المحفوظ
- *  (GET /auth/me)، نعرض شاشة التحميل بدل ما نسيب الراوتس تتقيّم بـ user=null
- *  وتحوّل أي صفحة محمية لصفحة الدخول لحظيًا حتى لو المستخدم عنده جلسة فعلية. */
 function AuthGate({ children }) {
   const { loading } = useAuth();
   if (loading) return <LoadingScreen />;
@@ -34,16 +38,18 @@ function AuthGate({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AuthGate>
-          <LanguageProvider defaultLang="ar">
-            <DirectionController />
-            <CartProvider>
-              <AppRoutes />
-            </CartProvider>
-          </LanguageProvider>
-        </AuthGate>
-      </AuthProvider>
+      <LogtoProvider config={logtoConfig}>
+        <AuthProvider>
+          <AuthGate>
+            <LanguageProvider defaultLang="ar">
+              <DirectionController />
+              <CartProvider>
+                <AppRoutes />
+              </CartProvider>
+            </LanguageProvider>
+          </AuthGate>
+        </AuthProvider>
+      </LogtoProvider>
     </BrowserRouter>
   );
 }
