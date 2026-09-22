@@ -3,7 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
-use App\Services\LogtoJwtService;
+use App\Services\LogtoUserInfoService;
 use Closure;
 use Illuminate\Http\Request;
 use Throwable;
@@ -16,7 +16,7 @@ class ApiAuth
         if ($token === '') return response()->json(['message' => 'Unauthenticated.'], 401);
 
         try {
-            $claims = app(LogtoJwtService::class)->validate($token, (string) config('services.logto.audience'));
+            $claims = app(LogtoUserInfoService::class)->getUser($token);
             $subject = (string) ($claims['sub'] ?? '');
             if ($subject === '') throw new \RuntimeException('Missing Logto subject.');
 
