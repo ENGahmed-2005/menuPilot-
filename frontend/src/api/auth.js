@@ -4,7 +4,6 @@ export async function register(payload) {
   return api.post('/auth/register', {
     restaurant_name: payload.restaurantName,
     email: payload.email,
-    whatsapp_phone: payload.whatsappPhone,
     password: payload.password,
     password_confirmation: payload.passwordConfirmation,
     plan: payload.plan,
@@ -27,12 +26,12 @@ export async function getVerificationStatus(email) {
   return api.get('/auth/verification-status?email=' + encodeURIComponent(email));
 }
 
-export async function sendVerification(email, channel) {
-  return api.post('/auth/verification/send', { email, channel });
+export async function sendVerification(email) {
+  return api.post('/auth/verification/send', { email });
 }
 
-export async function verifyCode(email, channel, code) {
-  const data = await api.post('/auth/verification/check', { email, channel, code });
+export async function verifyCode(email, code) {
+  const data = await api.post('/auth/verification/check', { email, code });
   if (data?.token) setToken(data.token);
   return data;
 }
