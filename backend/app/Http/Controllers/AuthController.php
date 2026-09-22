@@ -246,6 +246,7 @@ class AuthController extends Controller
         $row = DB::table('password_reset_tokens')->where('email', $v['email'])->first();
         if (! $row || ! hash_equals($row->token, hash('sha256', $v['token']))) return response()->json(['message' => 'Invalid reset token.'], 422);
         User::where('email', $v['email'])->update(['password' => Hash::make($v['password']), 'api_token' => null, 'login_failed_attempts' => 0, 'login_locked_until' => null]);
+        if (DB::getSchemaBuilder()->hasTable('api_tokens')) DB::table('api_tokens')->where('user_id', User::where('email', $v['email'])->value('id'))->delete();
         DB::table('password_reset_tokens')->where('email', $v['email'])->delete();
         return $this->out(['message' => 'Password reset successfully']);
     }
