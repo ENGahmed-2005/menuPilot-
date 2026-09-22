@@ -12,9 +12,9 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'restaurant_name', 'restaurant_phone', 'restaurant_description',
-        'restaurant_address', 'latitude', 'longitude', 'email', 'password',
+        'restaurant_address', 'latitude', 'longitude', 'email', 'whatsapp_phone', 'password',
         'plan', 'role', 'api_token', 'login_failed_attempts', 'login_locked_until', 'theme', 'payment_methods',
-        'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at',
+        'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at', 'whatsapp_verified_at', 'verification_required',
     ];
 
     protected $hidden = ['password', 'remember_token', 'api_token'];
@@ -23,6 +23,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'whatsapp_verified_at' => 'datetime',
+            'verification_required' => 'boolean',
             'password' => 'hashed',
             'theme' => 'array',
             'payment_methods' => 'array',
