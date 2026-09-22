@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Check, Mail } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -8,6 +8,7 @@ const Logo = ({ className = "h-10" }) => <span className="brand-logo-surface inl
 
 export default function Login() {
   const { login } = useAuth();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -17,7 +18,7 @@ export default function Login() {
     setError("");
     if (!email.trim()) return setError("أدخل بريدك الإلكتروني.");
     setLoading(true);
-    try { await login({ email: email.trim(), returnTo: "/owner/dashboard" }); }
+    try { await login({ email: email.trim(), returnTo: location.state?.from?.pathname || null }); }
     catch (e) { setError(e?.message || "تعذر بدء تسجيل الدخول."); setLoading(false); }
   }
 
