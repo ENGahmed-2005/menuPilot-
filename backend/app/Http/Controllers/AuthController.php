@@ -20,11 +20,144 @@ class AuthController extends Controller
         return response()->json(['data' => $data], $status);
     }
 
-    private function twilioConfigured(): bool
+    private function otpConfigured(): bool
     {
-        return filled(env('TWILIO_ACCOUNT_SID'))
-            && filled(env('TWILIO_AUTH_TOKEN'))
-            && filled(env('TWILIO_VERIFY_SERVICE_SID'));
+        return filled(env('RESEND_API_KEY')) && filled(env('RESEND_FROM_EMAIL'));
+    }
+
+    private function sendEmailOtp(User $user): void
+    {
+        if (! $this->otpConfigured()) {
+            throw new \RuntimeException('خدمة البريد الإلكتروني غير مهيأة على الخادم.');
+        }
+
+        $code = (string) random_int(100000, 999999);
+        $user->update([
+            'email_otp_hash' => hash('sha256', $code),
+            'email_otp_expires_at' => now()->addMinutes(10),
+            'email_otp_sent_at' => now(),
+            'email_otp_attempts' => 0,
+        ]);
+
+        $fromName = env('RESEND_FROM_NAME', 'menuPilot');
+        $response = Http::withToken(env('RESEND_API_KEY'))
+            ->acceptJson()
+            ->timeout(10)
+            ->post('https://api.resend.com/emails', [
+                'from' => $fromName.' <'.env('RESEND_FROM_EMAIL').'>',
+                'to' => [$user->email],
+                'subject' => 'رمز التحقق من حسابك في menuPilot',
+                'html' => '<div style="font-family:Arial,sans-serif;line-height:1.8;max-width:560px;margin:auto;padding:24px"><h2>تأكيد حسابك في menuPilot</h2><p>استخدم رمز التحقق التالي لإكمال إنشاء حسابك:</p><div style="font-size:32px;font-weight:800;letter-spacing:8px;padding:18px;background:#f3efe5;border-radius:14px;text-align:center">'.$code.'</div><p>ينتهي الرمز خلال 10 دقائق.</p><p style="color:#777">إذا لم تطلب إنشاء هذا الحساب، تجاهل هذه الرسالة.</p></div>',
+            ]);
+
+        if (! $response->successful()) {
+            $user->update([
+                'email_otp_hash' => null,
+                'email_otp_expires_at' => null,
+                'email_otp_sent_at' => null,
+            ]);
+            throw new \RuntimeException($response->json('message') ?: 'تعذر إرسال رمز التحقق إلى البريد الإلكتروني.');
+        }
+    }
+
+    private function verificationStatus(User $user): array
+    {
+        return [
+            'required' => (bool) $user->verification_required,
+            'email' => (bool) $user->email_verified_at,
+            'complete' => ! $user->verification_required || (bool) $user->email_verified_at,
+        ];
+    }
+
+    public function register(Request $r)
+    {
+        $email = Str::lower(trim((string) $r->input('email')));
+
+        $v = Validator::make(array_merge($r->all(), ['email' => $email]), [
+            'restaurant_name' => 'required|string|max:255',
+            'email' => ['required', 'email'],
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
+        ])->validate();
+
+        if (User::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            return response()->json(['message' => 'This email address is already in use.'], 422);
+        }
+
+        if (! $this->otpConfigured()) {
+            return response()->json(['message' => 'خدمة البريد الإلكتروني OTP غير مهيأة على الخادم.', 'code' => 'OTP_NOT_CONFIGURED'], 503);
+        }
+
+        $now = now();
+        $u = User::create([
+            'name' => $v['restaurant_name'],
+            'restaurant_name' => $v['restaurant_name'],
+            'email' => $email,
+            'password' => Hash::make($v['password']),
+            'plan' => 'trial',
+            'trial_started_at' => $now,
+            'trial_ends_at' => $now->copy()->addDays(14),
+            'role' => 'owner',
+            'api_token' => null,
+            'verification_required' => true,
+            'login_failed_attempts' => 0,
+            'login_locked_until' => null,
+        ]);
+
+        try {
+            $this->sendEmailOtp($u);
+        } catch (Throwable $e) {
+            $u->delete();
+            return response()->json(['message' => $e->getMessage(), 'code' => 'OTP_SEND_FAILED'], 503);
+        }
+
+        return $this->out([
+            'user' => $u,
+            'verification' => $this->verificationStatus($u),
+            'requires_verification' => true,
+        ], 201);
+    }
+
+    public function login(Request $r)
+    {
+        $v = $r->validate(['email' => 'required|email', 'password' => 'required']);
+        $email = Str::lower(trim($v['email']));
+        $u = User::whereRaw('LOWER(email) = ?', [$email])->first();
+
+        if ($u && $u->login_locked_until && now()->lt($u->login_locked_until)) {
+            return response()->json(['message' => 'Account temporarily locked. Try again in 15 minutes.'], 429);
+        }
+
+        if (! $u || ! Hash::check($v['password'], $u->password)) {
+            if ($u) {
+                $attempts = ((int) $u->login_failed_attempts) + 1;
+                if ($attempts >= 5) {
+                    $u->update(['login_failed_attempts' => 0, 'login_locked_until' => now()->addMinutes(15)]);
+                    return response()->json(['message' => 'Account temporarily locked. Try again in 15 minutes.'], 429);
+                }
+                $u->update(['login_failed_attempts' => $attempts]);
+            }
+            return response()->json(['message' => 'Invalid credentials.'], 422);
+        }
+
+        if ($u->verification_required && ! $u->email_verified_at) {
+            return response()->json([
+                'message' => 'يجب تأكيد البريد الإلكتروني قبل تسجيل الدخول.',
+                'code' => 'VERIFICATION_REQUIRED',
+            ], 403);
+        }
+
+        if ($u->login_locked_until) $u->update(['login_locked_until' => null]);
+
+        if ($u->role !== 'owner' && $u->role !== 'admin') {
+            $staff = Staff::where('account_user_id', $u->id)->first();
+            if (! $staff || ! $staff->active || $staff->role !== $u->role) {
+                return response()->json(['message' => 'This staff account is disabled or not linked to a restaurant.'], 403);
+            }
+        }
+
+        $u->refreshSubscriptionStatus();
+        $u->update(['login_failed_attempts' => 0, 'login_locked_until' => null]);
+        return $this->out(['token' => $this->issueToken($u, $r), 'user' => $u]);
     }
 
     private function issueToken(User $user, Request $request): string
@@ -44,150 +177,32 @@ class AuthController extends Controller
         return $token;
     }
 
-    private function sendVerification(User $user, string $channel): void
-    {
-        if (! $this->twilioConfigured()) {
-            throw new \RuntimeException('OTP service is not configured.');
-        }
-
-        $to = $channel === 'email' ? $user->email : $user->whatsapp_phone;
-        $response = Http::asForm()
-            ->withBasicAuth(env('TWILIO_ACCOUNT_SID'), env('TWILIO_AUTH_TOKEN'))
-            ->timeout(8)
-            ->post('https://verify.twilio.com/v2/Services/'.env('TWILIO_VERIFY_SERVICE_SID').'/Verifications', [
-                'To' => $to,
-                'Channel' => $channel === 'whatsapp' ? 'whatsapp' : 'email',
-            ]);
-
-        if (! $response->successful()) {
-            throw new \RuntimeException($response->json('message') ?: 'تعذر إرسال رمز التحقق.');
-        }
-    }
-
-    private function checkVerification(string $to, string $code): bool
-    {
-        if (! $this->twilioConfigured()) throw new \RuntimeException('OTP service is not configured.');
-
-        $response = Http::asForm()
-            ->withBasicAuth(env('TWILIO_ACCOUNT_SID'), env('TWILIO_AUTH_TOKEN'))
-            ->timeout(8)
-            ->post('https://verify.twilio.com/v2/Services/'.env('TWILIO_VERIFY_SERVICE_SID').'/VerificationCheck', [
-                'To' => $to,
-                'Code' => $code,
-            ]);
-
-        return $response->successful() && $response->json('status') === 'approved';
-    }
-
-    private function verificationStatus(User $user): array
-    {
-        return [
-            'required' => (bool) $user->verification_required,
-            'email' => (bool) $user->email_verified_at,
-            'whatsapp' => (bool) $user->whatsapp_verified_at,
-            'complete' => ! $user->verification_required || ($user->email_verified_at && $user->whatsapp_verified_at),
-        ];
-    }
-
-    public function register(Request $r)
-    {
-        $email = Str::lower(trim((string) $r->input('email')));
-        $phone = trim((string) $r->input('whatsapp_phone'));
-
-        $v = Validator::make(array_merge($r->all(), ['email' => $email, 'whatsapp_phone' => $phone]), [
-            'restaurant_name' => 'required|string|max:255',
-            'email' => ['required', 'email'],
-            'whatsapp_phone' => ['required', 'regex:/^\+[1-9]\d{7,14}$/'],
-            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
-        ])->validate();
-
-        if (User::whereRaw('LOWER(email) = ?', [$email])->exists()) return response()->json(['message' => 'This email address is already in use.'], 422);
-        if (User::where('whatsapp_phone', $phone)->exists()) return response()->json(['message' => 'رقم WhatsApp مستخدم مسبقًا.'], 422);
-        if (! $this->twilioConfigured()) return response()->json(['message' => 'خدمة OTP غير مهيأة على الخادم.', 'code' => 'OTP_NOT_CONFIGURED'], 503);
-
-        $now = now();
-        $u = User::create([
-            'name' => $v['restaurant_name'],
-            'restaurant_name' => $v['restaurant_name'],
-            'email' => $email,
-            'whatsapp_phone' => $phone,
-            'password' => Hash::make($v['password']),
-            'plan' => 'trial',
-            'trial_started_at' => $now,
-            'trial_ends_at' => $now->copy()->addDays(14),
-            'role' => 'owner',
-            'api_token' => null,
-            'verification_required' => true,
-            'login_failed_attempts' => 0,
-            'login_locked_until' => null,
-        ]);
-
-        try {
-            $this->sendVerification($u, 'email');
-            $this->sendVerification($u, 'whatsapp');
-        } catch (Throwable $e) {
-            $u->delete();
-            return response()->json(['message' => $e->getMessage(), 'code' => 'OTP_SEND_FAILED'], 503);
-        }
-
-        return $this->out(['user' => $u, 'verification' => $this->verificationStatus($u), 'requires_verification' => true], 201);
-    }
-
-    public function login(Request $r)
-    {
-        $v = $r->validate(['email' => 'required|email', 'password' => 'required']);
-        $email = Str::lower(trim($v['email']));
-        $u = User::whereRaw('LOWER(email) = ?', [$email])->first();
-
-        if ($u && $u->login_locked_until && now()->lt($u->login_locked_until)) return response()->json(['message' => 'Account temporarily locked. Try again in 15 minutes.'], 429);
-
-        if (! $u || ! Hash::check($v['password'], $u->password)) {
-            if ($u) {
-                $attempts = ((int) $u->login_failed_attempts) + 1;
-                if ($attempts >= 5) {
-                    $u->update(['login_failed_attempts' => 0, 'login_locked_until' => now()->addMinutes(15)]);
-                    return response()->json(['message' => 'Account temporarily locked. Try again in 15 minutes.'], 429);
-                }
-                $u->update(['login_failed_attempts' => $attempts]);
-            }
-            return response()->json(['message' => 'Invalid credentials.'], 422);
-        }
-
-        if ($u->verification_required && (! $u->email_verified_at || ! $u->whatsapp_verified_at)) {
-            return response()->json(['message' => 'يجب تأكيد البريد الإلكتروني وWhatsApp قبل تسجيل الدخول.', 'code' => 'VERIFICATION_REQUIRED'], 403);
-        }
-
-        if ($u->login_locked_until) $u->update(['login_locked_until' => null]);
-
-        if ($u->role !== 'owner' && $u->role !== 'admin') {
-            $staff = Staff::where('account_user_id', $u->id)->first();
-            if (! $staff || ! $staff->active || $staff->role !== $u->role) return response()->json(['message' => 'This staff account is disabled or not linked to a restaurant.'], 403);
-        }
-
-        $u->refreshSubscriptionStatus();
-        $u->update(['login_failed_attempts' => 0, 'login_locked_until' => null]);
-        return $this->out(['token' => $this->issueToken($u, $r), 'user' => $u]);
-    }
-
     public function verifyStatus(Request $r)
     {
         $email = Str::lower(trim((string) $r->input('email')));
         $u = User::whereRaw('LOWER(email) = ?', [$email])->first();
         if (! $u) return response()->json(['message' => 'الحساب غير موجود.'], 404);
-        return $this->out(['verification' => $this->verificationStatus($u), 'email' => $u->email, 'whatsapp_phone' => $u->whatsapp_phone]);
+
+        return $this->out([
+            'verification' => $this->verificationStatus($u),
+            'email' => $u->email,
+        ]);
     }
 
     public function sendVerificationCode(Request $r)
     {
-        $v = $r->validate(['email' => 'required|email', 'channel' => 'required|in:email,whatsapp']);
+        $v = $r->validate(['email' => 'required|email']);
         $u = User::whereRaw('LOWER(email) = ?', [Str::lower($v['email'])])->first();
         if (! $u) return response()->json(['message' => 'الحساب غير موجود.'], 404);
-        if ($v['channel'] === 'email' && $u->email_verified_at) return $this->out(['message' => 'البريد الإلكتروني مؤكد بالفعل.']);
-        if ($v['channel'] === 'whatsapp' && $u->whatsapp_verified_at) return $this->out(['message' => 'رقم WhatsApp مؤكد بالفعل.']);
+        if ($u->email_verified_at) return $this->out(['message' => 'البريد الإلكتروني مؤكد بالفعل.']);
+
+        if ($u->email_otp_sent_at && now()->diffInSeconds($u->email_otp_sent_at) < 60) {
+            return response()->json(['message' => 'انتظر دقيقة قبل طلب رمز جديد.'], 429);
+        }
 
         try {
-            $this->sendVerification($u, $v['channel']);
-            return $this->out(['message' => 'تم إرسال رمز التحقق.']);
+            $this->sendEmailOtp($u);
+            return $this->out(['message' => 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.']);
         } catch (Throwable $e) {
             return response()->json(['message' => $e->getMessage(), 'code' => 'OTP_SEND_FAILED'], 503);
         }
@@ -195,32 +210,52 @@ class AuthController extends Controller
 
     public function verifyCode(Request $r)
     {
-        $v = $r->validate(['email' => 'required|email', 'channel' => 'required|in:email,whatsapp', 'code' => 'required|digits:6']);
+        $v = $r->validate([
+            'email' => 'required|email',
+            'code' => 'required|digits:6',
+        ]);
+
         $u = User::whereRaw('LOWER(email) = ?', [Str::lower($v['email'])])->first();
         if (! $u) return response()->json(['message' => 'الحساب غير موجود.'], 404);
-        $to = $v['channel'] === 'email' ? $u->email : $u->whatsapp_phone;
+        if ($u->email_verified_at) return $this->out(['message' => 'البريد الإلكتروني مؤكد بالفعل.', 'verification' => $this->verificationStatus($u)]);
 
-        try {
-            if (! $this->checkVerification($to, $v['code'])) return response()->json(['message' => 'رمز التحقق غير صحيح أو منتهي الصلاحية.'], 422);
-        } catch (Throwable $e) {
-            return response()->json(['message' => $e->getMessage(), 'code' => 'OTP_CHECK_FAILED'], 503);
+        if (! $u->email_otp_hash || ! $u->email_otp_expires_at || now()->gt($u->email_otp_expires_at)) {
+            return response()->json(['message' => 'رمز التحقق منتهي الصلاحية. اطلب رمزًا جديدًا.'], 422);
         }
 
-        $u->update([$v['channel'] === 'email' ? 'email_verified_at' : 'whatsapp_verified_at' => now()]);
+        if ((int) $u->email_otp_attempts >= 5) {
+            return response()->json(['message' => 'تم تجاوز عدد المحاولات. اطلب رمزًا جديدًا.'], 429);
+        }
+
+        if (! hash_equals($u->email_otp_hash, hash('sha256', $v['code']))) {
+            $u->increment('email_otp_attempts');
+            return response()->json(['message' => 'رمز التحقق غير صحيح.'], 422);
+        }
+
+        $u->update([
+            'email_verified_at' => now(),
+            'email_otp_hash' => null,
+            'email_otp_expires_at' => null,
+            'email_otp_sent_at' => null,
+            'email_otp_attempts' => 0,
+        ]);
         $u->refresh();
-        $verification = $this->verificationStatus($u);
-        $response = ['message' => 'تم تأكيد الرمز بنجاح.', 'verification' => $verification];
 
-        if ($verification['complete']) {
-            $response['token'] = $this->issueToken($u, $r);
-            $response['user'] = $u;
-        }
+        $response = [
+            'message' => 'تم تأكيد البريد الإلكتروني بنجاح.',
+            'verification' => $this->verificationStatus($u),
+            'token' => $this->issueToken($u, $r),
+            'user' => $u,
+        ];
+
         return $this->out($response);
     }
 
     public function logout(Request $r)
     {
-        if ($r->bearerToken()) DB::table('api_tokens')->where('token_hash', hash('sha256', trim($r->bearerToken())))->delete();
+        if ($r->bearerToken()) {
+            DB::table('api_tokens')->where('token_hash', hash('sha256', trim($r->bearerToken())))->delete();
+        }
         $r->user()->update(['api_token' => null]);
         return $this->out(['message' => 'Logged out']);
     }
@@ -236,17 +271,32 @@ class AuthController extends Controller
     {
         $v = $r->validate(['email' => 'required|email']);
         $token = Str::random(64);
-        DB::table('password_reset_tokens')->updateOrInsert(['email' => $v['email']], ['token' => hash('sha256', $token), 'created_at' => now()]);
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $v['email']],
+            ['token' => hash('sha256', $token), 'created_at' => now()]
+        );
         return $this->out(['message' => 'Reset token created', 'reset_token' => $token]);
     }
 
     public function resetPassword(Request $r)
     {
-        $v = $r->validate(['token' => 'required', 'email' => 'required|email', 'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()]]);
+        $v = $r->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
+        ]);
         $row = DB::table('password_reset_tokens')->where('email', $v['email'])->first();
-        if (! $row || ! hash_equals($row->token, hash('sha256', $v['token']))) return response()->json(['message' => 'Invalid reset token.'], 422);
-        User::where('email', $v['email'])->update(['password' => Hash::make($v['password']), 'api_token' => null, 'login_failed_attempts' => 0, 'login_locked_until' => null]);
-        if (DB::getSchemaBuilder()->hasTable('api_tokens')) DB::table('api_tokens')->where('user_id', User::where('email', $v['email'])->value('id'))->delete();
+        if (! $row || ! hash_equals($row->token, hash('sha256', $v['token']))) {
+            return response()->json(['message' => 'Invalid reset token.'], 422);
+        }
+        $user = User::where('email', $v['email'])->first();
+        User::where('email', $v['email'])->update([
+            'password' => Hash::make($v['password']),
+            'api_token' => null,
+            'login_failed_attempts' => 0,
+            'login_locked_until' => null,
+        ]);
+        DB::table('api_tokens')->where('user_id', $user?->id)->delete();
         DB::table('password_reset_tokens')->where('email', $v['email'])->delete();
         return $this->out(['message' => 'Password reset successfully']);
     }
