@@ -67,7 +67,7 @@ class PaymentController
         $proofPath = $request->hasFile('proof') ? $request->file('proof')->store('payment-proofs', 'public') : null;
 
         $result = DB::transaction(function () use ($v, $sessionId, $session, $proofPath) {
-            $orderId = DB::table('orders')->insertGetId(['dining_session_id' => $sessionId, 'user_id' => $session->restaurant_user_id, 'status' => 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            $orderId = DB::table('orders')->insertGetId(['dining_session_id' => $sessionId, 'user_id' => $session->restaurant_user_id, 'status' => $v['method'] === 'cash' ? 'pending' : 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
             $validItems = 0;
             foreach ($v['items'] as $item) {
                 $menuItem = DB::table('menu_items')->where('id', $item['menuItemId'])->where('user_id', $session->restaurant_user_id)->where('is_available', true)->first();
