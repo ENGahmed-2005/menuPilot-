@@ -44,3 +44,30 @@ export const getOwnerOrders = (filters = {}) => {
   const qs = new URLSearchParams(filters).toString();
   return api.get(`/owner/orders${qs ? `?${qs}` : ""}`);
 };
+
+
+const normalizeOrder = (order) => {
+  if (!order) return order;
+  const rawStatus = String(order.status || "").toLowerCase();
+  const statusMap = { pending: "Pending", preparing: "Preparing", ready: "Ready", served: "Served", cancelled: "Cancelled", payment_pending: "Pending" };
+  return {
+    ...order,
+    orderNumber: order.orderNumber ?? order.order_number ?? order.id,
+    tableLabel: order.tableLabel ?? order.table_label ?? "",
+    customerName: order.customerName ?? order.customer_name ?? "",
+    submittedAt: order.submittedAt ?? order.submitted_at ?? order.created_at,
+    avgPrepTimeMinutes: Number(order.avgPrepTimeMinutes ?? order.avg_prep_time_minutes ?? 15),
+    status: statusMap[rawStatus] || order.status,
+    items: (order.items || []).map((item) => ({
+      ...item,
+      menuItemId: item.menuItemId ?? item.menu_item_id,
+      price: Number(item.price ?? item.unit_price ?? 0),
+      unitPrice: Number(item.unitPrice ?? item.unit_price ?? 0),
+      total: Number(item.total ?? ((item.quantity || 0) * (item.unit_price || item.price || 0))),
+    })),
+  };
+};
+
+export const getSessionOrdersNormalized = async (sessionId) => (await getSessionOrders(sessionId) || []).map(normalizeOrder);
+export const getKitchenOrdersNormalized = async (params = {}) => (await getKitchenOrders(params) || []).map(normalizeOrder);
+export { normalizeOrder };
