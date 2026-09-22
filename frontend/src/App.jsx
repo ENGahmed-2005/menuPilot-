@@ -15,7 +15,6 @@ const logtoConfig = {
   endpoint: LOGTO_ENDPOINT,
   appId: LOGTO_APP_ID,
   scopes: [UserScope.Email],
-  resources: [LOGTO_API_RESOURCE],
 };
 
 function DirectionController() {
