@@ -23,9 +23,7 @@ return [
     ],
 
     'logto' => [
-        'issuer' => env('LOGTO_ISSUER', 'https://mxodny.logto.app/oidc'),
-        'jwks_uri' => env('LOGTO_JWKS_URI', 'https://mxodny.logto.app/oidc/jwks'),
-        'audience' => env('LOGTO_API_RESOURCE', 'https://api.menupilot.local'),
+        'userinfo_uri' => env('LOGTO_USERINFO_URI', 'https://mxodny.logto.app/oidc/me'),
         'app_id' => env('LOGTO_APP_ID', '6cdahvzsdobmzftwzlbrd'),
     ],
 
