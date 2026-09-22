@@ -31,13 +31,13 @@ export function AuthProvider({ children }) {
 
   async function login(payload) {
     const data = await apiLogin(payload);
-    setUser(data.user);
+    if (data?.user) setUser(data.user);
     return data;
   }
 
   async function register(payload) {
     const data = await apiRegister(payload);
-    setUser(data.user);
+    if (data?.user && data?.token) setUser(data.user);
     return data;
   }
 
