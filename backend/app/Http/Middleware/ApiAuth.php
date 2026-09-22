@@ -3,32 +3,33 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\LogtoJwtService;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class ApiAuth
 {
     public function handle(Request $request, Closure $next)
     {
-        $plain = trim((string) $request->bearerToken());
-        if ($plain === '') return response()->json(['message' => 'Unauthenticated.'], 401);
+        $token = trim((string) $request->bearerToken());
+        if ($token === '') return response()->json(['message' => 'Unauthenticated.'], 401);
 
-        $hash = hash('sha256', $plain);
-        $user = null;
+        try {
+            $claims = app(LogtoJwtService::class)->validate($token, (string) config('services.logto.audience'));
+            $subject = (string) ($claims['sub'] ?? '');
+            if ($subject === '') throw new \RuntimeException('Missing Logto subject.');
 
-        if (DB::getSchemaBuilder()->hasTable('api_tokens')) {
-            $token = DB::table('api_tokens')->where('token_hash', $hash)->first();
-            if ($token && (! $token->expires_at || now()->lt($token->expires_at))) {
-                $user = User::find($token->user_id);
-                if ($user) DB::table('api_tokens')->where('id', $token->id)->update(['last_used_at' => now(), 'updated_at' => now()]);
-            }
+            $user = User::where('logto_subject', $subject)->first();
+            if (!$user) return response()->json(['message' => 'Logto account is not linked to a menuPilot account.'], 403);
+
+            if (method_exists($user, 'refreshSubscriptionStatus')) $user->refreshSubscriptionStatus();
+            $request->setUserResolver(static fn () => $user);
+            $request->attributes->set('logto_claims', $claims);
+
+            return $next($request);
+        } catch (Throwable $e) {
+            return response()->json(['message' => 'Unauthenticated.', 'code' => 'LOGTO_TOKEN_INVALID'], 401);
         }
-
-        if (! $user) $user = User::where('api_token', $hash)->first();
-        if (! $user) return response()->json(['message' => 'Unauthenticated.'], 401);
-
-        $request->setUserResolver(static fn () => $user);
-        return $next($request);
     }
 }
