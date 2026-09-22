@@ -55,6 +55,8 @@ class BillingController extends Controller
             return response()->json(['message' => 'Session not found'], 404);
         }
 
+        $session = DB::table('dining_sessions')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('dining_sessions.id', $sid)->select('dining_sessions.*', 'restaurant_tables.label as table_label')->first();
+
         $items = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->join('menu_items', 'menu_items.id', '=', 'order_items.menu_item_id')
@@ -63,7 +65,21 @@ class BillingController extends Controller
             ->select('order_items.id', 'menu_items.name', 'order_items.quantity', 'order_items.unit_price', DB::raw('(order_items.quantity*order_items.unit_price) as total'))
             ->get();
 
-        return $this->out(['items' => $items, 'total' => $items->sum('total')]);
+        $items = $items->map(function ($item) {
+            $item->price = (float) $item->unit_price;
+            $item->total = (float) $item->total;
+            return $item;
+        });
+
+        return $this->out([
+            'session_id' => (int) $sid,
+            'table_label' => $session?->table_label,
+            'customer_name' => $session?->customer_name,
+            'status' => $session?->status,
+            'items' => $items,
+            'subtotal' => (float) $items->sum('total'),
+            'total' => (float) $items->sum('total'),
+        ]);
     }
 
     public function pay(Request $r, $sid)

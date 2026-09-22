@@ -28,7 +28,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
-  const [formData, setFormData] = useState({ restaurantName: "", restaurantType: "", email: "", password: "", confirmPassword: "" });
+  const [formData, setFormData] = useState({ restaurantName: "", restaurantType: "", email: "", whatsappPhone: "", password: "", confirmPassword: "" });
 
   const currentPlan = plans.find((plan) => plan.id === selectedPlan) || plans[0];
 
@@ -50,6 +50,8 @@ export default function Register() {
     const next = {};
     if (!formData.email.trim()) next.email = "البريد الإلكتروني مطلوب.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) next.email = "أدخل بريدًا إلكترونيًا صالحًا.";
+    if (!formData.whatsappPhone.trim()) next.whatsappPhone = "رقم WhatsApp مطلوب.";
+    else if (!/^\+[1-9]\d{7,14}$/.test(formData.whatsappPhone.trim())) next.whatsappPhone = "استخدم الصيغة الدولية مثل +970599123456.";
     if (!formData.password) next.password = "كلمة المرور مطلوبة.";
     else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(formData.password)) next.password = "8 أحرف على الأقل، مع حرف كبير وصغير ورقم ورمز.";
     if (!formData.confirmPassword) next.confirmPassword = "يرجى تأكيد كلمة المرور.";
@@ -68,9 +70,10 @@ export default function Register() {
         email: formData.email.trim(),
         password: formData.password,
         passwordConfirmation: formData.confirmPassword,
+        whatsappPhone: formData.whatsappPhone.trim(),
         plan: selectedPlan,
       });
-      navigate(`/checkout?plan=${selectedPlan}`, { replace: true });
+      navigate(`/verify?email=${encodeURIComponent(formData.email.trim())}`, { replace: true });
     } catch (error) {
       setErrors({ form: error?.message || "تعذر إنشاء الحساب. حاول مرة أخرى." });
     } finally {
@@ -159,6 +162,7 @@ export default function Register() {
               {step === 3 && <StepFrame eyebrow={`الخطة ${currentPlan.name}`} title="معلومات الحساب" description="أنشئ بيانات الدخول الخاصة بحسابك.">
                 <div className="grid gap-5">
                   <Field label="البريد الإلكتروني" name="email" type="email" value={formData.email} onChange={change} placeholder="you@example.com" icon={Mail} error={errors.email} />
+                  <Field label="رقم WhatsApp" name="whatsappPhone" type="tel" value={formData.whatsappPhone} onChange={change} placeholder="+970599123456" icon={UserRound} error={errors.whatsappPhone} />
                   <PasswordField label="كلمة المرور" name="password" value={formData.password} onChange={change} placeholder="أنشئ كلمة مرور قوية" visible={showPassword} onToggle={() => setShowPassword((v) => !v)} error={errors.password} />
                   <PasswordField label="تأكيد كلمة المرور" name="confirmPassword" value={formData.confirmPassword} onChange={change} placeholder="أعد كتابة كلمة المرور" visible={showConfirm} onToggle={() => setShowConfirm((v) => !v)} error={errors.confirmPassword} />
                 </div>
@@ -167,7 +171,7 @@ export default function Register() {
 
               {step === 4 && <StepFrame eyebrow="الخطوة الأخيرة" title="راجع بياناتك" description="تأكد من صحة المعلومات قبل إنشاء الحساب.">
                 <div className="overflow-hidden rounded-2xl border border-[#4B5147]/10 bg-[#F3EFE5]/35">
-                  {[['الخطة', `${currentPlan.name} · ${currentPlan.price}/شهريًا`], ['المطعم', formData.restaurantName], ['النوع', formData.restaurantType], ['البريد', formData.email]].map(([label, value], index) => <div key={label} className={`grid grid-cols-[90px_1fr] gap-4 px-4 py-4 text-sm ${index < 3 ? "border-b border-[#4B5147]/10" : ""}`}><span className="text-[#4B5147]/50">{label}</span><strong className="break-words">{value || "—"}</strong></div>)}
+                  {[['الخطة', `${currentPlan.name} · ${currentPlan.price}/شهريًا`], ['المطعم', formData.restaurantName], ['النوع', formData.restaurantType], ['البريد', formData.email], ['WhatsApp', formData.whatsappPhone]].map(([label, value], index) => <div key={label} className={`grid grid-cols-[90px_1fr] gap-4 px-4 py-4 text-sm ${index < 3 ? "border-b border-[#4B5147]/10" : ""}`}><span className="text-[#4B5147]/50">{label}</span><strong className="break-words">{value || "—"}</strong></div>)}
                 </div>
                 <div className="mt-6 flex gap-3">
                   <button type="button" onClick={() => setStep(3)} className="flex-1 rounded-full border border-[#4B5147]/15 bg-white px-5 py-3.5 text-sm font-bold text-[#1F2420] transition hover:border-[#EEA122]">رجوع</button>

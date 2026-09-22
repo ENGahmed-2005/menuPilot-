@@ -31,13 +31,13 @@ export function AuthProvider({ children }) {
 
   async function login(payload) {
     const data = await apiLogin(payload);
-    setUser(data.user);
+    if (data?.user) setUser(data.user);
     return data;
   }
 
   async function register(payload) {
     const data = await apiRegister(payload);
-    setUser(data.user);
+    if (data?.user && data?.token) setUser(data.user);
     return data;
   }
 
@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
    *  بعد أي طلب PATCH بيرجّع نسخة محدّثة من user، زي تبديل الباقة أو حفظ
    *  الثيم، عشان الواجهة (Sidebar/DashboardShell...) تعكس التغيير فورًا. */
   function updateUser(patch) {
-    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+    setUser((prev) => (prev ? { ...prev, ...patch } : patch));
   }
 
   const value = {

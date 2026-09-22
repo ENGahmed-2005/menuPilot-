@@ -36,6 +36,10 @@ export default function Login() {
       const from = location.state?.from?.pathname;
       navigate(from || getRoleHome(data.user?.role), { replace: true });
     } catch (err) {
+      if (err?.code === "VERIFICATION_REQUIRED") {
+        navigate(`/verify?email=${encodeURIComponent(email.trim())}`, { replace: true });
+        return;
+      }
       setError(err.message || "فشل تسجيل الدخول. تحقق من بياناتك.");
     } finally {
       setLoading(false);

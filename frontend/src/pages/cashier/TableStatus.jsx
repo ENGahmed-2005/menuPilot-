@@ -53,8 +53,8 @@ export default function TableStatus() {
   const filteredTables = useMemo(() => tables.filter((table) => {
     const matchesQuery = `${table.label || ""} ${table.code || ""}`.toLowerCase().includes(query.toLowerCase());
     const matchesFilter = filter === "all"
-      || (filter === "available" && table.status === "Available")
-      || (filter === "occupied" && table.status !== "Available");
+      || (filter === "available" && String(table.status).toLowerCase() === "available")
+      || (filter === "occupied" && String(table.status).toLowerCase() !== "available");
     return matchesQuery && matchesFilter;
   }), [tables, query, filter]);
 
@@ -85,8 +85,8 @@ export default function TableStatus() {
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filteredTables.map((table) => {
-          const occupied = table.status !== "Available";
-          const payment = table.activeSessionId ? (MOCK_PAYMENT[Number(table.activeSessionId)] || { total: 98, paid: 0, method: "لم يتم الدفع" }) : null;
+          const occupied = String(table.status).toLowerCase() !== "available";
+          const payment = null;
           const remaining = payment ? Math.max(payment.total - payment.paid, 0) : 0;
           const paid = payment && payment.paid >= payment.total;
 

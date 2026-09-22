@@ -29,7 +29,25 @@ class OrderController extends Controller
             ->join('menu_items', 'menu_items.id', '=', 'order_items.menu_item_id')
             ->where('order_id', $id)
             ->select('order_items.*', 'menu_items.name')
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                $item->menuItemId = (int) $item->menu_item_id;
+                $item->unitPrice = (float) $item->unit_price;
+                $item->price = (float) $item->unit_price;
+                $item->total = (float) $item->quantity * (float) $item->unit_price;
+                return $item;
+            });
+    }
+
+    private function normalizeOrder($order)
+    {
+        if (! $order) return $order;
+        $order->orderNumber = $order->order_number ?? $order->id;
+        $order->tableLabel = $order->table_label ?? null;
+        $order->customerName = $order->customer_name ?? null;
+        $order->submittedAt = $order->submitted_at ?? $order->created_at;
+        $order->avgPrepTimeMinutes = 15;
+        return $order;
     }
 
     private function orderBelongsToRestaurant($orderId, $restaurantId): bool
@@ -114,6 +132,7 @@ class OrderController extends Controller
         DB::table('dining_sessions')->where('id', $sid)->update(['status' => 'ordering', 'updated_at' => now()]);
         $o = DB::table('orders')->find($oid);
         $o->items = $this->items($oid);
+        $this->normalizeOrder($o);
 
         return $this->out($o, 201);
     }
@@ -123,6 +142,7 @@ class OrderController extends Controller
         $orders = DB::table('orders')->where('dining_session_id', $sid)->latest()->get();
         foreach ($orders as $o) {
             $o->items = $this->items($o->id);
+            $this->normalizeOrder($o);
         }
 
         return $this->out($orders);
@@ -138,6 +158,7 @@ class OrderController extends Controller
                 $orders = DB::table('orders')->where('dining_session_id', $sid)->latest()->get();
                 foreach ($orders as $order) {
                     $order->items = $this->items($order->id);
+                    $this->normalizeOrder($order);
                 }
 
                 $payload = json_encode($orders->values()->all(), JSON_UNESCAPED_UNICODE);
@@ -196,7 +217,7 @@ class OrderController extends Controller
             'updated_at' => now(),
         ]);
 
-        return $n ? $this->out(DB::table('orders')->find($id)) : response()->json(['message' => 'Order not found'], 404);
+        return $n ? $this->out($this->normalizeOrder(DB::table('orders')->find($id))) : response()->json(['message' => 'Order not found'], 404);
     }
 
     public function owner(Request $r)

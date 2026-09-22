@@ -67,7 +67,7 @@ class PaymentController
         $proofPath = $request->hasFile('proof') ? $request->file('proof')->store('payment-proofs', 'public') : null;
 
         $result = DB::transaction(function () use ($v, $sessionId, $session, $proofPath) {
-            $orderId = DB::table('orders')->insertGetId(['dining_session_id' => $sessionId, 'user_id' => $session->restaurant_user_id, 'status' => 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            $orderId = DB::table('orders')->insertGetId(['dining_session_id' => $sessionId, 'user_id' => $session->restaurant_user_id, 'status' => $v['method'] === 'cash' ? 'pending' : 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
             $validItems = 0;
             foreach ($v['items'] as $item) {
                 $menuItem = DB::table('menu_items')->where('id', $item['menuItemId'])->where('user_id', $session->restaurant_user_id)->where('is_available', true)->first();
@@ -80,8 +80,8 @@ class PaymentController
             if ($validItems === 0) {
                 abort(422, 'لا توجد أصناف متاحة في الطلب.');
             }
-            $paymentId = DB::table('payments')->insertGetId(['dining_session_id' => $sessionId, 'order_id' => $orderId, 'method' => $v['method'], 'status' => 'pending', 'provider' => $v['provider'] ?? null, 'payer_name' => trim($v['payer_name']), 'payer_phone' => trim($v['payer_phone']), 'proof_path' => $proofPath, 'amount' => $this->total($orderId), 'paid_at' => null, 'created_at' => now(), 'updated_at' => now()]);
-            DB::table('dining_sessions')->where('id', $sessionId)->update(['status' => 'payment_pending', 'updated_at' => now()]);
+            $paymentId = DB::table('payments')->insertGetId(['dining_session_id' => $sessionId, 'order_id' => $orderId, 'method' => $v['method'], 'status' => $v['method'] === 'cash' ? 'verified' : 'pending', 'provider' => $v['provider'] ?? null, 'payer_name' => trim($v['payer_name']), 'payer_phone' => trim($v['payer_phone']), 'proof_path' => $proofPath, 'amount' => $this->total($orderId), 'paid_at' => null, 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('dining_sessions')->where('id', $sessionId)->update(['status' => $v['method'] === 'cash' ? 'ordering' : 'payment_pending', 'updated_at' => now()]);
 
             return ['order' => DB::table('orders')->find($orderId), 'payment' => DB::table('payments')->find($paymentId)];
         });

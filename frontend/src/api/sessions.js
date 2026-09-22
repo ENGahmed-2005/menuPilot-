@@ -23,3 +23,15 @@ export const getSession = (sessionId) => api.get(`/public/sessions/${sessionId}`
 export const updateCustomer = (sessionId, payload) => api.patch(`/public/sessions/${sessionId}/customer`, payload);
 export const requestWaiterAssistance = (sessionId) => api.post(`/public/sessions/${sessionId}/assistance-requests`);
 export const getActiveSessions = () => api.get("/sessions?status=active");
+
+
+const normalizeSession = (session) => session ? ({
+  ...session,
+  tableLabel: session.tableLabel ?? session.table_label ?? "",
+  customerName: session.customerName ?? session.customer_name ?? "",
+  assistanceRequested: Boolean(session.assistanceRequested ?? session.assistance_requested),
+}) : session;
+
+const originalGetActiveSessions = getActiveSessions;
+export const getActiveSessionsNormalized = async () => (await originalGetActiveSessions() || []).map(normalizeSession);
+export { normalizeSession };

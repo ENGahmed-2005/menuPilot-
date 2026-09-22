@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChefHat, Clock3, CheckCircle2, Flame, Filter } from "lucide-react";
-import { getKitchenOrders, updateOrderStatus } from "../../api/orders";
+import { getKitchenOrdersNormalized, updateOrderStatus } from "../../api/orders";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
 import EmptyState from "../../components/dashboard/EmptyState";
@@ -10,7 +10,7 @@ const flow=["Pending","Preparing","Ready","Served"], ar={Pending:"قيد الا�
 const mins=t=>Math.max(0,Math.floor((Date.now()-new Date(t).getTime())/60000));
 export default function KitchenDashboard(){
  const [orders,setOrders]=useState([]),[filter,setFilter]=useState("all"),[error,setError]=useState(null),[loading,setLoading]=useState(true);
- useEffect(()=>{let stop=false;const load=()=>getKitchenOrders({sortBy:"prepTime"}).then(x=>!stop&&setOrders(x||[])).catch(e=>!stop&&setError(e)).finally(()=>!stop&&setLoading(false));load();const id=setInterval(load,4000);return()=>{stop=true;clearInterval(id)}},[]);
+ useEffect(()=>{let stop=false;const load=()=>getKitchenOrdersNormalized({sortBy:"prepTime"}).then(x=>!stop&&setOrders(x||[])).catch(e=>!stop&&setError(e)).finally(()=>!stop&&setLoading(false));load();const id=setInterval(load,4000);return()=>{stop=true;clearInterval(id)}},[]);
  const counts=useMemo(()=>({all:orders.length,pending:orders.filter(o=>o.status==="Pending").length,preparing:orders.filter(o=>o.status==="Preparing").length,ready:orders.filter(o=>o.status==="Ready").length}),[orders]);
  async function advance(o){try{const next=flow[Math.min(flow.indexOf(o.status)+1,3)];await updateOrderStatus(o.id,next);setOrders(x=>x.map(a=>a.id===o.id?{...a,status:next}:a));}catch(e){setError(e)}}
  const shown=filter==="all"?orders:orders.filter(o=>o.status.toLowerCase()===filter);

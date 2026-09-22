@@ -7,6 +7,7 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
+import VerifyAccount from "../pages/auth/VerifyAccount";
 import ScanEntry from "../pages/customer/ScanEntry";
 import Menu from "../pages/customer/Menu";
 import RestaurantMenu from "../pages/customer/RestaurantMenu";
@@ -44,6 +45,7 @@ export default function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify" element={<VerifyAccount />} />
       <Route path="/menu" element={<RestaurantMenu />} />
       <Route path="/t/:tableCode" element={<ScanEntry />} />
       <Route path="/t/:tableCode/menu" element={<Menu />} />
