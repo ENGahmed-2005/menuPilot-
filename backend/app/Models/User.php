@@ -12,18 +12,20 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'restaurant_name', 'restaurant_phone', 'restaurant_description',
-        'restaurant_address', 'latitude', 'longitude', 'email', 'whatsapp_phone', 'password',
+        'restaurant_address', 'latitude', 'longitude', 'email', 'password',
         'plan', 'role', 'api_token', 'login_failed_attempts', 'login_locked_until', 'theme', 'payment_methods',
-        'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at', 'whatsapp_verified_at', 'verification_required',
+        'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at',
+        'email_otp_hash', 'email_otp_expires_at', 'email_otp_sent_at', 'email_otp_attempts', 'verification_required',
     ];
 
-    protected $hidden = ['password', 'remember_token', 'api_token'];
+    protected $hidden = ['password', 'remember_token', 'api_token', 'email_otp_hash'];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'whatsapp_verified_at' => 'datetime',
+            'email_otp_expires_at' => 'datetime',
+            'email_otp_sent_at' => 'datetime',
             'verification_required' => 'boolean',
             'password' => 'hashed',
             'theme' => 'array',
