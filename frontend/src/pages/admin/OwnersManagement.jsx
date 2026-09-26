@@ -8,6 +8,7 @@ const emptyForm = {
   email: "",
   restaurant_name: "",
   restaurant_phone: "",
+  
 };
 
 export default function OwnersManagement() {

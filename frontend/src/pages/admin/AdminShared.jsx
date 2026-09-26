@@ -14,6 +14,7 @@ export const initialRestaurants = [
     owner: "سارة خالد",
     plan: "Standard",
     tables: 8,
+    
     revenue: 6200,
     active: true,
   },

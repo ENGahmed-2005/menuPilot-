@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   Activity,
   BarChart3,
@@ -84,8 +84,6 @@ function StatCard({ title, value, icon: Icon, color }) {
 }
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
-
   const [restaurants, setRestaurants] = useState(initialRestaurants);
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -253,23 +251,27 @@ export default function AdminDashboard() {
         </p>
 
         <nav className="admin-nav">
-          <button
-            type="button"
-            className="admin-nav-item"
-            onClick={() => navigate("/admin/settings")}
+          <NavLink
+            to="/admin/settings"
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) =>
+              `admin-nav-item ${isActive ? "selected" : ""}`
+            }
           >
             <Settings size={19} />
             <span>الإعدادات</span>
-          </button>
+          </NavLink>
 
-          <button
-            type="button"
-            className="admin-nav-item"
-            onClick={() => navigate("/admin/notifications")}
+          <NavLink
+            to="/admin/notifications"
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) =>
+              `admin-nav-item ${isActive ? "selected" : ""}`
+            }
           >
             <Bell size={19} />
             <span>الإشعارات</span>
-          </button>
+          </NavLink>
         </nav>
 
         <div className="admin-user-box">
