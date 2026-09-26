@@ -14,8 +14,8 @@
   --color-brand-cream: #f4efe6;
   --font-display: "Instrument Serif", serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-arabic: "Cairo", sans-serif;
-  --font-arabic-display: "Aref Ruqaa", serif;
+  --font-arabic: "Tajawal", sans-serif;
+  --font-arabic-display: "Tajawal", sans-serif;
   --font-mono-ticket: "Space Mono", monospace;
 }
 *, *::before, *::after { box-sizing: border-box; }
@@ -24,7 +24,7 @@ body { margin: 0; background: var(--color-ink); color: var(--color-paper); font-
 h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
 img, svg { display: block; max-width: 100%; }
 [dir="rtl"], .lang-ar { font-family: var(--font-arabic); }
-[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, .lang-ar h1, .lang-ar h2, .lang-ar h3 { font-family: var(--font-arabic-display); letter-spacing: 0; }
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, .lang-ar h1, .lang-ar h2, .lang-ar h3 { font-family: var(--font-arabic-display); font-weight: 800; letter-spacing: 0; }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 :focus-visible { outline: 2px solid var(--color-copper); outline-offset: 3px; }

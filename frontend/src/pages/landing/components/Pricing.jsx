@@ -12,8 +12,6 @@ import Reveal from "./Reveal";
 
 const PLAN_ORDER = ["basic", "pro", "premium"];
 
-// أسماء الميزات بالعربي — القيم الخام بـ config (زي "theme-presets") مش
-// معدّة للعرض المباشر للزبون.
 const FEATURE_LABELS = {
   dashboard: "لوحة تحكم موحّدة",
   tables: "إدارة الطاولات",
@@ -36,16 +34,22 @@ function formatLimit(value) {
 
 export default function Pricing() {
   return (
-    <section id="pricing" className="mx-auto max-w-7xl scroll-mt-20 px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
+    <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
       <Reveal className="mx-auto max-w-2xl text-center">
-        <span className="text-xs font-black tracking-[.2em] text-[#EEA122]">الأسعار</span>
-        <h2 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">باقة تناسب حجم مطعمك.</h2>
-        <p className="mt-5 text-lg leading-8 text-[#F3EFE5]/55">
-          ابدأ بالباقة المناسبة، وارتقِ في أي وقت مع نمو مطعمك — بلا عقود طويلة الأمد.
+        <span className="text-[11px] font-black tracking-[.18em] text-[#EEA122] uppercase">الأسعار</span>
+        <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">باقة تناسب حجم مطعمك.</h2>
+        <p className="mt-4 text-base leading-7 text-[#F3EFE5]/55">
+          ابدأ بالباقة المناسبة، وارتقِ في أي وقت مع نمو مطعمك.
         </p>
+
+        {/* 14-day trial badge */}
+        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#5B7A52]/40 bg-[#5B7A52]/10 px-4 py-2 text-sm font-bold text-[#5B7A52]">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5B7A52]" />
+          تجربة مجانية لمدة 14 يومًا — بدون بطاقة ائتمانية
+        </div>
       </Reveal>
 
-      <div className="mt-14 grid gap-6 lg:grid-cols-3">
+      <div className="mt-10 grid gap-4 lg:grid-cols-3">
         {PLAN_ORDER.map((id, i) => {
           const plan = SUBSCRIPTION_PLANS[id];
           const popular = id === "pro";
@@ -53,39 +57,42 @@ export default function Pricing() {
           return (
             <Reveal key={id} delay={i * 80}>
               <article
-                className={`relative flex h-full flex-col rounded-3xl border p-7 transition duration-300 hover:-translate-y-1.5 ${
+                className={`relative flex h-full flex-col rounded-2xl border p-5 transition duration-300 hover:-translate-y-1 ${
                   popular
-                    ? "border-[#EEA122]/50 bg-[#EEA122]/[.06] shadow-2xl shadow-[#EEA122]/10 lg:-mt-4 lg:mb-4"
-                    : "border-[#F3EFE5]/10 bg-[#F3EFE5]/[.025] hover:border-[#EEA122]/30 hover:bg-[#EEA122]/[.04]"
+                    ? "border-[#EEA122]/40 bg-[#EEA122]/[.07] shadow-xl shadow-[#EEA122]/10 lg:-mt-3 lg:mb-3"
+                    : "border-[#F3EFE5]/10 bg-[#F3EFE5]/[.02] hover:border-[#EEA122]/25 hover:bg-[#EEA122]/[.04]"
                 }`}
               >
                 {popular && (
-                  <span className="absolute -top-3 right-7 rounded-full bg-[#EEA122] px-3 py-1 text-[11px] font-black text-[#1F2420]">
+                  <span className="absolute -top-3 right-5 rounded-full bg-[#EEA122] px-3 py-0.5 text-[10px] font-black text-[#1F2420]">
                     الأكثر اختيارًا
                   </span>
                 )}
 
-                <h3 className="text-xl font-black">{plan.name}</h3>
-                <p className="mt-2 text-sm leading-6 text-[#F3EFE5]/55">{plan.description}</p>
-
-                <div className="mt-6 flex items-baseline gap-1.5">
-                  <span className="text-4xl font-black">${plan.price}</span>
-                  <span className="text-sm text-[#F3EFE5]/45">/ شهريًا</span>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-base font-black">{plan.name}</h3>
+                    <p className="mt-1 text-xs leading-5 text-[#F3EFE5]/50">{plan.description}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <span className="text-2xl font-black">${plan.price}</span>
+                    <span className="block text-[11px] text-[#F3EFE5]/40">/ شهريًا</span>
+                  </div>
                 </div>
 
-                <div className="mt-5 flex flex-wrap gap-2 text-xs text-[#F3EFE5]/60">
-                  <span className="rounded-full bg-[#F3EFE5]/[.06] px-3 py-1">
+                <div className="mt-4 flex flex-wrap gap-1.5 text-[11px] text-[#F3EFE5]/55">
+                  <span className="rounded-full bg-[#F3EFE5]/[.06] px-2.5 py-0.5">
                     حتى {formatLimit(plan.limits.tables)} طاولة
                   </span>
-                  <span className="rounded-full bg-[#F3EFE5]/[.06] px-3 py-1">
+                  <span className="rounded-full bg-[#F3EFE5]/[.06] px-2.5 py-0.5">
                     حتى {formatLimit(plan.limits.menuItems)} صنف
                   </span>
                 </div>
 
-                <ul className="mt-7 flex-1 space-y-3">
+                <ul className="mt-5 flex-1 space-y-2">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2.5 text-sm leading-6 text-[#F3EFE5]/75">
-                      <Check size={16} className="mt-0.5 shrink-0 text-[#EEA122]" aria-hidden="true" />
+                    <li key={feature} className="flex items-start gap-2 text-xs leading-5 text-[#F3EFE5]/70">
+                      <Check size={13} className="mt-0.5 shrink-0 text-[#EEA122]" aria-hidden="true" />
                       {FEATURE_LABELS[feature] || feature}
                     </li>
                   ))}
@@ -93,13 +100,13 @@ export default function Pricing() {
 
                 <a
                   href={`/register?plan=${id}`}
-                  className={`mt-8 block rounded-full px-5 py-3.5 text-center text-sm font-black transition ${
+                  className={`mt-6 block rounded-full px-4 py-2.5 text-center text-xs font-black transition ${
                     popular
                       ? "bg-[#EEA122] text-[#1F2420] hover:bg-[#E67E22]"
-                      : "border border-[#F3EFE5]/15 text-[#F3EFE5] hover:border-[#EEA122]/40 hover:bg-[#EEA122]/10"
+                      : "border border-[#F3EFE5]/15 text-[#F3EFE5] hover:border-[#EEA122]/35 hover:bg-[#EEA122]/10"
                   }`}
                 >
-                  ابدأ بباقة {plan.name}
+                  ابدأ تجربتك المجانية
                 </a>
               </article>
             </Reveal>
@@ -107,8 +114,8 @@ export default function Pricing() {
         })}
       </div>
 
-      <p className="mt-10 text-center text-xs text-[#F3EFE5]/35">
-        كل الباقات تشمل: طلب عبر QR، متابعة حية للطلبات، ولوحات مخصّصة للمطبخ والكاشير والنادل.
+      <p className="mt-8 text-center text-[11px] text-[#F3EFE5]/30">
+        جميع الباقات تشمل: طلب عبر QR، متابعة حية للطلبات، ولوحات مخصّصة للمطبخ والكاشير والنادل. لا عقود، إلغاء في أي وقت.
       </p>
     </section>
   );
