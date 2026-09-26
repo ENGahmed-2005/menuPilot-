@@ -92,21 +92,9 @@ function psSession($test, object $table): array
     ])->assertCreated()->json('data');
 }
 
-function auth(array $user): array
+function psAuth(array $user): array
 {
     return ['Authorization' => 'Bearer '.$user['token'], 'Accept' => 'application/json'];
-}
-
-function insertPayment(array $overrides = []): int
-{
-    return DB::table('payments')->insertGetId(array_merge([
-        'dining_session_id' => 1,
-        'method' => 'cash',
-        'status' => PaymentStatus::Pending->value,
-        'amount' => 100,
-        'created_at' => now(),
-        'updated_at' => now(),
-    ], $overrides));
 }
 
 // ─── PaymentStatus enum ────────────────────────────────────────────────────────
@@ -140,37 +128,21 @@ it('cashier can verify a pending customer payment', function () {
     $owner = psOwner();
     $cashier = psStaff($owner['id'], 'cashier');
     $table = psTable($owner['id']);
-    $item = psItem($owner['id'], 50);
+    psItem($owner['id'], 50);
     $session = psSession($this, $table);
 
-    // Customer submits payment
     $orderId = DB::table('orders')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'user_id' => $owner['id'],
-        'order_number' => 1,
-        'status' => 'payment_pending',
-        'submitted_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
+        'status' => 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
     $paymentId = DB::table('payments')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'order_id' => $orderId,
-        'method' => 'bank',
-        'status' => PaymentStatus::Pending->value,
-        'amount' => 50,
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'order_id' => $orderId, 'method' => 'bank',
+        'status' => PaymentStatus::Pending->value, 'amount' => 50, 'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    $this->postJson("/api/payments/{$paymentId}/verify", [], auth($cashier))
-        ->assertOk();
-
-    expect(DB::table('payments')->find($paymentId)->status)
-        ->toBe(PaymentStatus::Verified->value);
-
-    expect(DB::table('orders')->find($orderId)->status)
-        ->toBe('pending');
+    $this->postJson("/api/payments/{$paymentId}/verify", [], psAuth($cashier))->assertOk();
+    expect(DB::table('payments')->find($paymentId)->status)->toBe(PaymentStatus::Verified->value);
+    expect(DB::table('orders')->find($orderId)->status)->toBe('pending');
 });
 
 it('cashier can reject a pending customer payment', function () {
@@ -180,32 +152,17 @@ it('cashier can reject a pending customer payment', function () {
     $session = psSession($this, $table);
 
     $orderId = DB::table('orders')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'user_id' => $owner['id'],
-        'order_number' => 1,
-        'status' => 'payment_pending',
-        'submitted_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
+        'status' => 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
     $paymentId = DB::table('payments')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'order_id' => $orderId,
-        'method' => 'wallet',
-        'status' => PaymentStatus::Pending->value,
-        'amount' => 40,
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'order_id' => $orderId, 'method' => 'wallet',
+        'status' => PaymentStatus::Pending->value, 'amount' => 40, 'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    $this->postJson("/api/payments/{$paymentId}/reject", ['reason' => 'Proof unclear'], auth($cashier))
-        ->assertOk();
-
-    expect(DB::table('payments')->find($paymentId)->status)
-        ->toBe(PaymentStatus::Rejected->value);
-
-    expect(DB::table('orders')->find($orderId)->status)
-        ->toBe('cancelled');
+    $this->postJson("/api/payments/{$paymentId}/reject", ['reason' => 'Proof unclear'], psAuth($cashier))->assertOk();
+    expect(DB::table('payments')->find($paymentId)->status)->toBe(PaymentStatus::Rejected->value);
+    expect(DB::table('orders')->find($orderId)->status)->toBe('cancelled');
 });
 
 it('cannot verify a payment that is not in pending status', function () {
@@ -215,209 +172,97 @@ it('cannot verify a payment that is not in pending status', function () {
     $session = psSession($this, $table);
 
     $orderId = DB::table('orders')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'user_id' => $owner['id'],
-        'order_number' => 1,
-        'status' => 'pending',
-        'submitted_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
+        'status' => 'pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
-    // Already verified payment
     $paymentId = DB::table('payments')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'order_id' => $orderId,
-        'method' => 'bank',
-        'status' => PaymentStatus::Verified->value,
-        'amount' => 30,
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'order_id' => $orderId, 'method' => 'bank',
+        'status' => PaymentStatus::Verified->value, 'amount' => 30, 'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    $this->postJson("/api/payments/{$paymentId}/verify", [], auth($cashier))
-        ->assertStatus(409);
+    $this->postJson("/api/payments/{$paymentId}/verify", [], psAuth($cashier))->assertStatus(409);
 });
 
-// ─── Cashier billing flow (BillingController) ─────────────────────────────────
+// ─── Cashier billing flow ─────────────────────────────────────────────────────
 
 it('cashier pay sets status to verified for cash payments', function () {
-    $owner = psOwner();
-    $cashier = psStaff($owner['id'], 'cashier');
-    $table = psTable($owner['id']);
-    $item = psItem($owner['id'], 30);
-    $session = psSession($this, $table);
-
-    // Place an order
+    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 30); $session = psSession($this, $table);
     $orderId = DB::table('orders')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'user_id' => $owner['id'],
-        'order_number' => 1,
-        'status' => 'served',
-        'submitted_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
+        'status' => 'served', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
     DB::table('order_items')->insert([
-        'order_id' => $orderId,
-        'menu_item_id' => $item,
-        'quantity' => 1,
-        'unit_price' => 30,
-        'status' => 'active',
-        'created_at' => now(),
-        'updated_at' => now(),
+        'order_id' => $orderId, 'menu_item_id' => $item, 'quantity' => 1, 'unit_price' => 30,
+        'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
     ]);
-
-    $this->postJson("/api/sessions/{$session['id']}/payment", ['method' => 'cash', 'close' => false], auth($cashier))
-        ->assertCreated();
-
-    $payment = DB::table('payments')->where('dining_session_id', $session['id'])->first();
-    expect($payment->status)->toBe(PaymentStatus::Verified->value);
+    $this->postJson("/api/sessions/{$session['id']}/payment", ['method' => 'cash', 'close' => false], psAuth($cashier))->assertCreated();
+    expect(DB::table('payments')->where('dining_session_id', $session['id'])->first()->status)->toBe(PaymentStatus::Verified->value);
 });
 
 it('cashier pay sets status to pending_reconciliation for USSD', function () {
-    $owner = psOwner();
-    $cashier = psStaff($owner['id'], 'cashier');
-    $table = psTable($owner['id']);
-    $item = psItem($owner['id'], 25);
-    $session = psSession($this, $table);
-
+    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 25); $session = psSession($this, $table);
     $orderId = DB::table('orders')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'user_id' => $owner['id'],
-        'order_number' => 1,
-        'status' => 'served',
-        'submitted_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
+        'status' => 'served', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
     DB::table('order_items')->insert([
-        'order_id' => $orderId,
-        'menu_item_id' => $item,
-        'quantity' => 1,
-        'unit_price' => 25,
-        'status' => 'active',
-        'created_at' => now(),
-        'updated_at' => now(),
+        'order_id' => $orderId, 'menu_item_id' => $item, 'quantity' => 1, 'unit_price' => 25,
+        'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
     ]);
-
-    $this->postJson("/api/sessions/{$session['id']}/payment", ['method' => 'ussd', 'close' => false], auth($cashier))
-        ->assertCreated();
-
-    $payment = DB::table('payments')->where('dining_session_id', $session['id'])->first();
-    expect($payment->status)->toBe(PaymentStatus::PendingReconciliation->value);
+    $this->postJson("/api/sessions/{$session['id']}/payment", ['method' => 'ussd', 'close' => false], psAuth($cashier))->assertCreated();
+    expect(DB::table('payments')->where('dining_session_id', $session['id'])->first()->status)->toBe(PaymentStatus::PendingReconciliation->value);
 });
 
 it('reconcile moves pending_reconciliation to verified', function () {
-    $owner = psOwner();
-    $cashier = psStaff($owner['id'], 'cashier');
-    $table = psTable($owner['id']);
-    $session = psSession($this, $table);
-
+    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']); $session = psSession($this, $table);
     $paymentId = DB::table('payments')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'method' => 'ussd',
-        'status' => PaymentStatus::PendingReconciliation->value,
-        'reconciliation_status' => 'pending',
-        'amount' => 60,
-        'paid_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'method' => 'ussd', 'status' => PaymentStatus::PendingReconciliation->value,
+        'reconciliation_status' => 'pending', 'amount' => 60, 'paid_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
-
-    $this->postJson("/api/payments/{$paymentId}/reconcile", [], auth($cashier))
-        ->assertOk();
-
+    $this->postJson("/api/payments/{$paymentId}/reconcile", [], psAuth($cashier))->assertOk();
     $payment = DB::table('payments')->find($paymentId);
-    expect($payment->status)->toBe(PaymentStatus::Verified->value)
-        ->and($payment->reconciliation_status)->toBe('reconciled');
+    expect($payment->status)->toBe(PaymentStatus::Verified->value)->and($payment->reconciliation_status)->toBe('reconciled');
 });
 
 it('cannot reconcile a payment that is not pending_reconciliation', function () {
-    $owner = psOwner();
-    $cashier = psStaff($owner['id'], 'cashier');
-    $table = psTable($owner['id']);
-    $session = psSession($this, $table);
-
+    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']); $session = psSession($this, $table);
     $paymentId = DB::table('payments')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'method' => 'cash',
-        'status' => PaymentStatus::Verified->value,
-        'amount' => 60,
-        'paid_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'method' => 'cash', 'status' => PaymentStatus::Verified->value,
+        'amount' => 60, 'paid_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
-
-    $this->postJson("/api/payments/{$paymentId}/reconcile", [], auth($cashier))
-        ->assertStatus(409);
+    $this->postJson("/api/payments/{$paymentId}/reconcile", [], psAuth($cashier))->assertStatus(409);
 });
 
 // ─── Double-pay guard ─────────────────────────────────────────────────────────
 
 it('blocks cashier billing payment when customer pending payment exists', function () {
-    $owner = psOwner();
-    $cashier = psStaff($owner['id'], 'cashier');
-    $table = psTable($owner['id']);
-    $item = psItem($owner['id'], 40);
-    $session = psSession($this, $table);
-
+    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 40); $session = psSession($this, $table);
     $orderId = DB::table('orders')->insertGetId([
-        'dining_session_id' => $session['id'],
-        'user_id' => $owner['id'],
-        'order_number' => 1,
-        'status' => 'payment_pending',
-        'submitted_at' => now(),
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
+        'status' => 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
     DB::table('order_items')->insert([
-        'order_id' => $orderId,
-        'menu_item_id' => $item,
-        'quantity' => 1,
-        'unit_price' => 40,
-        'status' => 'active',
-        'created_at' => now(),
-        'updated_at' => now(),
+        'order_id' => $orderId, 'menu_item_id' => $item, 'quantity' => 1, 'unit_price' => 40,
+        'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
     ]);
-
-    // Customer payment already pending
     DB::table('payments')->insert([
-        'dining_session_id' => $session['id'],
-        'order_id' => $orderId,
-        'method' => 'bank',
-        'status' => PaymentStatus::Pending->value,
-        'amount' => 40,
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'order_id' => $orderId, 'method' => 'bank',
+        'status' => PaymentStatus::Pending->value, 'amount' => 40, 'created_at' => now(), 'updated_at' => now(),
     ]);
-
-    // Cashier tries to record another payment via billing flow – should be blocked
-    $this->postJson("/api/sessions/{$session['id']}/payment", ['method' => 'cash', 'close' => false], auth($cashier))
-        ->assertStatus(409);
+    $this->postJson("/api/sessions/{$session['id']}/payment", ['method' => 'cash', 'close' => false], psAuth($cashier))->assertStatus(409);
 });
 
 it('blocks second customer payment submission when one is already pending', function () {
-    $owner = psOwner();
-    $table = psTable($owner['id']);
-    $item = psItem($owner['id'], 15);
-    $session = psSession($this, $table);
-
-    // First payment submission
+    $owner = psOwner(); $table = psTable($owner['id']); $item = psItem($owner['id'], 15); $session = psSession($this, $table);
     DB::table('payments')->insert([
-        'dining_session_id' => $session['id'],
-        'method' => 'bank',
-        'status' => PaymentStatus::Pending->value,
-        'amount' => 15,
-        'created_at' => now(),
-        'updated_at' => now(),
+        'dining_session_id' => $session['id'], 'method' => 'bank', 'status' => PaymentStatus::Pending->value,
+        'amount' => 15, 'created_at' => now(), 'updated_at' => now(),
     ]);
-
-    // Second customer attempt (via multipart form would normally go through submit)
-    // We test the guard directly by asserting 409.
     $this->postJson("/api/public/sessions/{$session['id']}/payment", [
-        'method' => 'bank',
-        'payer_name' => 'Ali',
-        'payer_phone' => '0599111222',
+        'method' => 'bank', 'payer_name' => 'Ali', 'payer_phone' => '0599111222',
         'items' => json_encode([['menuItemId' => $item, 'quantity' => 1]]),
     ])->assertStatus(409);
 });
