@@ -27,7 +27,7 @@ export default function Navbar({ onNavigate }) {
 
         <div className="hidden items-center gap-3 sm:flex">
           <button onClick={() => go("/login")} className="rounded-full px-4 py-2 text-sm font-bold text-[#F3EFE5]/80 transition hover:text-[#F3EFE5]">تسجيل الدخول</button>
-          <button onClick={() => go("/register")} className="rounded-full bg-[#EEA122] px-5 py-2.5 text-sm font-black text-[#1F2420] transition hover:bg-[#E67E22]">ابدأ الآن</button>
+          <button onClick={() => go("/register")} className="rounded-full bg-[#EEA122] px-5 py-2.5 text-sm font-black text-[#1F2420] transition hover:bg-[#E67E22]">جرّب مجانًا 14 يومًا</button>
         </div>
 
         <button onClick={() => setMobileOpen(!mobileOpen)} className="rounded-xl border border-[#F3EFE5]/15 p-2.5 md:hidden" aria-label="فتح القائمة">
@@ -40,7 +40,7 @@ export default function Navbar({ onNavigate }) {
           <div className="flex flex-col gap-4 text-sm">
             {NAV_LINKS.map((link) => <a key={link.href} href={link.href} onClick={() => setMobileOpen(false)}>{link.label}</a>)}
             <button onClick={() => go("/login")} className="rounded-xl border border-[#F3EFE5]/15 px-4 py-3">تسجيل الدخول</button>
-            <button onClick={() => go("/register")} className="rounded-xl bg-[#EEA122] px-4 py-3 font-black text-[#1F2420]">ابدأ الآن</button>
+            <button onClick={() => go("/register")} className="rounded-xl bg-[#EEA122] px-4 py-3 font-black text-[#1F2420]">جرّب مجانًا 14 يومًا</button>
           </div>
         </div>
       )}

@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { getToken } from "../api/client";
+import { getActiveSessions } from "../api/sessions";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+// See useOrderTracking: "polling" is for local development on Windows.
+const POLLING = import.meta.env.VITE_REALTIME_MODE === "polling";
+const POLL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS) || 3000;
 
 async function consumeStream(url, onSessions, signal) {
   const response = await fetch(url, { headers: { Accept: "text/event-stream", Authorization: `Bearer ${getToken()}` }, signal });
@@ -35,6 +39,15 @@ export function useWaiterRealtime(initialSessions = []) {
   useEffect(() => {
     let stopped = false;
     let controller;
+
+    if (POLLING) {
+      const load = () => getActiveSessions()
+        .then((next) => { if (!stopped) { setSessions(next ?? []); setConnected(true); } })
+        .catch(() => { if (!stopped) setConnected(false); });
+      load();
+      const timer = setInterval(load, POLL_MS);
+      return () => { stopped = true; clearInterval(timer); };
+    }
 
     async function connect() {
       if (stopped) return;

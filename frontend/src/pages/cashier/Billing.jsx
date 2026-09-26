@@ -16,6 +16,44 @@ import Spinner from "../../components/ui/Spinner";
 import Button from "../../components/ui/Button";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
+import { adjustBillItem, getBill, recordPayment } from "../../api/billing";
+
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
+
+/** Map the backend bill (GET /sessions/{id}/bill) to the shape this screen renders. */
+function mapBill(data, sessionId) {
+  const session = data?.session || {};
+  const items = (data?.items || []).map((item) => ({
+    id: String(item.id),
+    name: item.name,
+    code: item.order_number ? `طلب #${item.order_number}` : `#${item.order_id}`,
+    category: item.category || "—",
+    quantity: Number(item.quantity),
+    price: Number(item.unit_price),
+    total: Number(item.total),
+    note: item.note,
+  }));
+  const lastPayment = (data?.payments || []).slice(-1)[0];
+  return {
+    id: String(session.id ?? sessionId),
+    invoiceNumber: `INV-${session.id ?? sessionId}`,
+    table: session.table_label ? `طاولة ${session.table_label}` : "—",
+    customer: session.customer_name || "زبون",
+    date: (session.opened_at || "").slice(0, 10),
+    status: session.closed_at ? "Paid" : "Open",
+    sessionStatus: session.status,
+    tax: 0,
+    discount: 0,
+    items,
+    subtotal: Number(data?.total || 0),
+    total: Number(data?.total || 0),
+    paidAmount: Number(data?.paid || 0),
+    outstanding: Number(data?.outstanding || 0),
+    paymentMethod: lastPayment?.method || "",
+    paymentStatus: lastPayment?.status || "",
+    real: true,
+  };
+}
 
 const PAYMENT_METHODS = [
   { value: "cash", label: "نقدًا", description: "الدفع المباشر عند الكاشير" },
@@ -141,11 +179,37 @@ export default function Billing() {
   function loadBill(silent = false) {
     if (silent) setRefreshing(true);
     else setLoading(true);
+    if (!USE_MOCKS) {
+      getBill(sessionId)
+        .then((data) => setBill(mapBill(data, sessionId)))
+        .catch((error) => setNotice({ type: "error", text: error.message || "تعذر تحميل الفاتورة." }))
+        .finally(() => { setLoading(false); setRefreshing(false); });
+      return;
+    }
     window.setTimeout(() => {
       setBill(getMockBill(sessionId));
       setLoading(false);
       setRefreshing(false);
     }, 350);
+  }
+
+  /** US-18 / FR-36: manual price adjustment, audited by the backend. */
+  async function handleAdjust(item) {
+    const value = window.prompt(`السعر الجديد للوحدة لـ "${item.name}"`, String(item.price));
+    if (value === null) return;
+    const newPrice = Number(value);
+    if (!Number.isFinite(newPrice) || newPrice < 0) {
+      setNotice({ type: "error", text: "أدخل سعرًا صحيحًا (صفر أو أكثر)." });
+      return;
+    }
+    const reason = window.prompt("سبب التعديل (اختياري)", "") || undefined;
+    try {
+      const data = await adjustBillItem(sessionId, item.id, { new_price: newPrice, reason });
+      setBill(mapBill(data, sessionId));
+      setNotice({ type: "success", text: "تم تعديل السعر وتسجيله في سجل التدقيق." });
+    } catch (error) {
+      setNotice({ type: "error", text: error.message || "تعذر تعديل السعر." });
+    }
   }
 
   useEffect(() => {
@@ -204,6 +268,23 @@ export default function Billing() {
   async function handleConfirmPayment() {
     setSubmitting(true);
     setNotice(null);
+    if (!USE_MOCKS) {
+      try {
+        const payment = await recordPayment(sessionId, method);
+        setNotice({
+          type: "success",
+          text: payment?.status === "pending_reconciliation"
+            ? "تم تسجيل دفعة USSD وإغلاق الجلسة — الدفعة بانتظار التسوية عند عودة الاتصال."
+            : "تم تسجيل الدفع وإغلاق الجلسة، وأصبحت الطاولة متاحة.",
+        });
+        loadBill(true);
+      } catch (error) {
+        setNotice({ type: "error", text: error.message || "تعذر تسجيل الدفع." });
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
     await new Promise((resolve) => window.setTimeout(resolve, 650));
     setBill((previous) => ({ ...previous, status: "Paid", paymentMethod: method }));
     setNotice({ type: "success", text: "تم تسجيل الدفع بنجاح — البيانات جاهزة للتصدير إلى Excel." });
@@ -213,7 +294,7 @@ export default function Billing() {
   const subtotal = useMemo(() => (bill?.items || []).reduce((sum, item) => sum + Number(item.total || 0), 0), [bill]);
   const paid = bill?.status === "Paid";
 
-  if (loading) return <Spinner label="جارِ تحميل الفاتورة التجريبية…" />;
+  if (loading) return <Spinner label={USE_MOCKS ? "جارِ تحميل الفاتورة التجريبية…" : "جارِ تحميل الفاتورة…"} />;
   if (!bill) return null;
 
   return (
@@ -257,12 +338,12 @@ export default function Billing() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-ink/[0.025] px-5 py-4">
             <div className="flex items-center gap-2.5">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-copper/10 text-copper"><Receipt size={17} /></span>
-              <div><h2 className="text-sm font-bold">بنود الفاتورة</h2><p className="text-[11px] text-ink-soft/50">بيانات وهمية قابلة للتعديل</p></div>
+              <div><h2 className="text-sm font-bold">بنود الفاتورة</h2><p className="text-[11px] text-ink-soft/50">{bill.real ? "كل طلبات الجلسة مجمّعة" : "بيانات وهمية قابلة للتعديل"}</p></div>
             </div>
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:bg-ink/[0.03]">
+            {!bill.real && <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:bg-ink/[0.03]">
               <Upload size={15} /> استيراد Excel
               <input ref={importRef} type="file" accept=".csv,.txt" onChange={handleImport} className="hidden" />
-            </label>
+            </label>}
           </div>
 
           <div className="divide-y divide-ink/10">
@@ -271,13 +352,21 @@ export default function Billing() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold">{item.name}</p>
                   <p className="mt-1 text-[11px] text-ink-soft/50">{item.code} · {item.category} · {money(item.price)} للوحدة</p>
+                  {item.note && <p className="mt-0.5 text-[11px] text-copper">{item.note}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
+                  {bill.real ? (
+                    <span className="rounded-xl border border-ink/10 px-2.5 py-1.5 text-sm font-bold">×{item.quantity}</span>
+                  ) : (
                   <div className="flex items-center rounded-xl border border-ink/10">
                     <button onClick={() => changeQuantity(item.id, -1)} disabled={paid} className="px-2.5 py-1.5 text-sm font-bold">−</button>
                     <span className="min-w-7 text-center text-sm font-bold">{item.quantity}</span>
                     <button onClick={() => changeQuantity(item.id, 1)} disabled={paid} className="px-2.5 py-1.5 text-sm font-bold">+</button>
                   </div>
+                  )}
+                  {bill.real && !paid && (
+                    <button onClick={() => handleAdjust(item)} className="rounded-lg px-2 py-1 text-[11px] font-bold text-copper hover:bg-copper/10">تعديل السعر</button>
+                  )}
                   <span className="w-20 text-left text-sm font-bold">{money(item.total)}</span>
                 </div>
               </div>
@@ -289,6 +378,15 @@ export default function Billing() {
             <div className="mt-2 flex justify-between text-xs text-ink-soft/60"><span>الضريبة</span><span>{money(bill.tax)}</span></div>
             <div className="mt-2 flex justify-between text-xs text-ink-soft/60"><span>الخصم</span><span>- {money(bill.discount)}</span></div>
             <div className="mt-4 flex justify-between"><strong className="text-lg">الإجمالي</strong><strong className="text-2xl text-copper-deep">{money(bill.total)}</strong></div>
+            {bill.real && bill.paidAmount > 0 && (
+              <>
+                <div className="mt-2 flex justify-between text-xs text-herb"><span>مدفوع مسبقًا</span><span>{money(bill.paidAmount)}</span></div>
+                <div className="mt-1 flex justify-between text-sm font-bold"><span>المتبقي</span><span>{money(bill.outstanding)}</span></div>
+              </>
+            )}
+            {bill.paymentStatus === "pending_reconciliation" && (
+              <p className="mt-3 rounded-lg bg-copper/10 px-3 py-2 text-[11px] font-bold text-copper-deep">دفعة USSD بانتظار التسوية</p>
+            )}
           </div>
         </Card>
 
@@ -309,12 +407,12 @@ export default function Billing() {
         </Card>
       </div>
 
-      <Card className="mt-5 border-copper/15 bg-copper/5 p-4">
+      {!bill.real && <Card className="mt-5 border-copper/15 bg-copper/5 p-4">
         <div className="flex items-start gap-3">
           <FileSpreadsheet size={20} className="mt-0.5 shrink-0 text-copper" />
           <div><p className="font-bold">جاهزية التكامل مع الأصيل</p><p className="mt-1 text-xs leading-6 text-ink-soft">هذه النسخة تستخدم بيانات وهمية، لكن نموذج التصدير مرتب كجدول Excel: رقم الفاتورة، التاريخ، الطاولة، الصنف، الكود، التصنيف، الكمية، السعر، الضريبة، الخصم والإجمالي. لاحقًا نربط نفس الجدول بالبيانات الحقيقية.</p></div>
         </div>
-      </Card>
+      </Card>}
     </div>
   );
 }

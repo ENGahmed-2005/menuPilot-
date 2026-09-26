@@ -83,8 +83,8 @@ export default function OrderTracking() {
     if (!sessionId) return;
     setBusy("help");
     try {
-      await requestWaiterAssistance(sessionId);
-      showNotice("تم إشعار النادل بطلب المساعدة.");
+      const request = await requestWaiterAssistance(sessionId);
+      showNotice(request?.duplicate ? "طلبك السابق ما زال قيد المتابعة — النادل في الطريق." : "تم إشعار النادل بطلب المساعدة.");
     } catch (err) {
       showNotice(err.message || "تعذّر إرسال طلب المساعدة.", "error");
     } finally {

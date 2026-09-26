@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -79,22 +80,34 @@ class TableController extends Controller
         ]);
         $v = $validator->validate();
 
-        do {
+        // Generate a unique table code. The DB has a UNIQUE constraint on table_code,
+        // so we rely on it as the authoritative uniqueness check and retry on the rare
+        // collision instead of using a racy check-then-insert loop (TOCTOU).
+        $id = null;
+        $code = null;
+        $attempts = 0;
+        while ($id === null) {
             $code = Str::upper(Str::random(10));
-        } while (DB::table('restaurant_tables')->where('table_code', $code)->exists());
-
-        $qrImageUrl = $this->qrImageUrl($code);
-
-        $id = DB::table('restaurant_tables')->insertGetId([
-            'user_id' => $restaurantId,
-            'label' => trim($v['label']),
-            'seats' => $v['seats'],
-            'table_code' => $code,
-            'qr_image_url' => $qrImageUrl,
-            'status' => 'available',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            try {
+                $qrImageUrl = $this->qrImageUrl($code);
+                $id = DB::table('restaurant_tables')->insertGetId([
+                    'user_id' => $restaurantId,
+                    'label' => trim($v['label']),
+                    'seats' => $v['seats'],
+                    'table_code' => $code,
+                    'qr_image_url' => $qrImageUrl,
+                    'status' => 'available',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (QueryException $e) {
+                // 23000 = Integrity constraint violation (duplicate unique key).
+                if ($e->getCode() !== '23000' || ++$attempts >= 5) {
+                    throw $e;
+                }
+                // Retry with a new code.
+            }
+        }
 
         return $this->out($this->withQr(DB::table('restaurant_tables')->find($id)), 201);
     }

@@ -432,8 +432,17 @@ export async function mockRequest(method, rawPath, body, token) {
   if (method === "POST" && seg[0] === "public" && seg[1] === "sessions" && seg[3] === "assistance-requests") {
     const session = sessions.find((s) => s.id === Number(seg[2]));
     if (!session) fail(404, "Session not found.");
+    const duplicate = Boolean(session.assistanceRequested);
     session.assistanceRequested = true;
-    return { ok: true };
+    return { ok: true, duplicate };
+  }
+
+  if (method === "POST" && seg[0] === "sessions" && seg[2] === "assistance" && seg[3] === "resolve") {
+    const session = sessions.find((s) => s.id === Number(seg[1]));
+    if (!session) fail(404, "Session not found.");
+    const resolved = session.assistanceRequested ? 1 : 0;
+    session.assistanceRequested = false;
+    return { resolved };
   }
 
   if (method === "GET" && path === "/sessions" && query.status === "active") {

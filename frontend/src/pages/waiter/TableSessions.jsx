@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Bell, LayoutGrid, Check, Clock3, Users } from "lucide-react";
-import { getActiveSessions } from "../../api/sessions";
+import { getActiveSessions, resolveSessionAssistance } from "../../api/sessions";
 import { useWaiterRealtime } from "../../hooks/useWaiterRealtime";
 import Spinner from "../../components/ui/Spinner";
 import Badge from "../../components/ui/Badge";
@@ -20,8 +20,10 @@ export default function TableSessions() {
   const help = sessions.filter((s) => s.assistanceRequested).length;
   const occupied = sessions.length;
 
-  function resolve(id) {
-    setSessions((current) => current.map((session) => session.id === id ? { ...session, assistanceRequested: false } : session));
+  async function resolve(id) {
+    // Optimistic update; the realtime stream confirms the server state.
+    setSessions((current) => current.map((session) => session.id === id ? { ...session, assistanceRequested: false, assistanceRequest: null } : session));
+    try { await resolveSessionAssistance(id); } catch (e) { setError(e); }
   }
 
   if (loading) return <Spinner label="جارِ تحميل الطاولات…"/>;
@@ -31,6 +33,6 @@ export default function TableSessions() {
     <div className="mb-5 grid gap-3 sm:grid-cols-3">
       {[[Users,"الجلسات النشطة",occupied],[Bell,"طلبات المساعدة",help],[Clock3,"الاتصال","لحظي"]].map(([I,l,v]) => <Card key={l} className="p-4"><I size={18} className={connected ? "text-herb" : "text-copper"}/><p className="mt-2 text-xs text-ink-soft/60">{l}</p><strong className="text-2xl">{v}</strong></Card>)}
     </div>
-    {sessions.length === 0 ? <Card><div className="p-10 text-center"><LayoutGrid className="mx-auto text-copper"/><p className="mt-3 font-bold">لا توجد جلسات نشطة</p></div></Card> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{sessions.map((s) => <Card key={s.id} className={`p-5 ${s.assistanceRequested ? "border-brick/40 bg-brick/5" : ""}`}><div className="flex items-start justify-between"><div><strong>طاولة {s.tableLabel}</strong><p className="mt-1 text-xs text-ink-soft/55">{s.customer_name || "زبون"}</p></div><Badge tone={s.assistanceRequested ? "danger" : "neutral"}>{s.status}</Badge></div>{s.assistanceRequested ? <div className="mt-5 flex items-center justify-between rounded-xl bg-brick/10 p-3"><span className="flex items-center gap-2 text-sm font-bold text-brick"><Bell size={16}/> تحتاج مساعدة</span><button onClick={() => resolve(s.id)} className="rounded-lg bg-paper px-3 py-2 text-xs font-bold"><Check size={14} className="inline"/> تمت</button></div> : <div className="mt-5 border-t border-ink/8 pt-3 text-xs text-ink-soft/55">لا توجد طلبات معلقة</div>}</Card>)}</div>}
+    {sessions.length === 0 ? <Card><div className="p-10 text-center"><LayoutGrid className="mx-auto text-copper"/><p className="mt-3 font-bold">لا توجد جلسات نشطة</p></div></Card> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{sessions.map((s) => <Card key={s.id} className={`p-5 ${s.assistanceRequested ? "border-brick/40 bg-brick/5" : ""}`}><div className="flex items-start justify-between"><div><strong>طاولة {s.tableLabel || s.table_label}</strong><p className="mt-1 text-xs text-ink-soft/55">{s.customer_name || "زبون"}</p></div><Badge tone={s.assistanceRequested ? "danger" : "neutral"}>{s.status}</Badge></div>{s.assistanceRequested ? <div className="mt-5 flex items-center justify-between rounded-xl bg-brick/10 p-3"><span className="flex flex-col text-sm font-bold text-brick"><span className="flex items-center gap-2"><Bell size={16}/> تحتاج مساعدة</span>{s.assistanceRequest?.note && <span className="mt-1 text-xs font-normal">{s.assistanceRequest.note}</span>}</span><button onClick={() => resolve(s.id)} className="rounded-lg bg-paper px-3 py-2 text-xs font-bold"><Check size={14} className="inline"/> تمت</button></div> : s.billRequested ? <div className="mt-5 flex items-center gap-2 rounded-xl bg-copper/10 p-3 text-sm font-bold text-copper-deep"><Clock3 size={16}/> طلب الفاتورة</div> : <div className="mt-5 border-t border-ink/8 pt-3 text-xs text-ink-soft/55">لا توجد طلبات معلقة</div>}</Card>)}</div>}
   </div>;
 }

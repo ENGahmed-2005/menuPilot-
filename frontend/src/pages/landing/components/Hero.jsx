@@ -91,6 +91,7 @@ export default function Hero({ onNavigate }) {
             <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> طلبات QR</span>
             <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> إدارة المطبخ</span>
             <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> فواتير ومدفوعات</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> تجربة مجانية 14 يومًا</span>
           </div>
         </Reveal>
 
