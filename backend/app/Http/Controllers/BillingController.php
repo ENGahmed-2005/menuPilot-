@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PaymentStatus;
 use App\Support\ResolvesRestaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,8 +15,6 @@ class BillingController extends Controller
 {
     use ResolvesRestaurant;
 
-    /** Payment statuses that count as money received. */
-    private const SETTLED = ['verified', 'pending_reconciliation'];
 
     private function out($d, $s = 200)
     {
@@ -61,7 +60,7 @@ class BillingController extends Controller
         $items = $this->billItems($session->id);
         $total = round((float) $items->sum('total'), 2);
         $payments = DB::table('payments')->where('dining_session_id', $session->id)->orderBy('id')->get();
-        $paid = round((float) $payments->whereIn('status', self::SETTLED)->sum('amount'), 2);
+        $paid = round((float) $payments->whereIn('status', PaymentStatus::settled())->sum('amount'), 2);
 
         return [
             'session' => [
@@ -131,6 +130,16 @@ class BillingController extends Controller
             return response()->json(['message' => 'Session already closed'], 409);
         }
 
+        // Guard: if a customer-submitted payment is still pending verification,
+        // the cashier must verify or reject it first before recording another payment.
+        $pendingCustomerPayment = DB::table('payments')
+            ->where('dining_session_id', $session->id)
+            ->where('status', PaymentStatus::Pending->value)
+            ->exists();
+        if ($pendingCustomerPayment) {
+            return response()->json(['message' => 'يوجد طلب دفع من العميل قيد المراجعة. يرجى تأكيده أو رفضه أولاً.'], 409);
+        }
+
         $result = DB::transaction(function () use ($r, $v, $session, $restaurantId) {
             $outstanding = $this->summary($session)['outstanding'];
             $isUssd = $v['method'] === 'ussd';
@@ -139,7 +148,7 @@ class BillingController extends Controller
             $paymentId = DB::table('payments')->insertGetId([
                 'dining_session_id' => $session->id,
                 'method' => $v['method'],
-                'status' => $isUssd ? 'pending_reconciliation' : 'verified',
+                'status' => $isUssd ? PaymentStatus::PendingReconciliation->value : PaymentStatus::Verified->value,
                 'reconciliation_status' => $isUssd ? 'pending' : null,
                 'amount' => $outstanding,
                 'paid_at' => $now,
@@ -173,7 +182,7 @@ class BillingController extends Controller
         }
 
         $summary = $this->summary($session);
-        $hasPayment = collect($summary['payments'])->whereIn('status', self::SETTLED)->isNotEmpty();
+        $hasPayment = collect($summary['payments'])->whereIn('status', PaymentStatus::settled())->isNotEmpty();
         if ($summary['outstanding'] > 0 || ($summary['total'] > 0 && ! $hasPayment)) {
             return response()->json(['message' => 'Payment must be recorded before closing the session.', 'outstanding' => $summary['outstanding']], 422);
         }
@@ -196,12 +205,12 @@ class BillingController extends Controller
         if (! $payment) {
             return response()->json(['message' => 'Payment not found'], 404);
         }
-        if ($payment->status !== 'pending_reconciliation') {
+        if ($payment->status !== PaymentStatus::PendingReconciliation->value) {
             return response()->json(['message' => 'Payment is not awaiting reconciliation.'], 409);
         }
 
         DB::table('payments')->where('id', $paymentId)->update([
-            'status' => 'verified',
+            'status' => PaymentStatus::Verified->value,
             'reconciliation_status' => 'reconciled',
             'verified_at' => now(),
             'verified_by' => $r->user()->id,

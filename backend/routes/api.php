@@ -75,12 +75,12 @@ Route::middleware('api.auth')->group(function () {
     });
     Route::middleware('role:manager,cashier')->group(function () {
         Route::get('payments/pending', [PaymentController::class, 'pending']);
-        Route::post('payments/{id}/verify', [PaymentController::class, 'verify']);
-        Route::post('payments/{id}/reject', [PaymentController::class, 'reject']);
-        Route::post('sessions/{id}/payment', [BillingController::class, 'pay']);
-        Route::post('sessions/{id}/close', [BillingController::class, 'close']);
-        Route::post('payments/{id}/reconcile', [BillingController::class, 'reconcile']);
-        Route::patch('sessions/{sessionId}/bill-items/{item}', [BillingController::class, 'adjust']);
+        Route::post('payments/{id}/verify', [PaymentController::class, 'verify'])->middleware('throttle:30,1');
+        Route::post('payments/{id}/reject', [PaymentController::class, 'reject'])->middleware('throttle:30,1');
+        Route::post('sessions/{id}/payment', [BillingController::class, 'pay'])->middleware('throttle:30,1');
+        Route::post('sessions/{id}/close', [BillingController::class, 'close'])->middleware('throttle:20,1');
+        Route::post('payments/{id}/reconcile', [BillingController::class, 'reconcile'])->middleware('throttle:30,1');
+        Route::patch('sessions/{sessionId}/bill-items/{item}', [BillingController::class, 'adjust'])->middleware('throttle:30,1');
     });
     Route::middleware('role:manager,cashier,waiter')->group(function () {
         Route::get('sessions/{id}/bill', [BillingController::class, 'bill']);
