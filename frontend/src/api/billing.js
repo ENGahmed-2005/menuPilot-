@@ -23,3 +23,9 @@ export const recordPayment = (sessionId, method) =>
  */
 export const adjustBillItem = (sessionId, billItemId, payload) =>
   api.patch(`/sessions/${sessionId}/bill-items/${billItemId}`, payload);
+
+/** Close a session once payment is recorded; the table returns to Available. FR-31, FR-32. */
+export const closeSession = (sessionId) => api.post(`/sessions/${sessionId}/close`);
+
+/** Mark an offline/USSD payment as reconciled after connectivity returns. FR-37. */
+export const reconcilePayment = (paymentId) => api.post(`/payments/${paymentId}/reconcile`);

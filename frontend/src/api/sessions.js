@@ -21,5 +21,7 @@ export const openSession = async (payload) => {
 
 export const getSession = (sessionId) => api.get(`/public/sessions/${sessionId}`);
 export const updateCustomer = (sessionId, payload) => api.patch(`/public/sessions/${sessionId}/customer`, payload);
-export const requestWaiterAssistance = (sessionId) => api.post(`/public/sessions/${sessionId}/assistance-requests`);
+export const requestWaiterAssistance = (sessionId, note) => api.post(`/public/sessions/${sessionId}/assistance-requests`, note ? { note } : undefined);
 export const getActiveSessions = () => api.get("/sessions?status=active");
+/** US-11: staff mark every pending waiter call of a session as handled. */
+export const resolveSessionAssistance = (sessionId) => api.post(`/sessions/${sessionId}/assistance/resolve`);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Staff;
+use App\Support\OrderWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -67,7 +68,7 @@ class PaymentController
         $proofPath = $request->hasFile('proof') ? $request->file('proof')->store('payment-proofs', 'public') : null;
 
         $result = DB::transaction(function () use ($v, $sessionId, $session, $proofPath) {
-            $orderId = DB::table('orders')->insertGetId(['dining_session_id' => $sessionId, 'user_id' => $session->restaurant_user_id, 'status' => 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            $orderId = OrderWorkflow::createOrder((int) $sessionId, (int) $session->restaurant_user_id, 'payment_pending');
             $validItems = 0;
             foreach ($v['items'] as $item) {
                 $menuItem = DB::table('menu_items')->where('id', $item['menuItemId'])->where('user_id', $session->restaurant_user_id)->where('is_available', true)->first();
@@ -92,6 +93,7 @@ class PaymentController
     public function pending(Request $request)
     {
         $restaurantId = $this->restaurantId($request);
+
         return $this->out(DB::table('payments')->join('orders', 'orders.id', '=', 'payments.order_id')->join('dining_sessions', 'dining_sessions.id', '=', 'payments.dining_session_id')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('restaurant_tables.user_id', $restaurantId)->where('payments.status', 'pending')->select('payments.*', 'orders.status as order_status', 'restaurant_tables.label as table_label', 'dining_sessions.customer_name')->latest('payments.id')->get());
     }
 
@@ -107,6 +109,7 @@ class PaymentController
         DB::transaction(function () use ($payment, $request) {
             DB::table('payments')->where('id', $payment->id)->update(['status' => 'verified', 'paid_at' => now(), 'verified_at' => now(), 'verified_by' => $request->user()->id, 'updated_at' => now()]);
             DB::table('orders')->where('id', $payment->order_id)->update(['status' => 'pending', 'updated_at' => now()]);
+            OrderWorkflow::logStatus((int) $payment->order_id, 'payment_pending', 'pending', $request->user()->id);
             DB::table('dining_sessions')->where('id', $payment->dining_session_id)->update(['status' => 'ordering', 'updated_at' => now()]);
         });
 

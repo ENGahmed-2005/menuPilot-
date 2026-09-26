@@ -63,10 +63,10 @@ class MenuController extends Controller
             throw new \InvalidArgumentException('Image must not be larger than 3 MB.');
         }
 
-        $path = 'menu-items/' . Str::uuid() . '.' . $extension;
+        $path = 'menu-items/'.Str::uuid().'.'.$extension;
         Storage::disk('public')->put($path, $decoded);
 
-        return asset('storage/' . $path);
+        return asset('storage/'.$path);
     }
 
     private function deleteStoredImage(?string $value): void
@@ -75,7 +75,7 @@ class MenuController extends Controller
             return;
         }
 
-        $prefix = rtrim(asset('storage/'), '/') . '/';
+        $prefix = rtrim(asset('storage/'), '/').'/';
         if (Str::startsWith($value, $prefix)) {
             $path = Str::after($value, $prefix);
             if ($path && Storage::disk('public')->exists($path)) {
@@ -92,6 +92,8 @@ class MenuController extends Controller
 
         $item->imageUrl = $item->image_url;
         unset($item->image_url);
+        $item->prepTimeMinutes = (int) ($item->prep_time_minutes ?? 15);
+
         return $item;
     }
 
@@ -108,7 +110,8 @@ class MenuController extends Controller
             'category' => 'nullable|string',
             'description' => 'nullable|string',
             'imageUrl' => 'nullable|string',
-        ]);
+            'prepTimeMinutes' => 'nullable|integer|min:1|max:240',
+        ], ['price.gt' => 'Price must be greater than zero.']);
 
         try {
             $imageUrl = $this->storeImage($v['imageUrl'] ?? null);
@@ -124,6 +127,7 @@ class MenuController extends Controller
             'description' => $v['description'] ?? null,
             'image_url' => $imageUrl,
             'is_available' => true,
+            'prep_time_minutes' => $v['prepTimeMinutes'] ?? 15,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -145,13 +149,18 @@ class MenuController extends Controller
             'description' => 'nullable|string',
             'imageUrl' => 'nullable|string',
             'is_available' => 'sometimes|boolean',
-        ]);
+            'prepTimeMinutes' => 'sometimes|nullable|integer|min:1|max:240',
+        ], ['price.gt' => 'Price must be greater than zero.']);
 
         $data = [];
         foreach (['name', 'price', 'category', 'description', 'is_available'] as $k) {
             if (array_key_exists($k, $v)) {
                 $data[$k] = $v[$k];
             }
+        }
+
+        if (array_key_exists('prepTimeMinutes', $v) && $v['prepTimeMinutes'] !== null) {
+            $data['prep_time_minutes'] = $v['prepTimeMinutes'];
         }
 
         if (array_key_exists('imageUrl', $v)) {
