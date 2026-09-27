@@ -49,9 +49,14 @@ Route::middleware('api.auth')->group(function () {
     Route::middleware('role:manager')->group(function () {
         Route::apiResource('menu-items', MenuController::class)->except(['show', 'create']);
         Route::apiResource('menu-categories', MenuCategoryController::class)->except(['show', 'create']);
-        Route::apiResource('tables', TableController::class)->except(['show', 'create']);
+        Route::apiResource('tables', TableController::class)->except(['show', 'create', 'index']);
         Route::get('tables/{id}/qr', [TableController::class, 'qr']);
         Route::apiResource('staff', StaffController::class)->except(['show', 'create']);
+    });
+    // Cashiers and waiters need read access to the table list (but not write).
+    Route::middleware('role:manager,cashier,waiter')->group(function () {
+        Route::get('tables', [TableController::class, 'index']);
+        Route::get('tables/{id}/status', [TableController::class, 'status']);
     });
     Route::middleware('role:manager,kitchen,cashier,waiter')->group(function () {
         Route::get('sessions', [SessionController::class, 'active']);

@@ -29,3 +29,9 @@ export const closeSession = (sessionId) => api.post(`/sessions/${sessionId}/clos
 
 /** Mark an offline/USSD payment as reconciled after connectivity returns. FR-37. */
 export const reconcilePayment = (paymentId) => api.post(`/payments/${paymentId}/reconcile`);
+
+/** Cashier verifies a customer-submitted pending payment. */
+export const verifyPayment = (paymentId) => api.post(`/payments/${paymentId}/verify`);
+
+/** Cashier rejects a customer-submitted pending payment with a reason. */
+export const rejectPayment = (paymentId, reason) => api.post(`/payments/${paymentId}/reject`, { reason });
