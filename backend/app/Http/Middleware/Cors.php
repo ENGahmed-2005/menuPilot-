@@ -9,7 +9,7 @@ class Cors
 {
     public function handle(Request $r, Closure $next)
     {
-        $h = ['Access-Control-Allow-Origin' => '*', 'Access-Control-Allow-Methods' => 'GET, POST, PUT, PATCH, DELETE, OPTIONS', 'Access-Control-Allow-Headers' => 'Content-Type, Authorization, Accept'];
+        $h = ['Access-Control-Allow-Origin' => '*', 'Access-Control-Allow-Methods' => 'GET, POST, PUT, PATCH, DELETE, OPTIONS', 'Access-Control-Allow-Headers' => 'Content-Type, Authorization, Accept, X-Session-Token'];
         if ($r->isMethod('OPTIONS')) {
             return response('', 204, $h);
         }$response = $next($r);
@@ -17,6 +17,6 @@ class Cors
             $response->headers->set($k, $v);
         }
 
-return $response;
+        return $response;
     }
 }

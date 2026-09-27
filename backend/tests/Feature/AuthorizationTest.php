@@ -12,7 +12,7 @@ function sessionWithOrder($test, int $ownerId, float $price = 20, string $label 
 {
     $table = makeTable($ownerId, $label);
     $s = openSession($test, $table);
-    $test->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($ownerId, $price), 'quantity' => 1]]])->assertCreated();
+    $test->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($ownerId, $price), 'quantity' => 1]]], customer($s))->assertCreated();
 
     return ['session' => $s, 'table' => $table];
 }
@@ -48,7 +48,7 @@ it('marks the table occupied when a session opens and exposes the lifecycle', fu
         ->and($session['closeBlocker'])->toBe('OUTSTANDING_BALANCE')
         ->and((float) $session['outstanding'])->toBe(20.0);
 
-    $this->postJson("/api/public/sessions/{$s['id']}/bill-request")->assertOk();
+    $this->postJson("/api/public/sessions/{$s['id']}/bill-request", [], customer($s))->assertOk();
     expect($this->getJson('/api/sessions', authAs($cashier))->json('data.0.lifecycle'))->toBe('bill_requested');
 });
 
@@ -68,7 +68,7 @@ it('closes a paid session: table available, waiter calls resolved, audit written
     $owner = makeOwner();
     $cashier = makeStaff($owner['id'], 'cashier');
     ['session' => $s, 'table' => $table] = sessionWithOrder($this, $owner['id'], 25);
-    $this->postJson("/api/public/sessions/{$s['id']}/assistance-requests")->assertCreated();
+    $this->postJson("/api/public/sessions/{$s['id']}/assistance-requests", [], customer($s))->assertCreated();
 
     $this->postJson("/api/sessions/{$s['id']}/payment", ['method' => 'cash', 'close' => false], authAs($cashier))->assertCreated();
     $bill = $this->getJson("/api/sessions/{$s['id']}/bill", authAs($cashier))->json('data');

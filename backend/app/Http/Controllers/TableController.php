@@ -37,9 +37,14 @@ class TableController extends Controller
         return DB::table('restaurant_tables')->where('user_id', $this->restaurantId($request));
     }
 
+    private function menuUrl(string $tableCode): string
+    {
+        return rtrim(config('app.frontend_url'), '/').'/t/'.$tableCode;
+    }
+
     private function qrImageUrl(string $tableCode): string
     {
-        $menuUrl = url('/t/'.$tableCode);
+        $menuUrl = $this->menuUrl($tableCode);
 
         return 'https://api.qrserver.com/v1/create-qr-code/?size=640x640&margin=16&data='.rawurlencode($menuUrl);
     }
@@ -61,7 +66,9 @@ class TableController extends Controller
         // set the table aside manually (reserved / out of service).
         $table->status = $activeSession ? 'occupied' : (in_array($table->status, self::MANUAL_STATUSES, true) ? $table->status : 'available');
         $table->qrCodeUrl = '/t/'.$table->table_code;
-        $table->qrImageUrl = $table->qr_image_url ?: $this->qrImageUrl($table->table_code);
+        // Always derived from FRONTEND_URL, so changing the domain fixes every QR.
+        $table->qrImageUrl = $this->qrImageUrl($table->table_code);
+        $table->menuUrl = $this->menuUrl($table->table_code);
 
         return $table;
     }
@@ -98,13 +105,11 @@ class TableController extends Controller
         while ($id === null) {
             $code = Str::upper(Str::random(10));
             try {
-                $qrImageUrl = $this->qrImageUrl($code);
                 $id = DB::table('restaurant_tables')->insertGetId([
                     'user_id' => $restaurantId,
                     'label' => trim($v['label']),
                     'seats' => $v['seats'],
                     'table_code' => $code,
-                    'qr_image_url' => $qrImageUrl,
                     'status' => 'available',
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -167,15 +172,12 @@ class TableController extends Controller
             return response()->json(['message' => 'Table not found'], 404);
         }
 
-        $qrImageUrl = $table->qr_image_url ?: $this->qrImageUrl($table->table_code);
-        if (! $table->qr_image_url) {
-            DB::table('restaurant_tables')->where('id', $id)->update(['qr_image_url' => $qrImageUrl, 'updated_at' => now()]);
-        }
+        $qrImageUrl = $this->qrImageUrl($table->table_code);
 
         return $this->out([
             'table_id' => $table->id,
             'table_code' => $table->table_code,
-            'menu_url' => url('/t/'.$table->table_code),
+            'menu_url' => $this->menuUrl($table->table_code),
             'qr_image_url' => $qrImageUrl,
         ]);
     }

@@ -9,7 +9,6 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
-  const [resetLink, setResetLink] = useState("");
 
   const submit = async (e) => {
     e.preventDefault();
@@ -20,11 +19,9 @@ export default function ForgotPassword() {
     }
     setLoading(true);
     try {
-      const data = await forgotPassword({ email: email.trim() });
+      // The reset link arrives by e-mail only (locally: see storage/logs/laravel.log).
+      await forgotPassword({ email: email.trim() });
       setSent(true);
-      if (data?._devResetToken) {
-        setResetLink(`/reset-password?token=${data._devResetToken}&email=${encodeURIComponent(email.trim())}`);
-      }
     } catch (err) {
       setError(err.message || "تعذر إرسال طلب الاسترجاع.");
     } finally {
@@ -45,13 +42,6 @@ export default function ForgotPassword() {
             <CheckCircle2 className="mt-0.5 shrink-0 text-herb" size={19} />
             <span>إذا كان البريد <strong dir="ltr">{email}</strong> مسجلًا لدينا، فقد تم إنشاء طلب الاسترجاع.</span>
           </div>
-          {resetLink && (
-            <div className="rounded-2xl border border-copper/20 bg-copper/5 p-4 text-sm leading-6 text-ink-soft">
-              <p className="font-bold text-ink">وضع الاختبار</p>
-              <p className="mt-1">الـ Mock API لا يرسل بريدًا حقيقيًا. استخدم الرابط التالي لإكمال الاختبار.</p>
-              <Link to={resetLink} className="mt-3 inline-flex items-center gap-2 font-bold text-copper-ink no-underline hover:text-copper">فتح صفحة إعادة التعيين <ArrowRight size={15} /></Link>
-            </div>
-          )}
           <Link to="/login" className="inline-flex items-center gap-2 text-sm font-bold text-copper-ink no-underline hover:text-copper">العودة إلى تسجيل الدخول <ArrowRight size={15} /></Link>
         </div>
       ) : (

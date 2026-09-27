@@ -1,5 +1,6 @@
 import { mockRequest } from './mockServer';
 import { friendlyMessage } from '../utils/errors';
+import { sessionHeaders, sessionIdFromPath } from '../utils/sessionToken';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -27,6 +28,10 @@ export async function request(path, options = {}) {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
+
+  // Customer session endpoints need the session secret (see utils/sessionToken).
+  const sessionId = sessionIdFromPath(path);
+  if (sessionId) Object.assign(headers, sessionHeaders(sessionId));
 
   let response;
   try {

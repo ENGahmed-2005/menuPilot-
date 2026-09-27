@@ -1,3 +1,4 @@
+import { saveSessionToken } from "../utils/sessionToken";
 import { api } from "./client";
 
 const isMockMode = () => import.meta.env.VITE_USE_MOCKS === "true";
@@ -16,7 +17,10 @@ function getLocation() {
 export const openSession = async (payload) => {
   const body = { name: payload.name, phone: payload.phone };
   if (!isMockMode()) { const position = await getLocation(); body.latitude = position.coords.latitude; body.longitude = position.coords.longitude; }
-  return api.post(`/public/tables/${payload.tableCode}/sessions`, body);
+  const session = await api.post(`/public/tables/${payload.tableCode}/sessions`, body);
+  // Keep the session secret on this phone; later calls send it automatically.
+  saveSessionToken(session?.id, session?.access_token);
+  return session;
 };
 
 export const getSession = (sessionId) => api.get(`/public/sessions/${sessionId}`);

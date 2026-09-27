@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\RestaurantSetting;
+use App\Support\MediaStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -56,14 +57,15 @@ class BrandingController extends Controller
 
         foreach (['logo' => 'logo_url', 'background' => 'background_url'] as $file => $column) {
             if ($request->hasFile($file)) {
-                if ($settings->{$column}) {
-                    $old = parse_url($settings->{$column}, PHP_URL_PATH);
-                    if ($old) {
-                        Storage::disk('public')->delete(ltrim(str_replace('/storage/', '', $old), '/'));
-                    }
+                $old = $settings->{$column};
+                if ($old && str_contains($old, '/storage/')) {
+                    // Legacy file on the local disk.
+                    Storage::disk('public')->delete(ltrim(str_replace('/storage/', '', (string) parse_url($old, PHP_URL_PATH)), '/'));
                 }
-                $path = $request->file($file)->store('restaurant-branding', 'public');
-                $validated[$column] = Storage::url($path);
+                MediaStore::forget($old);
+                // Database-backed so the logo/background survive redeploys.
+                $upload = $request->file($file);
+                $validated[$column] = MediaStore::put((string) file_get_contents($upload->getRealPath()), (string) $upload->getMimeType(), $user->id);
             }
         }
 

@@ -56,7 +56,7 @@ it('lets the owner free an occupied table by ending its session, with a reason w
     // Session with an unpaid order: needs a reason, recorded as a forced close.
     $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available'], authAs($owner))->assertOk();
     $s2 = openSession($this, $table);
-    $this->postJson("/api/public/sessions/{$s2['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 15), 'quantity' => 1]]]);
+    $this->postJson("/api/public/sessions/{$s2['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 15), 'quantity' => 1]]], customer($s2));
     $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available', 'close_session' => true], authAs($owner))
         ->assertStatus(422)->assertJsonPath('code', 'REASON_REQUIRED');
     // A waiter can't end sessions this way (no close_session / manage_tables).
@@ -84,7 +84,7 @@ it('lets the owner edit tables and manage order status and cancellation', functi
     $this->putJson("/api/tables/{$table->id}", ['label' => 'Patio 1', 'seats' => 6], authAs($owner))->assertOk();
 
     $s = openSession($this, $table);
-    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 12), 'quantity' => 2]]])->json('data.id');
+    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 12), 'quantity' => 2]]], customer($s))->json('data.id');
 
     $this->patchJson("/api/orders/{$orderId}/status", ['status' => 'preparing'], authAs($owner))->assertOk()->assertJsonPath('data.status', 'preparing');
     $this->postJson("/api/orders/{$orderId}/cancel", ['reason' => ''], authAs($owner))->assertStatus(422);
@@ -101,7 +101,7 @@ it('keeps table status and order actions inside the owner restaurant and away fr
     $kitchen = makeStaff($a['id'], 'kitchen');
     $table = makeTable($a['id']);
     $s = openSession($this, $table);
-    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($a['id']), 'quantity' => 1]]])->json('data.id');
+    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($a['id']), 'quantity' => 1]]], customer($s))->json('data.id');
 
     $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'reserved'], authAs($b))->assertNotFound();
     $this->postJson("/api/orders/{$orderId}/cancel", ['reason' => 'x x'], authAs($b))->assertNotFound();
