@@ -1,73 +1,101 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   CreditCard,
   Download,
-  FileSpreadsheet,
   Loader2,
   Receipt,
   RefreshCw,
   Upload,
-  WalletCards,
+  X,
 } from "lucide-react";
 import Spinner from "../../components/ui/Spinner";
 import Button from "../../components/ui/Button";
+import Modal from "../../components/ui/Modal";
+import CloseSessionButton from "../../components/billing/CloseSessionButton";
+import { usePermissions } from "../../hooks/usePermissions";
+import Input from "../../components/ui/Input";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
+import {
+  adjustBillItem,
+  getBill,
+  recordPayment,
+  verifyPayment,
+  rejectPayment,
+} from "../../api/billing";
 
-const PAYMENT_METHODS = [
-  { value: "cash", label: "نقدًا", description: "الدفع المباشر عند الكاشير" },
-  { value: "electronic", label: "إلكتروني", description: "بطاقة أو وسيلة دفع إلكترونية" },
-  { value: "ussd", label: "USSD", description: "قناة دفع بديلة" },
-];
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
-const MOCK_BILLS = {
-  "101": {
-    id: "101",
-    invoiceNumber: "INV-1001",
-    table: "طاولة 01",
-    customer: "أحمد محمد",
-    date: "2026-09-09",
-    status: "Open",
-    tax: 4.5,
-    discount: 0,
-    items: [
-      { id: "1", code: "FOOD-001", name: "برغر كلاسيك", quantity: 2, price: 18, total: 36, category: "وجبات" },
-      { id: "2", code: "FOOD-014", name: "بطاطا مقلية", quantity: 1, price: 8, total: 8, category: "إضافات" },
-      { id: "3", code: "DRK-003", name: "مشروب غازي", quantity: 2, price: 5, total: 10, category: "مشروبات" },
-    ],
-  },
-  "102": {
-    id: "102",
-    invoiceNumber: "INV-1002",
-    table: "طاولة 02",
-    customer: "سارة علي",
-    date: "2026-09-09",
-    status: "Open",
-    tax: 3.2,
-    discount: 2,
-    items: [
-      { id: "4", code: "FOOD-007", name: "بيتزا خضار", quantity: 1, price: 24, total: 24, category: "بيتزا" },
-      { id: "5", code: "DRK-005", name: "عصير برتقال", quantity: 2, price: 6, total: 12, category: "مشروبات" },
-    ],
-  },
-};
+const money = (v) =>
+  `${Number(v || 0).toLocaleString("ar-PS", { maximumFractionDigits: 2 })} ₪`;
 
-const money = (value) => `${Number(value || 0).toLocaleString("ar-PS", { maximumFractionDigits: 2 })} ₪`;
+function mapBill(data, sessionId) {
+  const session = data?.session || {};
+  const items = (data?.items || []).map((item) => ({
+    id: String(item.id),
+    name: item.name,
+    code: item.order_number ? `طلب #${item.order_number}` : `#${item.order_id}`,
+    category: item.category || "—",
+    quantity: Number(item.quantity),
+    price: Number(item.unit_price),
+    total: Number(item.total),
+    note: item.note,
+  }));
+  const payments = data?.payments || [];
+  const pendingPayments = payments.filter((p) => p.status === "pending");
+  const lastSettled = payments.filter((p) => p.status !== "pending").slice(-1)[0];
 
-function getMockBill(sessionId) {
-  const source = MOCK_BILLS[sessionId] || MOCK_BILLS["101"];
-  const items = source.items.map((item) => ({ ...item }));
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
   return {
-    ...source,
+    id: String(session.id ?? sessionId),
+    invoiceNumber: `INV-${session.id ?? sessionId}`,
+    table: session.table_label ? `طاولة ${session.table_label}` : "—",
+    customer: session.customer_name || "زبون",
+    date: (session.opened_at || "").slice(0, 10),
+    sessionStatus: session.status,
+    closed: !!session.closed_at,
     items,
-    subtotal,
-    total: subtotal + Number(source.tax || 0) - Number(source.discount || 0),
+    subtotal: Number(data?.total || 0),
+    total: Number(data?.total || 0),
+    paidAmount: Number(data?.paid || 0),
+    outstanding: Number(data?.outstanding || 0),
+    paymentMethod: lastSettled?.method || "",
+    paymentStatus: lastSettled?.status || "",
+    pendingPayments,
+    // Lifecycle from the API (SessionLifecycle): drives the close button.
+    lifecycle: data?.lifecycle,
+    canClose: Boolean(data?.can_close),
+    closeBlocker: data?.close_blocker || null,
+    tableLabel: session.table_label,
+    real: true,
   };
 }
+
+const MOCK_BILL = {
+  id: "101",
+  invoiceNumber: "INV-1001",
+  table: "طاولة 01",
+  customer: "أحمد محمد",
+  date: "2026-09-09",
+  sessionStatus: "bill_requested",
+  closed: false,
+  items: [
+    { id: "1", code: "FOOD-001", name: "برغر كلاسيك", quantity: 2, price: 18, total: 36, category: "وجبات" },
+    { id: "2", code: "FOOD-014", name: "بطاطا مقلية", quantity: 1, price: 8, total: 8, category: "إضافات" },
+    { id: "3", code: "DRK-003", name: "مشروب غازي", quantity: 2, price: 5, total: 10, category: "مشروبات" },
+  ],
+  subtotal: 54,
+  total: 54,
+  paidAmount: 0,
+  outstanding: 54,
+  paymentMethod: "",
+  paymentStatus: "",
+  pendingPayments: [],
+  real: false,
+};
 
 function csvEscape(value) {
   const text = String(value ?? "");
@@ -75,246 +103,422 @@ function csvEscape(value) {
 }
 
 function downloadExcelCompatible(bill) {
-  const headers = ["رقم الفاتورة", "التاريخ", "الطاولة", "الصنف", "كود الصنف", "التصنيف", "الكمية", "سعر الوحدة", "الإجمالي", "الضريبة", "الخصم", "الإجمالي النهائي", "طريقة الدفع"];
+  const headers = ["رقم الفاتورة", "التاريخ", "الطاولة", "الصنف", "كود الصنف", "التصنيف", "الكمية", "سعر الوحدة", "الإجمالي"];
   const rows = bill.items.map((item) => [
-    bill.invoiceNumber,
-    bill.date,
-    bill.table,
-    item.name,
-    item.code,
-    item.category,
-    item.quantity,
-    item.price,
-    item.total,
-    bill.tax,
-    bill.discount,
-    bill.total,
-    bill.paymentMethod || "",
+    bill.invoiceNumber, bill.date, bill.table,
+    item.name, item.code, item.category,
+    item.quantity, item.price, item.total,
   ]);
   const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${bill.invoiceNumber || "menupilot-invoice"}.csv`;
+  anchor.download = `${bill.invoiceNumber || "invoice"}.csv`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
 
-function parseCsv(text) {
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) return [];
-  return lines.slice(1).map((line) => {
-    const cells = [];
-    let current = "";
-    let quoted = false;
-    for (let index = 0; index < line.length; index += 1) {
-      const char = line[index];
-      if (char === '"' && line[index + 1] === '"' && quoted) {
-        current += '"';
-        index += 1;
-      } else if (char === '"') {
-        quoted = !quoted;
-      } else if (char === "," && !quoted) {
-        cells.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    cells.push(current.trim());
-    return cells;
-  });
-}
+const METHOD_LABELS = { cash: "نقدًا", electronic: "إلكتروني", ussd: "USSD" };
+const PAYMENT_METHODS = [
+  { value: "cash", label: "نقدًا", description: "الدفع المباشر عند الكاشير" },
+  { value: "electronic", label: "إلكتروني", description: "بطاقة أو وسيلة إلكترونية" },
+  { value: "ussd", label: "USSD", description: "قناة دفع بديلة أوفلاين" },
+];
 
 export default function Billing() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
+  const { can } = usePermissions();
   const importRef = useRef(null);
+
   const [bill, setBill] = useState(null);
   const [method, setMethod] = useState("cash");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [verifying, setVerifying] = useState(null); // paymentId being processed
   const [notice, setNotice] = useState(null);
+  const [rejectModal, setRejectModal] = useState(null); // { paymentId }
+  const [rejectReason, setRejectReason] = useState("");
 
   function loadBill(silent = false) {
     if (silent) setRefreshing(true);
     else setLoading(true);
-    window.setTimeout(() => {
-      setBill(getMockBill(sessionId));
-      setLoading(false);
-      setRefreshing(false);
-    }, 350);
+
+    if (USE_MOCKS) {
+      setTimeout(() => { setBill(MOCK_BILL); setLoading(false); setRefreshing(false); }, 300);
+      return;
+    }
+
+    getBill(sessionId)
+      .then((data) => { setBill(mapBill(data, sessionId)); setNotice(null); })
+      .catch((err) => setNotice({ type: "error", text: err.message || "تعذر تحميل الفاتورة." }))
+      .finally(() => { setLoading(false); setRefreshing(false); });
   }
 
-  useEffect(() => {
-    loadBill();
-  }, [sessionId]);
+  useEffect(() => { loadBill(); }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleImport(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const rows = parseCsv(String(reader.result || ""));
-        if (!rows.length) throw new Error("الملف لا يحتوي على بيانات قابلة للاستيراد.");
-        const items = rows.map((row, index) => ({
-          id: `import-${index}`,
-          name: row[3] || `صنف ${index + 1}`,
-          code: row[4] || `IMPORT-${index + 1}`,
-          category: row[5] || "مستورد",
-          quantity: Number(row[6]) || 1,
-          price: Number(row[7]) || 0,
-          total: Number(row[8]) || (Number(row[6]) || 1) * (Number(row[7]) || 0),
-        }));
-        const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-        setBill((previous) => ({
-          ...previous,
-          invoiceNumber: rows[0][0] || previous.invoiceNumber,
-          date: rows[0][1] || previous.date,
-          table: rows[0][2] || previous.table,
-          items,
-          subtotal,
-          total: subtotal + Number(previous.tax || 0) - Number(previous.discount || 0),
-        }));
-        setNotice({ type: "success", text: `تم استيراد ${items.length} بند من جدول Excel.` });
-      } catch (error) {
-        setNotice({ type: "error", text: error.message || "تعذر قراءة الملف." });
-      }
-    };
-    reader.readAsText(file, "utf-8");
+  async function handleVerify(paymentId) {
+    setVerifying(paymentId);
+    try {
+      await verifyPayment(paymentId);
+      setNotice({ type: "success", text: "تم قبول دفعة العميل بنجاح." });
+      loadBill(true);
+    } catch (err) {
+      setNotice({ type: "error", text: err.message || "تعذر قبول الدفعة." });
+    } finally {
+      setVerifying(null);
+    }
   }
 
-  function changeQuantity(itemId, delta) {
-    setBill((previous) => {
-      const items = previous.items.map((item) => {
-        if (item.id !== itemId) return item;
-        const quantity = Math.max(1, item.quantity + delta);
-        return { ...item, quantity, total: quantity * item.price };
-      });
-      const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-      return { ...previous, items, subtotal, total: subtotal + Number(previous.tax || 0) - Number(previous.discount || 0) };
-    });
+  async function handleReject() {
+    if (!rejectReason.trim()) return;
+    const { paymentId } = rejectModal;
+    setVerifying(paymentId);
+    setRejectModal(null);
+    try {
+      await rejectPayment(paymentId, rejectReason.trim());
+      setRejectReason("");
+      setNotice({ type: "success", text: "تم رفض دفعة العميل." });
+      loadBill(true);
+    } catch (err) {
+      setNotice({ type: "error", text: err.message || "تعذر رفض الدفعة." });
+    } finally {
+      setVerifying(null);
+    }
+  }
+
+  // US-18: price adjustment in a dialog (validated, with reason) instead of window.prompt.
+  const [adjusting, setAdjusting] = useState(null);
+  function handleAdjust(item) {
+    setAdjusting({ item, price: String(item.price), reason: "", error: "", saving: false });
+  }
+  async function submitAdjust(event) {
+    event.preventDefault();
+    const newPrice = Number(adjusting.price);
+    if (adjusting.price === "" || !Number.isFinite(newPrice) || newPrice < 0) {
+      setAdjusting((a) => ({ ...a, error: "أدخل سعرًا صحيحًا يساوي صفرًا أو أكثر." }));
+      return;
+    }
+    setAdjusting((a) => ({ ...a, saving: true, error: "" }));
+    try {
+      const data = await adjustBillItem(sessionId, adjusting.item.id, { new_price: newPrice, reason: adjusting.reason.trim() || undefined });
+      setBill(mapBill(data, sessionId));
+      setAdjusting(null);
+      setNotice({ type: "success", text: "تم تعديل السعر وتسجيله في سجل التدقيق." });
+    } catch (err) {
+      setAdjusting((a) => ({ ...a, saving: false, error: err.message || "تعذّر تعديل السعر." }));
+    }
   }
 
   async function handleConfirmPayment() {
     setSubmitting(true);
     setNotice(null);
-    await new Promise((resolve) => window.setTimeout(resolve, 650));
-    setBill((previous) => ({ ...previous, status: "Paid", paymentMethod: method }));
-    setNotice({ type: "success", text: "تم تسجيل الدفع بنجاح — البيانات جاهزة للتصدير إلى Excel." });
-    setSubmitting(false);
+
+    if (USE_MOCKS) {
+      await new Promise((r) => setTimeout(r, 600));
+      setBill((prev) => ({ ...prev, closed: true, paymentMethod: method }));
+      setNotice({ type: "success", text: "تم تسجيل الدفع (بيانات وهمية)." });
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const payment = await recordPayment(sessionId, method);
+      setNotice({
+        type: "success",
+        text: payment?.status === "pending_reconciliation"
+          ? "تم تسجيل دفعة USSD وإغلاق الجلسة — بانتظار التسوية."
+          : "تم تسجيل الدفع وإغلاق الجلسة. الطاولة متاحة الآن.",
+      });
+      loadBill(true);
+    } catch (err) {
+      setNotice({ type: "error", text: err.message || "تعذر تسجيل الدفع." });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  const subtotal = useMemo(() => (bill?.items || []).reduce((sum, item) => sum + Number(item.total || 0), 0), [bill]);
-  const paid = bill?.status === "Paid";
-
-  if (loading) return <Spinner label="جارِ تحميل الفاتورة التجريبية…" />;
+  if (loading) return <Spinner label="جارِ تحميل الفاتورة…" />;
   if (!bill) return null;
 
+  const isPaid = bill.closed || bill.outstanding <= 0;
+  const hasPending = bill.pendingPayments?.length > 0;
+
   return (
-    <div dir="rtl" className="mx-auto max-w-4xl pb-8">
+    <div dir="rtl" className="mx-auto max-w-4xl pb-10">
       <PageHeader
         title="مركز الفاتورة"
         subtitle={`${bill.invoiceNumber} · ${bill.table} · جلسة #${sessionId}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => loadBill(true)} disabled={refreshing} className="flex items-center gap-2 rounded-xl border border-ink/10 px-3.5 py-2 text-sm font-bold hover:bg-ink/[0.04] disabled:opacity-50">
-              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> تحديث
+            <button
+              onClick={() => loadBill(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 rounded-xl border border-ink/10 px-3.5 py-2 text-sm font-bold hover:bg-ink/[0.04] disabled:opacity-50"
+            >
+              <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} /> تحديث
             </button>
-            <button onClick={() => downloadExcelCompatible(bill)} className="flex items-center gap-2 rounded-xl bg-herb px-3.5 py-2 text-sm font-bold text-paper">
-              <Download size={16} /> تصدير Excel
+            <button
+              onClick={() => downloadExcelCompatible(bill)}
+              className="flex items-center gap-2 rounded-xl bg-herb px-3.5 py-2 text-sm font-bold text-paper"
+            >
+              <Download size={15} /> تصدير Excel
             </button>
           </div>
         }
       />
 
+      {/* Notices */}
       {notice && (
-        <div className={`mb-5 rounded-2xl border px-4 py-3 text-sm font-semibold ${notice.type === "success" ? "border-herb/15 bg-herb/10 text-herb" : "border-brick/15 bg-brick/10 text-brick"}`}>
-          {notice.text}
+        <div className={`mb-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold ${notice.type === "success" ? "border-herb/20 bg-herb/10 text-herb" : "border-brick/20 bg-brick/10 text-brick"}`}>
+          {notice.type === "success" ? <CheckCircle2 size={17} className="mt-0.5 shrink-0" /> : <AlertTriangle size={17} className="mt-0.5 shrink-0" />}
+          <span>{notice.text}</span>
         </div>
       )}
 
+      {/* ── Pending customer payment ───────────────────────────────────── */}
+      {hasPending && bill.pendingPayments.map((p) => (
+        <div key={p.id} className="mb-5 rounded-2xl border-2 border-copper/40 bg-copper/5 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-copper/15 text-copper">
+                <AlertTriangle size={18} />
+              </span>
+              <div>
+                <p className="font-bold text-copper-ink">دفعة معلّقة من العميل — يتطلب إجراء</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {p.payer_name && <span className="ml-2">{p.payer_name}</span>}
+                  {p.method && <span className="ml-2">· {METHOD_LABELS[p.method] || p.method}</span>}
+                  {p.amount > 0 && <span>· {money(p.amount)}</span>}
+                </p>
+              </div>
+            </div>
+            {can("verify_payments") && <div className="flex gap-2">
+              <button
+                onClick={() => handleVerify(p.id)}
+                disabled={!!verifying}
+                className="flex items-center gap-1.5 rounded-xl bg-herb px-4 py-2 text-sm font-bold text-paper disabled:opacity-60"
+              >
+                {verifying === p.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                قبول
+              </button>
+              <button
+                onClick={() => { setRejectModal({ paymentId: p.id }); setRejectReason(""); }}
+                disabled={!!verifying}
+                className="flex items-center gap-1.5 rounded-xl border border-brick/30 bg-brick/10 px-4 py-2 text-sm font-bold text-brick disabled:opacity-60"
+              >
+                <X size={15} /> رفض
+              </button>
+            </div>}
+          </div>
+        </div>
+      ))}
+
+      {/* ── Summary cards ──────────────────────────────────────────────── */}
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         {[
           ["الطاولة", bill.table],
           ["العميل", bill.customer],
-          ["الحالة", paid ? "مدفوعة" : "مفتوحة"],
+          ["الحالة", isPaid ? "مدفوعة ✓" : "مفتوحة"],
         ].map(([label, value]) => (
           <Card key={label} className="p-4">
-            <p className="text-[11px] text-ink-soft/50">{label}</p>
-            <p className="mt-1 font-bold">{value}</p>
+            <p className="text-xs text-muted">{label}</p>
+            <p className={`mt-1 font-bold ${label === "الحالة" && isPaid ? "text-herb" : ""}`}>{value}</p>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_0.85fr]">
-        <Card className="overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 bg-ink/[0.025] px-5 py-4">
-            <div className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-copper/10 text-copper"><Receipt size={17} /></span>
-              <div><h2 className="text-sm font-bold">بنود الفاتورة</h2><p className="text-[11px] text-ink-soft/50">بيانات وهمية قابلة للتعديل</p></div>
+      {/* ── Bill items ─────────────────────────────────────────────────── */}
+      <Card className="mb-5 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-ink/10 bg-ink/[0.025] px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-copper/10 text-copper">
+              <Receipt size={17} />
+            </span>
+            <div>
+              <h2 className="text-sm font-bold">بنود الفاتورة</h2>
+              <p className="text-xs text-muted">{bill.items.length} صنف — {bill.real ? "بيانات حقيقية" : "بيانات وهمية"}</p>
             </div>
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:bg-ink/[0.03]">
-              <Upload size={15} /> استيراد Excel
-              <input ref={importRef} type="file" accept=".csv,.txt" onChange={handleImport} className="hidden" />
-            </label>
           </div>
+          {!bill.real && (
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:bg-ink/[0.03]">
+              <Upload size={14} /> استيراد CSV
+              <input ref={importRef} type="file" accept=".csv,.txt" className="hidden" />
+            </label>
+          )}
+        </div>
 
-          <div className="divide-y divide-ink/10">
+        {bill.items.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-muted">لا توجد أصناف في هذه الجلسة بعد.</div>
+        ) : (
+          <div className="divide-y divide-ink/[0.06]">
             {bill.items.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                <div className="min-w-0">
+              <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-ink/[0.015]">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{item.name}</p>
-                  <p className="mt-1 text-[11px] text-ink-soft/50">{item.code} · {item.category} · {money(item.price)} للوحدة</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {item.code} · {item.category} · {money(item.price)} للوحدة
+                  </p>
+                  {item.note && <p className="mt-0.5 text-xs text-copper">{item.note}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  <div className="flex items-center rounded-xl border border-ink/10">
-                    <button onClick={() => changeQuantity(item.id, -1)} disabled={paid} className="px-2.5 py-1.5 text-sm font-bold">−</button>
-                    <span className="min-w-7 text-center text-sm font-bold">{item.quantity}</span>
-                    <button onClick={() => changeQuantity(item.id, 1)} disabled={paid} className="px-2.5 py-1.5 text-sm font-bold">+</button>
-                  </div>
+                  <span className="rounded-xl border border-ink/10 px-3 py-1.5 text-sm font-bold">×{item.quantity}</span>
+                  {bill.real && !isPaid && can("adjust_bill") && (
+                    <button
+                      onClick={() => handleAdjust(item)}
+                      className="rounded-lg px-2 py-1 text-xs font-bold text-copper hover:bg-copper/10"
+                    >
+                      تعديل
+                    </button>
+                  )}
                   <span className="w-20 text-left text-sm font-bold">{money(item.total)}</span>
                 </div>
               </div>
             ))}
           </div>
+        )}
 
-          <div className="border-t border-ink/10 bg-paper-2 px-5 py-4">
-            <div className="flex justify-between text-xs text-ink-soft/60"><span>المجموع</span><span>{money(subtotal)}</span></div>
-            <div className="mt-2 flex justify-between text-xs text-ink-soft/60"><span>الضريبة</span><span>{money(bill.tax)}</span></div>
-            <div className="mt-2 flex justify-between text-xs text-ink-soft/60"><span>الخصم</span><span>- {money(bill.discount)}</span></div>
-            <div className="mt-4 flex justify-between"><strong className="text-lg">الإجمالي</strong><strong className="text-2xl text-copper-deep">{money(bill.total)}</strong></div>
+        {/* Totals */}
+        <div className="border-t border-ink/10 bg-paper-2 px-5 py-5 space-y-2">
+          <div className="flex justify-between text-sm text-muted"><span>المجموع الفرعي</span><span>{money(bill.subtotal)}</span></div>
+          {bill.real && bill.paidAmount > 0 && (
+            <div className="flex justify-between text-sm text-herb"><span>مدفوع مسبقًا</span><span>{money(bill.paidAmount)}</span></div>
+          )}
+          <div className="flex justify-between border-t border-ink/10 pt-3">
+            <strong className="text-base">الإجمالي المستحق</strong>
+            <strong className={`text-2xl ${isPaid ? "text-herb" : "text-copper-ink"}`}>{money(bill.outstanding)}</strong>
           </div>
-        </Card>
+          {bill.paymentStatus === "pending_reconciliation" && (
+            <p className="rounded-lg bg-copper/10 px-3 py-2 text-xs font-bold text-copper-ink">
+              دفعة USSD بانتظار التسوية
+            </p>
+          )}
+        </div>
+      </Card>
 
-        <Card className="h-fit p-5">
-          <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-xl bg-copper/10 text-copper"><WalletCards size={17} /></span><div><h2 className="text-sm font-bold">الدفع</h2><p className="text-[11px] text-ink-soft/50">اختر الطريقة</p></div></div>
-          <div className="mt-4 space-y-2">
+      {/* ── Payment section ────────────────────────────────────────────── */}
+      {!isPaid && !can("record_payment") ? (
+        <Card className="p-5 text-sm text-muted">تسجيل الدفع يحتاج صلاحية «تسجيل الدفع». اطلبها من صاحب المطعم إذا كانت ضمن عملك.</Card>
+      ) : !isPaid ? (
+        <Card className="p-5">
+          <h2 className="mb-4 text-sm font-bold">تسجيل الدفع</h2>
+          {hasPending && (
+            <p className="mb-4 rounded-xl border border-copper/25 bg-copper/5 px-4 py-2.5 text-xs font-semibold text-copper-ink">
+              يجب قبول أو رفض دفعة العميل أعلاه قبل تسجيل دفع جديد.
+            </p>
+          )}
+          <div className="grid gap-2 sm:grid-cols-3">
             {PAYMENT_METHODS.map((item) => (
-              <label key={item.value} className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-3.5 ${method === item.value ? "border-copper bg-copper/5" : "border-ink/10"} ${paid ? "pointer-events-none opacity-60" : ""}`}>
-                <input type="radio" name="payment-method" value={item.value} checked={method === item.value} onChange={(event) => setMethod(event.target.value)} disabled={paid || submitting} />
-                <span><span className="block text-sm font-bold">{item.label}</span><span className="block text-[11px] text-ink-soft/50">{item.description}</span></span>
+              <label
+                key={item.value}
+                className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors ${method === item.value ? "border-copper bg-copper/5" : "border-ink/10 hover:bg-ink/[0.025]"} ${hasPending ? "pointer-events-none opacity-50" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="payment-method"
+                  value={item.value}
+                  checked={method === item.value}
+                  onChange={(e) => setMethod(e.target.value)}
+                  disabled={hasPending || submitting}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-bold">{item.label}</span>
+                  <span className="block text-xs text-muted">{item.description}</span>
+                </span>
               </label>
             ))}
           </div>
-          <Button onClick={handleConfirmPayment} disabled={paid || submitting} className="mt-4 w-full justify-center">
-            {submitting ? <span className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> جارِ تسجيل الدفع…</span> : paid ? <span className="flex items-center gap-2"><CheckCircle2 size={16} /> مدفوعة</span> : <span className="flex items-center gap-2"><CreditCard size={16} /> تأكيد الدفع</span>}
+          <Button
+            onClick={handleConfirmPayment}
+            disabled={hasPending || submitting}
+            className="mt-4 w-full justify-center"
+          >
+            {submitting
+              ? <span className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> جارِ تسجيل الدفع…</span>
+              : <span className="flex items-center gap-2"><CreditCard size={16} /> تأكيد الدفع · {money(bill.outstanding)}</span>}
           </Button>
-          <button onClick={() => navigate("/cashier/tables")} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold text-ink-soft hover:bg-ink/[0.04]"><ArrowRight size={15} /> العودة للطاولات</button>
         </Card>
-      </div>
+      ) : (
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="flex items-center gap-3 text-herb">
+            <CheckCircle2 size={22} aria-hidden="true" />
+            <div>
+              <p className="font-bold">{bill.closed ? "دُفعت الفاتورة وأُغلقت الجلسة" : "الفاتورة مدفوعة بالكامل"}</p>
+              {bill.paymentMethod && <p className="text-xs opacity-80">طريقة الدفع: {METHOD_LABELS[bill.paymentMethod] || bill.paymentMethod}</p>}
+              {!bill.closed && <p className="mt-0.5 text-xs text-muted">أغلق الجلسة لتصبح الطاولة متاحة للزبون التالي.</p>}
+            </div>
+          </div>
+          {bill.real && !bill.closed && (
+            <CloseSessionButton
+              session={{ id: sessionId, tableLabel: bill.tableLabel, billTotal: bill.total, paidTotal: bill.paidAmount, outstanding: bill.outstanding, canClose: bill.canClose, closeBlocker: bill.closeBlocker }}
+              onClosed={() => navigate("/cashier/tables")}
+            />
+          )}
+        </Card>
+      )}
 
-      <Card className="mt-5 border-copper/15 bg-copper/5 p-4">
-        <div className="flex items-start gap-3">
-          <FileSpreadsheet size={20} className="mt-0.5 shrink-0 text-copper" />
-          <div><p className="font-bold">جاهزية التكامل مع الأصيل</p><p className="mt-1 text-xs leading-6 text-ink-soft">هذه النسخة تستخدم بيانات وهمية، لكن نموذج التصدير مرتب كجدول Excel: رقم الفاتورة، التاريخ، الطاولة، الصنف، الكود، التصنيف، الكمية، السعر، الضريبة، الخصم والإجمالي. لاحقًا نربط نفس الجدول بالبيانات الحقيقية.</p></div>
+      <button
+        onClick={() => navigate("/cashier/tables")}
+        className="mt-4 flex items-center gap-2 text-sm font-bold text-ink-soft hover:text-ink"
+      >
+        <ArrowRight size={15} /> العودة للطاولات
+      </button>
+
+      {/* ── Reject Modal ───────────────────────────────────────────────── */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setRejectModal(null)}>
+          <div dir="rtl" className="w-full max-w-sm rounded-2xl bg-paper p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-base font-black">رفض دفعة العميل</h3>
+            <p className="mb-4 text-xs text-muted">سيُرفض الطلب ويُعلَم العميل. أدخل سبب الرفض.</p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="سبب الرفض…"
+              rows={3}
+              className="w-full rounded-xl border border-ink/15 bg-paper-2 p-3 text-sm outline-none focus:border-copper"
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={handleReject}
+                disabled={!rejectReason.trim()}
+                className="flex-1 rounded-xl bg-brick py-2.5 text-sm font-bold text-paper disabled:opacity-50"
+              >
+                رفض الدفعة
+              </button>
+              <button
+                onClick={() => setRejectModal(null)}
+                className="flex-1 rounded-xl border border-ink/10 py-2.5 text-sm font-bold"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
         </div>
-      </Card>
+      )}
+      <Modal
+        open={Boolean(adjusting)}
+        onClose={() => !adjusting?.saving && setAdjusting(null)}
+        size="sm"
+        title={adjusting ? `تعديل سعر «${adjusting.item.name}»` : ""}
+        description="يُحفظ السعر القديم والجديد واسم الكاشير في سجل التدقيق."
+      >
+        {adjusting && (
+          <form id="adjust-form" onSubmit={submitAdjust} className="space-y-4">
+            <Input label="السعر الجديد للوحدة (₪)" type="number" inputMode="decimal" min="0" step="0.01" required value={adjusting.price}
+              onChange={(e) => setAdjusting((a) => ({ ...a, price: e.target.value, error: "" }))} error={adjusting.error}
+              hint={`السعر الحالي ${adjusting.item.price} ₪ × ${adjusting.item.quantity}`} autoFocus />
+            <Input label="سبب التعديل" placeholder="مثل: خصم ولاء، طبق بديل" maxLength={255} value={adjusting.reason}
+              onChange={(e) => setAdjusting((a) => ({ ...a, reason: e.target.value }))} hint="اختياري، لكنه يساعد عند مراجعة الحسابات." />
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="secondary" onClick={() => setAdjusting(null)} disabled={adjusting.saving}>تراجع</Button>
+              <Button type="submit" loading={adjusting.saving}>حفظ السعر</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

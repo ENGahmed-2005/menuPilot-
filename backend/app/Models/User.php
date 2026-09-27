@@ -15,6 +15,7 @@ class User extends Authenticatable
         'restaurant_address', 'latitude', 'longitude', 'email', 'password',
         'plan', 'role', 'api_token', 'login_failed_attempts', 'login_locked_until', 'theme', 'payment_methods',
         'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at',
+        'is_active', 'last_active_at',
     ];
 
     protected $hidden = ['password', 'remember_token', 'api_token'];
@@ -23,6 +24,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_active' => 'boolean',
+            'last_active_at' => 'datetime',
             'password' => 'hashed',
             'theme' => 'array',
             'payment_methods' => 'array',

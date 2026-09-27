@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, BarChart3, Building2, CalendarDays, CheckCircle2, CircleDollarSign, ClipboardList, RefreshCw, TrendingUp, Users, XCircle } from "lucide-react";
 import { api } from "../../api/client";
-import "./AdminDashboard.css";
+import AdminPageShell from "../../components/layout/AdminPageShell";
 
 const money = (value) => new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));
 const dateLabel = (value) => new Intl.DateTimeFormat("ar", { month: "short", day: "numeric" }).format(new Date(`${value}T00:00:00`));
@@ -27,13 +27,11 @@ export default function AdminReports() {
 
   const trend = report?.trend || [];
   const maxOrders = useMemo(() => Math.max(1, ...trend.map(x => Number(x.orders || 0))), [trend]);
-  const maxRevenue = useMemo(() => Math.max(1, ...trend.map(x => Number(x.revenue || 0))), [trend]);
   const planTotal = useMemo(() => (report?.plans || []).reduce((sum, x) => sum + Number(x.count || 0), 0), [report]);
 
-  if (loading && !report) return <div className="admin-dashboard" dir="rtl"><main className="admin-main" style={{ width: "100%", margin: 0 }}><div className="admin-content"><div className="admin-empty">جارٍ تحميل التقارير...</div></div></main></div>;
+  if (loading && !report) return <AdminPageShell><div className="admin-empty">جارٍ تحميل التقارير…</div></AdminPageShell>;
 
-  return <div className="admin-dashboard" dir="rtl"><main className="admin-main" style={{ width: "100%", margin: 0 }}>
-    <div className="admin-content">
+  return <AdminPageShell>
       <section className="admin-heading"><div><p className="admin-overline"><Activity size={14} /> تحليلات المنصة</p><h1>التقارير والإحصائيات</h1><p>ملخص أداء menuPilot من المطاعم والطلبات والمدفوعات.</p></div><div style={{ display: "flex", gap: 8, alignItems: "center" }}><select value={days} onChange={e => setDays(Number(e.target.value))} className="admin-modal input" style={{ width: 120, padding: "10px 12px", border: "1px solid #e2e0d8", borderRadius: 9, background: "#fff", fontSize: 11 }}><option value={7}>7 أيام</option><option value={30}>30 يومًا</option><option value={90}>90 يومًا</option><option value={365}>سنة</option></select><button className="admin-primary-button" onClick={load} disabled={loading}><RefreshCw size={15} className={loading ? "animate-spin" : ""} /> تحديث</button></div></section>
       {error && <div style={{ marginBottom: 20, padding: 12, borderRadius: 10, background: "#fff0eb", color: "#bd725c", fontSize: 11, fontWeight: 700 }}>{error}</div>}
 
@@ -61,6 +59,5 @@ export default function AdminReports() {
       </div>
 
       <section className="admin-table-card" style={{ marginTop: 18 }}><div className="admin-table-heading"><div><p>ملخص سريع</p><h2>مؤشرات الفترة</h2></div><span style={{ fontSize: 9, color: "#aaa99f" }}>{report?.period?.from} → {report?.period?.to}</span></div><div style={{ padding: "0 24px 22px", display: "flex", flexWrap: "wrap", gap: 10 }}><span className="admin-plan">{report?.restaurants?.paidRestaurants || 0} مطاعم مدفوعة</span><span className="admin-plan">{report?.restaurants?.trialRestaurants || 0} تجارب</span><span className="admin-plan">{report?.orders?.totalOrders || 0} طلب</span><span className="admin-plan">{report?.revenue?.paymentsCount || 0} دفعة</span><span className="admin-plan">{money(report?.revenue?.revenue)} إجمالي الإيرادات</span></div></section>
-    </div>
-  </main></div>;
+  </AdminPageShell>;
 }

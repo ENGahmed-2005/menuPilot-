@@ -1,4 +1,5 @@
 import { CheckCircle2, Clock3, ReceiptText, Utensils, ArrowRight } from "lucide-react";
+import BrandLogo from "../../components/brand/Logo";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function BillRequest() {
@@ -14,7 +15,7 @@ export default function BillRequest() {
             <div className="absolute -left-10 -top-12 h-36 w-36 rounded-full bg-copper/20 blur-2xl" />
             <div className="relative flex items-center gap-3">
               <div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div>
-              <div><p className="text-[10px] font-bold tracking-[0.18em] text-copper">MENUPILOT</p><p className="text-xs text-paper/50">إدارة جلسة الطعام</p></div>
+              <div><BrandLogo on="dark" height={22} /><p className="text-xs text-paper/50">إدارة جلسة الطعام</p></div>
             </div>
           </div>
 
@@ -24,11 +25,11 @@ export default function BillRequest() {
             <p className="mx-auto mt-3 max-w-sm text-sm leading-7 text-ink-soft">تم إرسال طلب الفاتورة إلى الكاشير بنجاح. سيقوم الفريق بمراجعة الحساب ومتابعة الدفع معك.</p>
 
             <div className="mt-7 rounded-2xl border border-ink/10 bg-white p-4 text-right">
-              <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><ReceiptText size={18} /></div><div><p className="text-xs text-ink-soft/60">رقم جلسة الطعام</p><p className="mt-0.5 font-bold">#{sessionId || "—"}</p></div></div>
+              <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><ReceiptText size={18} /></div><div><p className="text-xs text-muted">رقم جلسة الطعام</p><p className="mt-0.5 font-bold">#{sessionId || "—"}</p></div></div>
             </div>
 
-            <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-copper/10 px-4 py-3 text-xs font-semibold text-copper-deep"><Clock3 size={16} /> بانتظار تأكيد الكاشير للدفع</div>
-            <p className="mt-6 text-xs leading-5 text-ink-soft/50">لا تحتاج إلى تحديث الصفحة. سيهتم فريق المطعم بالخطوات التالية.</p>
+            <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-copper/10 px-4 py-3 text-xs font-semibold text-copper-ink"><Clock3 size={16} /> بانتظار تأكيد الكاشير للدفع</div>
+            <p className="mt-6 text-xs leading-5 text-muted">لا تحتاج إلى تحديث الصفحة. سيهتم فريق المطعم بالخطوات التالية.</p>
 
             {sessionId && <button onClick={() => navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`)} className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-bold text-paper transition hover:bg-ink-soft"><ArrowRight size={17} /> العودة لتتبع الطلب</button>}
           </div>

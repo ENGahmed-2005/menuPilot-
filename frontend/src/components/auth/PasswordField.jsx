@@ -17,7 +17,7 @@ export default function PasswordField(props) {
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          className="shrink-0 text-ink-soft/60 transition-colors hover:text-ink"
+          className="shrink-0 text-muted transition-colors hover:text-ink"
           aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
           tabIndex={-1}
         >

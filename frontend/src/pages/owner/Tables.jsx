@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useConfirm } from "../../components/ui/ConfirmDialog";
 import { LayoutGrid, Plus, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createTable, deleteTable, getTables, updateTable } from "../../api/tables";
@@ -15,6 +16,7 @@ import TableCard from "./components/TableCard";
 const fieldClass = "w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink outline-none focus:border-copper focus:ring-2 focus:ring-copper/20";
 
 export default function Tables() {
+  const [confirm, confirmDialog] = useConfirm();
   const { user } = useAuth();
   const plan = getSubscriptionPlan(user?.plan);
   const [tables, setTables] = useState([]);
@@ -41,7 +43,14 @@ export default function Tables() {
     catch (err) { setError(err); }
   }
   async function handleDelete(id) {
-    if (!window.confirm("هل أنت متأكد من حذف هذه الطاولة؟")) return;
+    const table = tables.find((t) => t.id === id);
+    const ok = await confirm({
+      title: `حذف طاولة ${table?.label ?? ""}؟`,
+      description: "سيتوقف رمز QR المطبوع لهذه الطاولة عن العمل. لا يمكن التراجع عن الحذف.",
+      confirmLabel: "حذف الطاولة",
+      tone: "danger",
+    });
+    if (!ok) return;
     try { await deleteTable(id); await load(); } catch (err) { setError(err); }
   }
   function startEdit(table) { setEditingId(table.id); setEditLabel(table.label); setEditSeats(table.seats); }
@@ -54,9 +63,10 @@ export default function Tables() {
 
   return (
     <div dir="rtl">
+      {confirmDialog}
       {qrTable && <QRCodeModal table={qrTable} onClose={() => setQrTable(null)} />}
       <PageHeader title="الطاولات" subtitle={`إدارة طاولات المطعم وإنشاء QR خاص لكل طاولة. (${tables.length} من ${plan.limits.tables === Infinity ? "∞" : plan.limits.tables} · ${plan.name})`} />
-      {atLimit && <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 border-copper/25 bg-copper/5 p-4 text-sm"><span className="flex items-center gap-2 font-medium text-copper-deep"><Crown size={16}/> وصلت للحد الأقصى لعدد الطاولات.</span><Link to="/owner/subscription/pro" className="font-bold text-copper-deep hover:underline">ترقية الباقة →</Link></Card>}
+      {atLimit && <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 border-copper/25 bg-copper/5 p-4 text-sm"><span className="flex items-center gap-2 font-medium text-copper-ink"><Crown size={16}/> وصلت للحد الأقصى لعدد الطاولات.</span><Link to="/owner/subscription/pro" className="font-bold text-copper-ink hover:underline">ترقية الباقة →</Link></Card>}
       <Card as="form" onSubmit={handleAdd} className={`mb-6 flex flex-wrap items-end gap-3 p-4 ${atLimit ? "opacity-50" : ""}`}>
         <fieldset disabled={atLimit} className="contents"><div className="min-w-40 flex-1"><label className="mb-1.5 block text-xs font-medium text-ink-soft">اسم الطاولة</label><input placeholder="مثال: طاولة 07" value={label} onChange={(e) => setLabel(e.target.value)} required className={fieldClass}/></div><div className="w-24"><label className="mb-1.5 block text-xs font-medium text-ink-soft">المقاعد</label><input type="number" min={1} max={100} value={seats} onChange={(e) => setSeats(e.target.value)} className={fieldClass}/></div><Button type="submit"><Plus size={16}/> إضافة طاولة</Button></fieldset>
       </Card>

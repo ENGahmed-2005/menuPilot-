@@ -1,25 +1,33 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, CircleDollarSign, LayoutGrid, Receipt, RefreshCw, Search, WalletCards } from "lucide-react";
+import { BellRing, CircleDollarSign, LayoutGrid, Receipt, RefreshCw, Search, Utensils, WalletCards, CheckCircle2 } from "lucide-react";
 import { getTables } from "../../api/tables";
-import Spinner from "../../components/ui/Spinner";
-import Badge from "../../components/ui/Badge";
+import { getBill } from "../../api/billing";
+import { useWaiterRealtime } from "../../hooks/useWaiterRealtime";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
+import EmptyState from "../../components/dashboard/EmptyState";
+import StatCard from "../../components/dashboard/StatCard";
+import Alert from "../../components/ui/Alert";
+import Button, { buttonClasses } from "../../components/ui/Button";
+import LiveIndicator from "../../components/ui/LiveIndicator";
+import SegmentedControl from "../../components/ui/SegmentedControl";
+import StatusBadge from "../../components/ui/StatusBadge";
+import { SkeletonCards, SkeletonStats } from "../../components/ui/Skeleton";
+import { errorText } from "../../utils/errors";
+import CloseSessionButton from "../../components/billing/CloseSessionButton";
+import { money, tableName } from "../../utils/format";
+
+// The API returns "available" / "occupied"; older mocks used "Available".
+const isAvailable = (table) => String(table.status || "").toLowerCase() === "available";
+
 
 const FILTERS = [
   { value: "all", label: "الكل" },
   { value: "occupied", label: "مشغولة" },
   { value: "available", label: "متاحة" },
+  { value: "bill", label: "طلب فاتورة" },
 ];
-
-const MOCK_PAYMENT = {
-  101: { total: 86.5, paid: 50, method: "نقدًا" },
-  102: { total: 124, paid: 0, method: "لم يتم الدفع" },
-  103: { total: 57.5, paid: 57.5, method: "إلكتروني" },
-};
-
-const money = (value) => `${Number(value || 0).toLocaleString("ar-PS", { maximumFractionDigits: 2 })} ₪`;
 
 export default function TableStatus() {
   const [tables, setTables] = useState([]);
@@ -27,13 +35,22 @@ export default function TableStatus() {
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [error, setError] = useState(null);
+
+  const { sessions, setSessions, connected } = useWaiterRealtime();
+  const prevSessionCount = useRef(null);
+  // bill summaries keyed by sessionId, fetched when billRequested is true
+  const [bills, setBills] = useState({});
 
   const loadTables = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true);
     else setLoading(true);
     try {
       const data = await getTables();
-      setTables(data);
+      setTables(data || []);
+      setError(null);
+    } catch (err) {
+      setError(err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -44,104 +61,209 @@ export default function TableStatus() {
     loadTables();
   }, [loadTables]);
 
+  // Auto-refresh tables when sessions open or close
+  useEffect(() => {
+    if (prevSessionCount.current === null) { prevSessionCount.current = sessions.length; return; }
+    if (sessions.length !== prevSessionCount.current) {
+      prevSessionCount.current = sessions.length;
+      loadTables(true);
+    }
+  }, [sessions.length, loadTables]);
+
+  // Map session ID → session for quick lookup
+  const sessionMap = useMemo(() => {
+    const map = {};
+    for (const s of sessions) map[String(s.id)] = s;
+    return map;
+  }, [sessions]);
+
+  // Fetch bill summaries for sessions that have requested the bill
+  useEffect(() => {
+    const pending = sessions.filter((s) => s.billRequested);
+    for (const s of pending) {
+      const sid = String(s.id);
+      if (bills[sid]) continue; // already fetched
+      getBill(sid)
+        .then((data) => setBills((prev) => ({ ...prev, [sid]: { total: Number(data?.total || 0), outstanding: Number(data?.outstanding || 0), itemCount: (data?.items || []).length } })))
+        .catch(() => {}); // ignore errors silently
+    }
+    // clear bill data for sessions that no longer exist
+    setBills((prev) => {
+      const activeIds = new Set(sessions.map((s) => String(s.id)));
+      const next = {};
+      for (const key of Object.keys(prev)) { if (activeIds.has(key)) next[key] = prev[key]; }
+      return next;
+    });
+  }, [sessions]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const counts = useMemo(() => ({
     total: tables.length,
-    occupied: tables.filter((table) => table.status !== "Available").length,
-    available: tables.filter((table) => table.status === "Available").length,
-  }), [tables]);
+    occupied: tables.filter((t) => !isAvailable(t)).length,
+    available: tables.filter(isAvailable).length,
+    bill: sessions.filter((s) => s.billRequested).length,
+  }), [tables, sessions]);
+
+  // Tables that need the cashier (bill requested, then waiter call) come first.
+  const rank = useCallback((table) => {
+    const session = table.activeSessionId ? sessionMap[String(table.activeSessionId)] : null;
+    if (session?.billRequested) return 0;
+    if (session?.assistanceRequested) return 1;
+    return isAvailable(table) ? 3 : 2;
+  }, [sessionMap]);
 
   const filteredTables = useMemo(() => tables.filter((table) => {
+    const session = table.activeSessionId ? sessionMap[String(table.activeSessionId)] : null;
     const matchesQuery = `${table.label || ""} ${table.code || ""}`.toLowerCase().includes(query.toLowerCase());
     const matchesFilter = filter === "all"
-      || (filter === "available" && table.status === "Available")
-      || (filter === "occupied" && table.status !== "Available");
+      || (filter === "available" && isAvailable(table))
+      || (filter === "occupied" && !isAvailable(table))
+      || (filter === "bill" && session?.billRequested);
     return matchesQuery && matchesFilter;
-  }), [tables, query, filter]);
+  }).sort((a, b) => rank(a) - rank(b) || String(a.label).localeCompare(String(b.label), "ar", { numeric: true })), [tables, query, filter, sessionMap, rank]);
 
-  if (loading) return <Spinner label="جارِ تحميل الطاولات…" />;
+  // After a close: drop the session and free the table right away; the live
+  // feed confirms it within seconds, so no reload is needed.
+  function handleClosed(session) {
+    setSessions((list) => list.filter((s) => String(s.id) !== String(session.id)));
+    setTables((list) => list.map((t) => (String(t.activeSessionId) === String(session.id) ? { ...t, status: "available", activeSessionId: null } : t)));
+  }
+
+  if (loading) return (
+    <div className="space-y-5">
+      <PageHeader title="الطاولات والفواتير" subtitle="تابع حالة الطاولات واستلم الفواتير من شاشة واحدة." />
+      <SkeletonStats />
+      <SkeletonCards count={6} />
+    </div>
+  );
 
   return (
-    <div dir="rtl" className="pb-8">
-      <PageHeader title="مركز الكاشير" subtitle="تابع حالة الطاولات والمدفوعات من شاشة واحدة." />
+    <div className="pb-8">
+      <PageHeader
+        title="الطاولات والفواتير"
+        subtitle="الطاولات التي طلبت الفاتورة تظهر أولًا. افتح الفاتورة لمراجعة الطلبات وتسجيل الدفع."
+        meta={<LiveIndicator connected={connected} />}
+        action={<Button variant="secondary" size="sm" onClick={() => loadTables(true)} loading={refreshing}><RefreshCw size={15} aria-hidden="true" /> تحديث</Button>}
+      />
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="p-4"><div className="text-xs text-ink-soft/55">إجمالي الطاولات</div><div className="mt-1 text-2xl font-black">{counts.total}</div></Card>
-        <Card className="p-4"><div className="text-xs text-ink-soft/55">متاحة</div><div className="mt-1 text-2xl font-black text-herb">{counts.available}</div></Card>
-        <Card className="p-4"><div className="text-xs text-ink-soft/55">مشغولة</div><div className="mt-1 text-2xl font-black text-copper-deep">{counts.occupied}</div></Card>
+      {error && (
+        <Alert tone="danger" className="mb-4" action={<Button size="sm" variant="secondary" onClick={() => loadTables()}>إعادة المحاولة</Button>}>
+          {errorText(error, "تعذّر تحميل الطاولات.")}
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard icon={LayoutGrid} label="كل الطاولات" value={counts.total} onClick={() => setFilter("all")} active={filter === "all"} />
+        <StatCard icon={CheckCircle2} tone="herb" label="متاحة" value={counts.available} onClick={() => setFilter("available")} active={filter === "available"} />
+        <StatCard icon={Utensils} tone="copper" label="مشغولة" value={counts.occupied} onClick={() => setFilter("occupied")} active={filter === "occupied"} />
+        <StatCard icon={WalletCards} tone="brick" label="طلبت الفاتورة" value={counts.bill} onClick={() => setFilter("bill")} active={filter === "bill"} emphasis={counts.bill > 0} />
       </div>
 
-      <Card className="mt-5 p-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="relative flex-1">
-            <Search size={17} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft/45" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ابحث باسم الطاولة أو QR…" className="w-full rounded-xl border border-ink/10 bg-paper py-2.5 pr-10 pl-3 text-sm outline-none focus:border-copper" />
-          </div>
-          <div className="flex items-center gap-2">
-            {FILTERS.map((item) => <button key={item.value} onClick={() => setFilter(item.value)} className={`rounded-xl px-4 py-2 text-xs font-bold ${filter === item.value ? "bg-ink text-paper" : "bg-ink/[0.04] text-ink-soft"}`}>{item.label}</button>)}
-            <button onClick={() => loadTables(true)} disabled={refreshing} className="grid h-10 w-10 place-items-center rounded-xl border border-ink/10"><RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /></button>
-          </div>
-        </div>
-      </Card>
+      <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <label className="relative flex-1 md:max-w-sm">
+          <span className="sr-only">ابحث عن طاولة</span>
+          <Search size={17} aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث باسم الطاولة أو رمزها" className="h-11 w-full rounded-[var(--radius-control)] border border-line bg-surface pr-10 pl-3 text-sm outline-none focus:border-copper focus:ring-2 focus:ring-copper/25" />
+        </label>
+        <SegmentedControl label="تصفية الطاولات" value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ ...f, count: { all: counts.total, occupied: counts.occupied, available: counts.available, bill: counts.bill }[f.value] }))} />
+      </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {filteredTables.map((table) => {
-          const occupied = table.status !== "Available";
-          const payment = table.activeSessionId ? (MOCK_PAYMENT[Number(table.activeSessionId)] || { total: 98, paid: 0, method: "لم يتم الدفع" }) : null;
-          const remaining = payment ? Math.max(payment.total - payment.paid, 0) : 0;
-          const paid = payment && payment.paid >= payment.total;
+          const occupied = !isAvailable(table);
+          const session = table.activeSessionId ? sessionMap[String(table.activeSessionId)] : null;
+          const bill = session?.billRequested ? bills[String(table.activeSessionId)] : null;
 
           return (
-            <Card key={table.id} className="overflow-hidden p-0">
-              <div className="p-5">
+            <Card as="li" key={table.id} className={`flex flex-col overflow-hidden p-0 ${session?.billRequested ? "border-copper ring-2 ring-copper/30" : ""}`}>
+              <div className="flex-1 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2"><LayoutGrid size={17} className="text-copper" /><div className="text-lg font-black">{table.label}</div></div>
-                    <div className="mt-1 text-xs text-ink-soft/50">QR: {table.code}</div>
+                    <p className="text-lg font-extrabold text-ink">{tableName(table.label)}</p>
+                    <p className="mt-0.5 text-xs text-muted" dir="ltr">{table.code}</p>
                   </div>
-                  <Badge tone={occupied ? "warning" : "good"}>{occupied ? "مشغولة" : "متاحة"}</Badge>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <StatusBadge type="table" status={occupied ? "occupied" : "available"} />
+                    {session?.lifecycle && session.lifecycle !== "active" && <StatusBadge type="lifecycle" status={session.lifecycle} />}
+                  </div>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2 text-sm text-ink-soft">
-                  <Receipt size={16} />
-                  {table.activeSessionId ? `جلسة #${table.activeSessionId}` : "لا توجد جلسة نشطة"}
-                </div>
+                <p className="mt-4 flex items-center gap-2 text-sm text-ink-soft">
+                  <Receipt size={16} aria-hidden="true" className="text-muted" />
+                  {table.activeSessionId ? <>جلسة <span className="num">#{table.activeSessionId}</span>{session?.customerName && <span className="text-muted">، {session.customerName}</span>}</> : "لا يوجد زبائن على الطاولة"}
+                </p>
 
-                {occupied && payment && (
-                  <div className="mt-4 rounded-2xl border border-ink/10 bg-paper-2 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-ink-soft/60">إجمالي الفاتورة</span>
-                      <strong>{money(payment.total)}</strong>
+                {session && session.billTotal > 0 && (
+                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+                    <span>الإجمالي <b className="num text-ink">{money(session.billTotal)}</b></span>
+                    <span>المدفوع <b className="num text-herb">{money(session.paidTotal)}</b></span>
+                    <span>المتبقي <b className="num text-ink">{money(session.outstanding)}</b></span>
+                  </p>
+                )}
+
+                {session?.assistanceRequested && (
+                  <div className="mt-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-brick/10 px-2.5 py-1 text-xs font-bold text-brick">
+                      <BellRing size={13} aria-hidden="true" /> تطلب نادلًا
+                    </span>
+                  </div>
+                )}
+
+                {session?.billRequested && (
+                  <div className="mt-3 rounded-2xl border border-copper/25 bg-copper/5 p-4">
+                    <div className="flex items-center gap-2 text-sm font-extrabold text-copper-ink">
+                      <WalletCards size={15} aria-hidden="true" /> طلبت الفاتورة
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-xs text-ink-soft/60">المبلغ المدفوع</span>
-                      <strong className={payment.paid > 0 ? "text-herb" : "text-ink"}>{money(payment.paid)}</strong>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between border-t border-ink/10 pt-2">
-                      <span className="text-xs font-bold text-ink-soft/60">المتبقي</span>
-                      <strong className={remaining ? "text-copper-deep" : "text-herb"}>{money(remaining)}</strong>
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 text-xs text-ink-soft/60">
-                      <WalletCards size={14} /> طريقة الدفع: {payment.method}
-                    </div>
+                    {bill ? (
+                      <div className="mt-3 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-muted">
+                          <span>عدد الأصناف</span>
+                          <span className="font-bold">{bill.itemCount}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted">
+                          <span>إجمالي الفاتورة</span>
+                          <span className="num font-bold text-ink">{money(bill.total)}</span>
+                        </div>
+                        {bill.outstanding > 0 && (
+                          <div className="flex items-center justify-between border-t border-copper/20 pt-1.5 text-sm font-extrabold text-ink">
+                            <span>المبلغ المستحق</span>
+                            <span className="num">{money(bill.outstanding)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-3 space-y-2" aria-hidden="true"><div className="skeleton h-3 w-full" /><div className="skeleton h-3 w-2/3" /></div>
+                    )}
                   </div>
                 )}
               </div>
 
               {occupied && table.activeSessionId && (
-                <div className="border-t border-ink/10 p-4">
-                  {paid ? (
-                    <div className="flex items-center justify-center gap-2 rounded-xl bg-herb/10 px-4 py-3 text-sm font-bold text-herb"><CheckCircle2 size={17} /> تم تأكيد الدفع</div>
-                  ) : (
-                    <Link to={`/cashier/billing/${table.activeSessionId}`} className="flex items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-bold text-paper"><CircleDollarSign size={17} /> تأكيد الدفع · {money(remaining)}</Link>
-                  )}
+                <div className="space-y-2 border-t border-line p-4">
+                  <Link
+                    to={`/cashier/billing/${table.activeSessionId}`}
+                    className={buttonClasses({ variant: session?.billRequested ? "primary" : "secondary", block: true })}
+                  >
+                    <CircleDollarSign size={17} aria-hidden="true" />
+                    {session?.billRequested ? "مراجعة الفاتورة وتسجيل الدفع" : "عرض الفاتورة"}
+                  </Link>
+                  {session && <CloseSessionButton block session={{ ...session, tableLabel: table.label }} onClosed={handleClosed} />}
                 </div>
               )}
             </Card>
           );
         })}
-      </div>
+      </ul>
 
-      {!filteredTables.length && <Card className="mt-5 p-10 text-center text-sm text-ink-soft">لا توجد طاولات مطابقة للبحث الحالي.</Card>}
+      {!filteredTables.length && !error && (
+        <Card className="mt-5">
+          {tables.length === 0 ? (
+            <EmptyState icon={LayoutGrid} title="لا توجد طاولات بعد" description="يضيف صاحب المطعم الطاولات ورموز QR من لوحة المالك، وستظهر هنا تلقائيًا." />
+          ) : (
+            <EmptyState icon={Search} title="لا توجد طاولات مطابقة" description="غيّر كلمة البحث أو التصفية لعرض طاولات أخرى."
+              action={<Button variant="secondary" size="sm" onClick={() => { setQuery(""); setFilter("all"); }}>مسح البحث والتصفية</Button>} />
+          )}
+        </Card>
+      )}
     </div>
   );
 }

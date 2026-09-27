@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import BrandLogo from "../../components/brand/Logo";
 import { BellRing, Check, ChevronRight, Clock3, FileText, Loader2, Utensils, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOrderTracking } from "../../hooks/useOrderTracking";
@@ -43,7 +44,7 @@ function OrderProgress({ status }) {
     <div className="mt-5 grid grid-cols-4 gap-2">
       {STEPS.map((step, index) => {
         const active = index <= current;
-        return <div key={step.key} className="min-w-0 text-center"><div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-xs font-bold transition ${active ? "border-copper bg-copper text-ink" : "border-ink/10 bg-paper text-ink-soft/50"}`}>{active ? <Check size={16} strokeWidth={3} /> : index + 1}</div><p className={`mt-2 truncate text-[10px] font-semibold sm:text-xs ${active ? "text-ink" : "text-ink-soft/50"}`}>{step.label}</p></div>;
+        return <div key={step.key} className="min-w-0 text-center"><div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-xs font-bold transition ${active ? "border-copper bg-copper text-ink" : "border-ink/10 bg-paper text-muted"}`}>{active ? <Check size={16} strokeWidth={3} /> : index + 1}</div><p className={`mt-2 truncate text-xs font-semibold sm:text-xs ${active ? "text-ink" : "text-muted"}`}>{step.label}</p></div>;
       })}
     </div>
   );
@@ -83,8 +84,8 @@ export default function OrderTracking() {
     if (!sessionId) return;
     setBusy("help");
     try {
-      await requestWaiterAssistance(sessionId);
-      showNotice("تم إشعار النادل بطلب المساعدة.");
+      const request = await requestWaiterAssistance(sessionId);
+      showNotice(request?.duplicate ? "طلبك السابق ما زال قيد المتابعة — النادل في الطريق." : "تم إشعار النادل بطلب المساعدة.");
     } catch (err) {
       showNotice(err.message || "تعذّر إرسال طلب المساعدة.", "error");
     } finally {
@@ -123,7 +124,7 @@ export default function OrderTracking() {
       <header className="bg-ink text-paper">
         <div className="mx-auto max-w-3xl px-5 pb-8 pt-6 sm:px-8">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div><div><p className="text-[10px] font-bold tracking-[0.18em] text-copper">MENUPILOT</p><p className="mt-0.5 text-xs text-paper/50">تتبع طلبك</p></div></div>
+            <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div><div><BrandLogo on="dark" height={22} /><p className="mt-0.5 text-xs text-paper/50">تتبع طلبك</p></div></div>
             <div className="flex items-center gap-2 rounded-full border border-paper/10 bg-paper/5 px-3 py-2 text-xs text-paper/65"><span className="h-2 w-2 animate-pulse rounded-full bg-herb" /> تحديث تلقائي</div>
           </div>
           <div className="mt-8"><p className="text-sm text-paper/50">جلسة الطعام #{sessionId}</p><h1 className="mt-1 font-display text-4xl">طلبك في الطريق إليك</h1></div>
@@ -140,7 +141,7 @@ export default function OrderTracking() {
             {normalizedOrders.map((order) => {
               const meta = statusMeta(order.normalizedStatus);
               const isActive = activeOrder?.id === order.id;
-              return <article key={order.id} className={`rounded-[2rem] border bg-white p-5 shadow-sm transition sm:p-6 ${isActive ? "border-copper/30 shadow-md" : "border-ink/10"}`}><div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-xs font-bold text-ink-soft/60"><span>طلب</span><span className="text-ink">#{order.orderNumber}</span></div><h2 className="mt-2 text-lg font-bold">{meta.label}</h2><p className="mt-1 text-sm leading-6 text-ink-soft">{meta.description}</p></div><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-copper/10 text-copper">{order.normalizedStatus === "ready" ? <BellRing size={20} /> : <Clock3 size={20} />}</div></div><OrderProgress status={order.normalizedStatus} /></article>;
+              return <article key={order.id} className={`rounded-[2rem] border bg-white p-5 shadow-sm transition sm:p-6 ${isActive ? "border-copper/30 shadow-md" : "border-ink/10"}`}><div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-xs font-bold text-muted"><span>طلب</span><span className="text-ink">#{order.orderNumber}</span></div><h2 className="mt-2 text-lg font-bold">{meta.label}</h2><p className="mt-1 text-sm leading-6 text-ink-soft">{meta.description}</p></div><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-copper/10 text-copper">{order.normalizedStatus === "ready" ? <BellRing size={20} /> : <Clock3 size={20} />}</div></div><OrderProgress status={order.normalizedStatus} /></article>;
             })}
           </div>
         )}
@@ -153,7 +154,7 @@ export default function OrderTracking() {
           </div>
         </section>
 
-        <div className="mt-5 flex items-center justify-center gap-1 text-xs text-ink-soft/50"><span>تحديث حالة الطلب تلقائيًا</span><ChevronRight size={13} className="rotate-180" /></div>
+        <div className="mt-5 flex items-center justify-center gap-1 text-xs text-muted"><span>تحديث حالة الطلب تلقائيًا</span><ChevronRight size={13} className="rotate-180" /></div>
       </div>
     </main>
   );

@@ -1,18 +1,9 @@
 /* ==========================================================================
-   DashboardShell.jsx — إطار موحّد لكل صفحات الأدوار المحمية
-   --------------------------------------------------------------------------
-   يلف أي صفحة owner/kitchen/cashier/waiter بنفس الـ Sidebar وبنية الصفحة،
-   بدل تكرار الشريط الجانبي في كل صفحة على حدة. التخطيط: عمود جانبي ثابت
-   (lg+) بجانب منطقة محتوى، مع flex-row-reverse عشان الشريط الجانبي يظهر
-   يمين الشاشة (متسق مع اتجاه RTL الافتراضي للتطبيق).
-
-   تطبيق الثيم المخصّص: كل كلاسات Tailwind زي bg-copper/text-herb بتتحوّل
-   وقت الـ build لـ background-color:var(--color-copper) إلخ (مش قيمة hex
-   ثابتة) — فلو الـ owner عندها ثيم محفوظ (من صفحة "تخصيص الثيم")، بنـ
-   override لنفس متغيرات الـ CSS دي كـ inline style على العنصر الجذر هنا،
-   فكل مكوّن جوّا اللوحة (Sidebar، أزرار، badges...) بياخد اللون الجديد
-   فورًا بدون ما نلمس أي مكوّن تاني بالاسم. لو المستخدم مش owner أو مفيش
-   ثيم محفوظ، themeVars بترجع null ومفيش أي override (الهوية الافتراضية).
+   DashboardShell.jsx — shared frame for every staff/owner page.
+   Sidebar on the right (RTL), skip link for keyboard users, and a content
+   width that suits both the tablet in the kitchen and a wide office screen.
+   An owner's saved theme overrides the CSS colour variables at the root, so
+   every component inherits it without knowing about themes.
    ========================================================================== */
 import { useAuth } from "../../context/AuthContext";
 import { resolveThemeVars } from "../../config/themes";
@@ -23,13 +14,13 @@ export default function DashboardShell({ children }) {
   const themeVars = user?.role === "owner" ? resolveThemeVars(user.theme) : null;
 
   return (
-    <div
-      style={themeVars || undefined}
-      className="min-h-screen bg-paper-2 text-ink lg:flex lg:flex-row-reverse"
-    >
+    <div dir="rtl" style={themeVars || undefined} className="min-h-screen bg-paper-2 text-ink lg:flex">
+      <a href="#main-content" className="sr-only-focusable fixed right-4 top-4 z-[60] rounded-xl bg-copper px-4 py-2 text-sm font-bold text-ink">
+        تخطَّ إلى المحتوى
+      </a>
       <Sidebar />
-      <main className="flex-1 px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
-        <div className="mx-auto max-w-6xl">{children}</div>
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-8">
+        <div className="mx-auto max-w-7xl">{children}</div>
       </main>
     </div>
   );

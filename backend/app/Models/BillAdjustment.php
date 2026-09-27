@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class BillAdjustment extends Model
 {
-    protected $fillable = ['dining_session_id', 'order_item_id', 'old_price', 'new_price', 'cashier_id'];
+    protected $fillable = ['dining_session_id', 'order_item_id', 'old_price', 'new_price', 'reason', 'cashier_id'];
 
     protected $casts = ['old_price' => 'decimal:2', 'new_price' => 'decimal:2'];
 

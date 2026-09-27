@@ -20,12 +20,12 @@ function ConfirmPlanModal({ plan, isUpgrade, onConfirm, onCancel, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-sm" onClick={onCancel}>
       <div dir="rtl" className="relative w-full max-w-sm rounded-3xl bg-paper p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onCancel} className="absolute left-4 top-4 rounded-full p-1.5 text-ink-soft/60 hover:bg-ink/5" aria-label="إغلاق"><X size={18} /></button>
-        <div className="mb-4 flex items-center gap-2 rounded-xl bg-copper/10 px-3 py-2 text-xs font-black text-copper-deep">
+        <button onClick={onCancel} className="absolute left-4 top-4 rounded-full p-1.5 text-muted hover:bg-ink/5" aria-label="إغلاق"><X size={18} /></button>
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-copper/10 px-3 py-2 text-xs font-black text-copper-ink">
           <ShieldAlert size={15} /> بيئة تجريبية — بدون بوابة دفع حقيقية بعد
         </div>
         <h2 className="text-xl font-black">{isUpgrade ? "تأكيد الترقية" : "تأكيد تغيير الباقة"} إلى {plan.name}؟</h2>
-        <p className="mt-2 text-sm leading-7 text-ink-soft/60">
+        <p className="mt-2 text-sm leading-7 text-muted">
           {isUpgrade
             ? `سيتم تفعيل باقة ${plan.name} فورًا مقابل $${plan.price} شهريًا. في النسخة النهائية هذه الخطوة ستتطلب تأكيد دفع فعلي عبر بوابة دفع.`
             : `سيتم تحويل حسابك إلى باقة ${plan.name} ($${plan.price}/شهر). قد تفقد إمكانية الوصول لبعض المزايا الحالية.`}
@@ -110,16 +110,16 @@ export default function SubscriptionPlanPage() {
       {features.map((feature) => {
         const enabled = hasPlanFeature(planId, feature);
         return <div key={feature} className={`rounded-3xl border p-5 ${enabled ? "border-herb/20 bg-paper" : "border-ink/8 bg-paper-2 opacity-60"}`}>
-          <div className="flex items-center justify-between gap-4"><div className="flex items-center gap-3"><span className={`grid h-10 w-10 place-items-center rounded-2xl ${enabled ? "bg-herb/10 text-herb" : "bg-ink/5 text-ink-soft/50"}`}>{enabled ? <Check size={19}/> : <Lock size={17}/>}</span><span className="font-bold">{labels[feature]}</span></div><span className="text-xs font-bold">{enabled ? "متاح" : "ترقية"}</span></div>
+          <div className="flex items-center justify-between gap-4"><div className="flex items-center gap-3"><span className={`grid h-10 w-10 place-items-center rounded-2xl ${enabled ? "bg-herb/10 text-herb" : "bg-ink/5 text-muted"}`}>{enabled ? <Check size={19}/> : <Lock size={17}/>}</span><span className="font-bold">{labels[feature]}</span></div><span className="text-xs font-bold">{enabled ? "متاح" : "ترقية"}</span></div>
         </div>;
       })}
     </section>
 
     <section className="grid gap-5 lg:grid-cols-2">
-      <div className="rounded-3xl border border-ink/8 bg-paper p-6"><div className="flex items-center gap-3"><Palette className="text-copper"/><h2 className="text-xl font-black">تخصيص المظهر</h2></div><p className="mt-3 text-sm leading-7 text-ink-soft/60">الأساسية تستخدم الهوية الافتراضية. الاحترافية تحصل على ثيمات جاهزة، والمميزة تستطيع بناء ألوانها الخاصة.</p><Link to="/owner/theme" className="mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-black text-paper">إدارة الثيم <ArrowUpRight size={16}/></Link></div>
+      <div className="rounded-3xl border border-ink/8 bg-paper p-6"><div className="flex items-center gap-3"><Palette className="text-copper"/><h2 className="text-xl font-black">تخصيص المظهر</h2></div><p className="mt-3 text-sm leading-7 text-muted">الأساسية تستخدم الهوية الافتراضية. الاحترافية تحصل على ثيمات جاهزة، والمميزة تستطيع بناء ألوانها الخاصة.</p><Link to="/owner/theme" className="mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-black text-paper">إدارة الثيم <ArrowUpRight size={16}/></Link></div>
       <div className="rounded-3xl bg-copper p-6 text-ink"><p className="text-xs font-black">اشتراكك الحالي</p><h2 className="mt-2 text-3xl font-black">{current.name}</h2><p className="mt-2 text-sm opacity-70">يمكنك مقارنة الباقات من هذه الصفحة قبل الترقية.</p></div>
     </section>
 
-    <div className="grid gap-4 md:grid-cols-3">{Object.values(SUBSCRIPTION_PLANS).map((item) => <Link key={item.id} to={`/owner/subscription/${item.id}`} className={`rounded-2xl border p-4 transition hover:-translate-y-1 ${item.id === planId ? "border-copper bg-copper/10" : "border-ink/8 bg-paper"}`}><span className="text-xs text-ink-soft/55">باقة</span><div className="mt-1 font-black">{item.name}</div><div className="mt-2 font-black">${item.price}<span className="text-xs font-normal"> / شهر</span></div>{item.id === user?.plan && <span className="mt-2 block text-[10px] font-black text-copper">باقتك الحالية</span>}</Link>)}</div>
+    <div className="grid gap-4 md:grid-cols-3">{Object.values(SUBSCRIPTION_PLANS).map((item) => <Link key={item.id} to={`/owner/subscription/${item.id}`} className={`rounded-2xl border p-4 transition hover:-translate-y-1 ${item.id === planId ? "border-copper bg-copper/10" : "border-ink/8 bg-paper"}`}><span className="text-xs text-muted">باقة</span><div className="mt-1 font-black">{item.name}</div><div className="mt-2 font-black">${item.price}<span className="text-xs font-normal"> / شهر</span></div>{item.id === user?.plan && <span className="mt-2 block text-xs font-black text-copper">باقتك الحالية</span>}</Link>)}</div>
   </div>;
 }
