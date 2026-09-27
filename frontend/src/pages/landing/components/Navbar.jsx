@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
+import BrandLogo from "../../../components/brand/Logo";
 import { MenuSquare, X } from "lucide-react";
 import { NAV_LINKS } from "./data";
 
-const Logo = ({ className = "h-9" }) => (
-  <span className="inline-flex shrink-0 items-center">
-    <img src="/menuPilot-logo.svg" alt="menuPilot" className={`${className} w-auto`} />
-  </span>
-);
+const Logo = ({ height = 34 }) => <BrandLogo on="dark" height={height} />;
 
 export default function Navbar({ onNavigate }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -59,15 +56,9 @@ export default function Navbar({ onNavigate }) {
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="flex items-center"
             >
-              <img
-                src="/menuPilot-logo.svg"
-                alt="menuPilot"
-                style={{
-                  height: scrolled ? "1.75rem" : "2.25rem",
-                  width: "auto",
-                  transition: "height 450ms cubic-bezier(0.4, 0, 0.2, 1)",
-                }}
-              />
+              <span className="inline-flex origin-right transition-transform duration-[450ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none" style={{ transform: scrolled ? "scale(0.8)" : "none" }}>
+                <BrandLogo on="dark" height={36} priority alt="menuPilot، العودة لأعلى الصفحة" />
+              </span>
             </button>
 
             {/* Desktop nav */}

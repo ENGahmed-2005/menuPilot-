@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BrandLogo from "../../components/brand/Logo";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -6,11 +7,8 @@ import { getRoleHome } from "../../utils/roleHome";
 
 const inputClass = "w-full rounded-2xl border border-[#4B5147]/20 bg-white px-4 py-3.5 text-sm text-[#1F2420] outline-none transition placeholder:text-[#4B5147]/45 focus:border-[#EEA122] focus:ring-4 focus:ring-[#EEA122]/10";
 
-const Logo = ({ className = "h-10" }) => (
-  <span className="brand-logo-surface inline-flex shrink-0 items-center">
-    <img src="/menuPilot-logo.svg" alt="menuPilot" className={`brand-logo ${className} w-auto`} />
-  </span>
-);
+// on="dark" for the dark side panel, default light for the mobile header.
+const Logo = ({ on = "dark", height = 40 }) => <BrandLogo on={on} height={height} priority />;
 
 export default function Login() {
   const { login } = useAuth();
@@ -68,7 +66,7 @@ export default function Login() {
           <div className="w-full max-w-md">
             <div className="mb-7 flex items-center justify-between">
               <Link to="/" className="lg:hidden" dir="ltr" aria-label="menuPilot">
-                <Logo className="h-9" />
+                <Logo on="light" height={34} />
               </Link>
               <Link to="/register" className="flex items-center gap-2 text-sm font-bold text-[#4B5147] transition hover:text-[#E67E22]">ليس لديك حساب؟ إنشاء حساب <ArrowLeft size={16} /></Link>
             </div>

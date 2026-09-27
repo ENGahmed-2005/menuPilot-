@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'api.auth' => ApiAuth::class,
             'role' => RoleAccess::class,
+            'permission' => \App\Http\Middleware\PermissionAccess::class,
         ]);
         $middleware->append(Cors::class);
     })

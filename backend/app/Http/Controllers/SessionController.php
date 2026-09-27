@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\ResolvesRestaurant;
+use App\Support\SessionLifecycle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -246,7 +247,13 @@ class SessionController extends Controller
             ->get()
             ->keyBy('dining_session_id');
 
-        return $sessions->map(function ($s) use ($open) {
+        // Money + lifecycle for every session in three queries (see SessionLifecycle).
+        $money = SessionLifecycle::summaries($sessions->pluck('id')->map(fn ($id) => (int) $id)->all());
+
+        return $sessions->map(function ($s) use ($open, $money) {
+            foreach (SessionLifecycle::present($s, $money[(int) $s->id]) as $key => $value) {
+                $s->{$key} = $value;
+            }
             $req = $open->get($s->id);
             $s->tableLabel = $s->table_label;
             $s->customerName = $s->customer_name;

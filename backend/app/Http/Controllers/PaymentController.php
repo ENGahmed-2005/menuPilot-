@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\PaymentStatus;
 use App\Models\Staff;
+use App\Support\Audit;
 use App\Support\OrderWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -117,12 +118,22 @@ class PaymentController extends Controller
         if ($payment->status !== PaymentStatus::Pending->value) {
             return response()->json(['message' => 'Payment already processed'], 409);
         }
-        DB::transaction(function () use ($payment, $request) {
-            DB::table('payments')->where('id', $payment->id)->update(['status' => PaymentStatus::Verified->value, 'paid_at' => now(), 'verified_at' => now(), 'verified_by' => $request->user()->id, 'updated_at' => now()]);
+        $applied = DB::transaction(function () use ($payment, $request) {
+            // Conditional update: if two cashiers verify at once, only one wins.
+            $updated = DB::table('payments')->where('id', $payment->id)->where('status', PaymentStatus::Pending->value)->update(['status' => PaymentStatus::Verified->value, 'paid_at' => now(), 'verified_at' => now(), 'verified_by' => $request->user()->id, 'updated_at' => now()]);
+            if ($updated === 0) {
+                return false;
+            }
             DB::table('orders')->where('id', $payment->order_id)->update(['status' => 'pending', 'updated_at' => now()]);
             OrderWorkflow::logStatus((int) $payment->order_id, 'payment_pending', 'pending', $request->user()->id);
             DB::table('dining_sessions')->where('id', $payment->dining_session_id)->update(['status' => 'ordering', 'updated_at' => now()]);
+            Audit::log($request, 'payment.verified', 'payment', $payment->id, ['amount' => $payment->amount, 'method' => $payment->method], $this->restaurantId($request));
+
+            return true;
         });
+        if (! $applied) {
+            return response()->json(['message' => 'Payment already processed'], 409);
+        }
 
         return $this->out(DB::table('payments')->find($payment->id));
     }
@@ -137,8 +148,18 @@ class PaymentController extends Controller
         if ($payment->status !== PaymentStatus::Pending->value) {
             return response()->json(['message' => 'Payment already processed'], 409);
         }
-        DB::table('payments')->where('id', $payment->id)->update(['status' => PaymentStatus::Rejected->value, 'rejection_reason' => $v['reason'], 'updated_at' => now()]);
-        DB::table('orders')->where('id', $payment->order_id)->update(['status' => 'cancelled', 'updated_at' => now()]);
+        $updated = DB::transaction(function () use ($payment, $v) {
+            $updated = DB::table('payments')->where('id', $payment->id)->where('status', PaymentStatus::Pending->value)->update(['status' => PaymentStatus::Rejected->value, 'rejection_reason' => $v['reason'], 'updated_at' => now()]);
+            if ($updated) {
+                DB::table('orders')->where('id', $payment->order_id)->update(['status' => 'cancelled', 'updated_at' => now()]);
+            }
+
+            return $updated;
+        });
+        if (! $updated) {
+            return response()->json(['message' => 'Payment already processed'], 409);
+        }
+        Audit::log($request, 'payment.rejected', 'payment', $payment->id, ['amount' => $payment->amount, 'reason' => $v['reason']], $this->restaurantId($request));
 
         return $this->out(DB::table('payments')->find($payment->id));
     }

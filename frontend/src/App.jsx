@@ -10,6 +10,7 @@ import { LanguageProvider, useLanguage } from "./context/LanguageContext";
 import { CartProvider } from "./context/CartContext";
 import AppRoutes from "./routes/AppRoutes";
 import LoadingScreen from "./components/loading/LoadingScreen";
+import { ToastProvider } from "./components/ui/Toast";
 
 function DirectionController() {
   const { lang, dir } = useLanguage();
@@ -39,7 +40,10 @@ export default function App() {
           <LanguageProvider defaultLang="ar">
             <DirectionController />
             <CartProvider>
-              <AppRoutes />
+              {/* App-level so a toast survives navigation (e.g. close session → tables). */}
+              <ToastProvider>
+                <AppRoutes />
+              </ToastProvider>
             </CartProvider>
           </LanguageProvider>
         </AuthGate>

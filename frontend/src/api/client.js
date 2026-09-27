@@ -1,4 +1,5 @@
 import { mockRequest } from './mockServer';
+import { friendlyMessage } from '../utils/errors';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -27,18 +28,30 @@ export async function request(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (cause) {
+    // Offline, DNS, CORS or server down: fetch rejects before any response.
+    const error = new Error(friendlyMessage(0));
+    error.status = 0;
+    error.friendly = true;
+    error.cause = cause;
+    throw error;
+  }
 
   const isJson = response.headers.get('content-type')?.includes('application/json');
   const data = isJson ? await response.json().catch(() => null) : null;
 
   if (!response.ok) {
-    const error = new Error(data?.message || `Request failed: ${response.status}`);
+    const error = new Error(friendlyMessage(response.status, data?.message));
     error.status = response.status;
+    error.friendly = true;
+    error.serverMessage = data?.message || null;
     error.code = data?.code || null;
     error.errors = data?.errors || null;
     throw error;

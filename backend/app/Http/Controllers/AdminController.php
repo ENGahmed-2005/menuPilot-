@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,30 +16,39 @@ class AdminController extends Controller
 
     public function restaurants(Request $r)
     {
-        if (! $this->guard($r)) return response()->json(['message' => 'Forbidden'], 403);
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
         User::where('role', 'owner')->get()->each->refreshSubscriptionStatus();
 
         return response()->json(['data' => User::where('role', 'owner')->with('restaurantSetting')->get([
             'id', 'name', 'restaurant_name', 'restaurant_phone', 'email', 'plan',
             'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at', 'created_at',
+            'is_active', 'last_active_at',
         ])]);
     }
 
     public function plan(Request $r, $id)
     {
-        if (! $this->guard($r)) return response()->json(['message' => 'Forbidden'], 403);
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
         $v = $r->validate(['plan' => 'required|in:basic,pro,premium']);
         $u = User::where('role', 'owner')->findOrFail($id);
+        $before = $u->plan;
         $u->update(['plan' => $v['plan'], 'subscription_started_at' => now(), 'subscription_ends_at' => null]);
+        Audit::log($r, 'admin.plan_changed', 'restaurant', $u->id, ['from' => $before, 'to' => $v['plan']], $u->id);
 
         return response()->json(['data' => $u->fresh()]);
     }
 
     public function extendTrial(Request $r, $id)
     {
-        if (! $this->guard($r)) return response()->json(['message' => 'Forbidden'], 403);
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
         $v = $r->validate(['days' => 'required|integer|min:1|max:365']);
         $u = User::where('role', 'owner')->findOrFail($id);
@@ -48,29 +58,54 @@ class AdminController extends Controller
             'trial_started_at' => $u->trial_started_at ?: now(),
             'trial_ends_at' => $base->copy()->addDays($v['days']),
         ]);
+        Audit::log($r, 'admin.trial_extended', 'restaurant', $u->id, ['days' => $v['days'], 'trial_ends_at' => (string) $u->trial_ends_at], $u->id);
 
         return response()->json(['data' => $u->fresh()]);
     }
 
     public function updateOwner(Request $r, $id)
     {
-        if (! $this->guard($r)) return response()->json(['message' => 'Forbidden'], 403);
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
         $u = User::where('role', 'owner')->findOrFail($id);
         $v = $r->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $u->id,
+            'email' => 'required|email|max:255|unique:users,email,'.$u->id,
             'restaurant_name' => 'nullable|string|max:255',
             'restaurant_phone' => 'nullable|string|max:50',
         ]);
         $u->update($v);
+        Audit::log($r, 'admin.owner_updated', 'user', $u->id, ['fields' => array_keys($v)], $u->id);
+
+        return response()->json(['data' => $u->fresh()]);
+    }
+
+    /**
+     * PATCH admin/owners/{id}/status {active}
+     * Disabling an owner revokes their token and blocks their whole restaurant
+     * (staff are rejected by ApiAuth while the owner is inactive). Records are kept.
+     */
+    public function ownerStatus(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $v = $r->validate(['active' => 'required|boolean']);
+        $u = User::where('role', 'owner')->findOrFail($id);
+        $u->update(['is_active' => $v['active']] + ($v['active'] ? [] : ['api_token' => null]));
+        Audit::log($r, $v['active'] ? 'admin.owner_enabled' : 'admin.owner_disabled', 'user', $u->id, [], $u->id);
 
         return response()->json(['data' => $u->fresh()]);
     }
 
     public function reports(Request $r)
     {
-        if (! $this->guard($r)) return response()->json(['message' => 'Forbidden'], 403);
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
         $days = min(max((int) $r->query('days', 30), 7), 365);
         $from = now()->startOfDay()->subDays($days - 1);
@@ -80,9 +115,9 @@ class AdminController extends Controller
         $activeRestaurants = (clone $owners)
             ->where(function ($q) {
                 $q->whereIn('plan', ['basic', 'pro', 'premium'])
-                  ->orWhere(function ($trial) {
-                      $trial->where('plan', 'trial')->where('trial_ends_at', '>', now());
-                  });
+                    ->orWhere(function ($trial) {
+                        $trial->where('plan', 'trial')->where('trial_ends_at', '>', now());
+                    });
             })->count();
         $trialRestaurants = (clone $owners)->where('plan', 'trial')->count();
         $paidRestaurants = (clone $owners)->whereIn('plan', ['basic', 'pro', 'premium'])->count();

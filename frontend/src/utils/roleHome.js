@@ -12,6 +12,7 @@
    ========================================================================== */
 export const ROLE_HOME = {
   owner: "/owner/dashboard",
+  manager: "/owner/dashboard",
   kitchen: "/kitchen",
   cashier: "/cashier/tables",
   waiter: "/waiter",

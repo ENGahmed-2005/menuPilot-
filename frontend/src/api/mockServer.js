@@ -135,6 +135,16 @@ let orders = [
   },
 ];
 
+const MOCK_ROLE_DEFAULTS = {
+  cashier: ["view_dashboard", "view_tables", "view_orders", "view_menu", "view_payments", "verify_payments", "record_payment", "adjust_bill", "close_session", "cancel_orders", "reassign_orders", "handle_assistance"],
+  waiter: ["view_tables", "view_orders", "view_menu", "cancel_orders", "reassign_orders", "handle_assistance"],
+  kitchen: ["view_orders", "manage_orders", "view_menu"],
+};
+const mockStaff = [
+  { id: 1, name: "Cashier Staff", email: "cashier@menupilot.test", phone: null, role: "cashier", active: true, custom_permissions: false, permissions: MOCK_ROLE_DEFAULTS.cashier, created_at: "2026-09-01T09:00:00Z", last_active_at: new Date().toISOString() },
+  { id: 2, name: "Waiter Staff", email: "waiter@menupilot.test", phone: "0599000111", role: "waiter", active: true, custom_permissions: false, permissions: MOCK_ROLE_DEFAULTS.waiter, created_at: "2026-09-03T09:00:00Z", last_active_at: null },
+  { id: 3, name: "Kitchen Staff", email: "kitchen@menupilot.test", phone: null, role: "kitchen", active: false, custom_permissions: false, permissions: MOCK_ROLE_DEFAULTS.kitchen, created_at: "2026-09-05T09:00:00Z", last_active_at: null },
+];
 const paidSessionIds = new Set(); // جلسات اتقفلت وتم دفعها
 
 function orderTotal(order) {
@@ -419,13 +429,39 @@ export async function mockRequest(method, rawPath, body, token) {
 
   // ------- Owner: orders list (FR-21) -------
   if (method === "GET" && path === "/owner/orders") {
-    return orders.map((o) => ({
+    // Same field names as the real API (order_number, table_label, submitted_at).
+    return orders.map((o, index) => ({
       id: o.id,
-      orderNumber: o.orderNumber,
-      tableLabel: o.tableLabel,
-      status: o.status,
+      order_number: o.orderNumber,
+      table_label: o.tableLabel,
+      customer_name: o.customerName || null,
+      status: String(o.status).toLowerCase(),
+      submitted_at: o.submittedAt || new Date(Date.now() - (index + 1) * 7 * 60000).toISOString(),
       total: Number(orderTotal(o).toFixed(2)),
     }));
+  }
+
+  // ------- Owner: 7-day sales trend (FR-40) — demo data for presentations -------
+  if (method === "GET" && path === "/owner/reports/sales-trend") {
+    const days = Number(url.searchParams.get("days")) || 7;
+    const trend = Array.from({ length: days }, (_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (days - 1 - i));
+      const ordersCount = 18 + ((i * 7) % 11);
+      return { date: d.toISOString().slice(0, 10), orders: ordersCount, revenue: ordersCount * 31 + ((i * 53) % 90) };
+    });
+    const revenue = trend.reduce((sum, d) => sum + d.revenue, 0);
+    const totalOrders = trend.reduce((sum, d) => sum + d.orders, 0);
+    return {
+      period: { days, from: trend[0].date, to: trend[trend.length - 1].date },
+      summary: { totalOrders, completedOrders: totalOrders - 6, pendingOrders: 4, cancelledOrders: 2, revenue, paymentsCount: totalOrders - 6, averageOrder: Math.round(revenue / (totalOrders - 6)) },
+      trend,
+      topItems: [
+        { name: "Slow-Braised Lamb Kofta", quantity: 42, revenue: 1596 },
+        { name: "Herb-Crusted Chicken", quantity: 35, revenue: 1225 },
+        { name: "Mint & Cucumber Lemonade", quantity: 31, revenue: 403 },
+        { name: "Rosemary Fries", quantity: 24, revenue: 312 },
+      ],
+    };
   }
 
   // ------- Waiter assistance (FR-41) -------
@@ -448,7 +484,43 @@ export async function mockRequest(method, rawPath, body, token) {
   if (method === "GET" && path === "/sessions" && query.status === "active") {
     return sessions
       .filter((s) => s.status !== "Closed")
-      .map((s) => ({ id: s.id, tableLabel: s.tableLabel, status: s.status, assistanceRequested: s.assistanceRequested }));
+      .map((s) => {
+        // Same lifecycle fields as the real API (SessionLifecycle) so the demo
+        // can show the close-session flow.
+        const total = orders.filter((o) => o.sessionId === s.id).reduce((sum, o) => sum + orderTotal(o), 0);
+        // Demo: the table that asked for the bill (103) is already paid, so it can be closed.
+        const paid = s.id === 103 || paidSessionIds.has(s.id) ? total : 0;
+        const outstanding = Math.max(0, Number((total - paid).toFixed(2)));
+        const canClose = outstanding === 0;
+        return {
+          id: s.id, tableLabel: s.tableLabel, status: s.status, assistanceRequested: s.assistanceRequested,
+          billRequested: String(s.status).toLowerCase().includes("bill"),
+          lifecycle: canClose && total > 0 ? "paid" : String(s.status).toLowerCase().includes("bill") ? "bill_requested" : "active",
+          billTotal: Number(total.toFixed(2)), paidTotal: paid, outstanding, canClose, closeBlocker: canClose ? null : "OUTSTANDING_BALANCE",
+        };
+      });
+  }
+
+  // ------- Staff & permissions (demo) -------
+  if (method === "GET" && path === "/staff") return mockStaff;
+  if ((method === "PUT" || method === "PATCH") && seg[0] === "staff" && seg[1]) {
+    const member = mockStaff.find((m) => m.id === Number(seg[1]));
+    if (!member) fail(404, "Staff not found");
+    if (body && "permissions" in body) {
+      member.custom_permissions = body.permissions !== null;
+      member.permissions = body.permissions ?? MOCK_ROLE_DEFAULTS[member.role];
+    }
+    if (body && "active" in body) member.active = Boolean(body.active);
+    return member;
+  }
+
+  if (method === "POST" && seg[0] === "sessions" && seg[2] === "close") {
+    const session = sessions.find((s) => s.id === Number(seg[1]));
+    if (!session) fail(404, "Session not found.");
+    session.status = "Closed";
+    const table = tables.find((t) => t.activeSessionId === session.id);
+    if (table) { table.status = "Available"; table.activeSessionId = null; }
+    return { id: session.id, status: "closed", closed_at: new Date().toISOString() };
   }
 
   // ------- Billing (FR-27..32, 36, 37) -------

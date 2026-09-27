@@ -146,20 +146,20 @@ export default function SalesReports() {
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.5fr_0.7fr]">
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-5 py-4">
-            <div><h2 className="font-bold">تقرير المبيعات</h2><p className="mt-1 text-xs text-ink-soft/50">الفواتير والتحصيل وحالة الدفع</p></div>
+            <div><h2 className="font-bold">تقرير المبيعات</h2><p className="mt-1 text-xs text-muted">الفواتير والتحصيل وحالة الدفع</p></div>
             <button onClick={exportInvoices} className="flex items-center gap-2 rounded-xl bg-herb px-4 py-2.5 text-sm font-bold text-white"><Download size={16} /> تصدير الفواتير Excel</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-right text-sm">
-              <thead className="bg-ink/[0.025] text-xs text-ink-soft/60"><tr><th className="px-5 py-3">الفاتورة</th><th>التاريخ</th><th>الطاولة</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الدفع</th><th>الحالة</th></tr></thead>
-              <tbody className="divide-y divide-ink/10">{visibleInvoices.map((item) => <tr key={item.id} className="hover:bg-ink/[0.02]"><td className="px-5 py-4 font-bold">{item.id}</td><td>{item.date}</td><td>{item.table}</td><td>{money(item.total)}</td><td className="font-bold text-herb">{money(item.paid)}</td><td className="font-bold text-copper-deep">{money(item.total - item.paid)}</td><td>{paymentLabels[item.method]}</td><td><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${item.status === "paid" ? "bg-herb/10 text-herb" : "bg-copper/10 text-copper-deep"}`}>{item.status === "paid" ? "مدفوعة" : "جزئية"}</span></td></tr>)}</tbody>
+              <thead className="bg-ink/[0.025] text-xs text-muted"><tr><th className="px-5 py-3">الفاتورة</th><th>التاريخ</th><th>الطاولة</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الدفع</th><th>الحالة</th></tr></thead>
+              <tbody className="divide-y divide-ink/10">{visibleInvoices.map((item) => <tr key={item.id} className="hover:bg-ink/[0.02]"><td className="px-5 py-4 font-bold">{item.id}</td><td>{item.date}</td><td>{item.table}</td><td>{money(item.total)}</td><td className="font-bold text-herb">{money(item.paid)}</td><td className="font-bold text-copper-ink">{money(item.total - item.paid)}</td><td>{paymentLabels[item.method]}</td><td><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.status === "paid" ? "bg-herb/10 text-herb" : "bg-copper/10 text-copper-ink"}`}>{item.status === "paid" ? "مدفوعة" : "جزئية"}</span></td></tr>)}</tbody>
             </table>
           </div>
         </Card>
 
         <Card className="h-fit p-5">
           <h2 className="font-bold">التقارير المحاسبية</h2>
-          <p className="mt-1 text-xs leading-5 text-ink-soft/55">ملخص جاهز للتصدير واستخدامه لاحقًا مع الأصيل.</p>
+          <p className="mt-1 text-xs leading-5 text-muted">ملخص جاهز للتصدير واستخدامه لاحقًا مع الأصيل.</p>
           <div className="mt-4 space-y-3">
             <Summary label="النقدي المحصل" value={money(cashTotal)} />
             <Summary label="الإلكتروني المحصل" value={money(electronicTotal)} />
@@ -172,13 +172,13 @@ export default function SalesReports() {
 
       <Card className="mt-5 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-5 py-4">
-          <div><h2 className="font-bold">مبيعات جميع الطاولات</h2><p className="mt-1 text-xs text-ink-soft/50">ملخص مستقل لكل الطاولات، جاهز للتصدير.</p></div>
+          <div><h2 className="font-bold">مبيعات جميع الطاولات</h2><p className="mt-1 text-xs text-muted">ملخص مستقل لكل الطاولات، جاهز للتصدير.</p></div>
           <button onClick={exportAllTables} className="flex items-center gap-2 rounded-xl border border-ink/10 px-4 py-2.5 text-sm font-bold hover:bg-ink/[0.03]"><Download size={16} /> تصدير شامل Excel</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[650px] text-right text-sm">
-            <thead className="bg-ink/[0.025] text-xs text-ink-soft/60"><tr><th className="px-5 py-3">الطاولة</th><th>عدد الفواتير</th><th>إجمالي المبيعات</th><th>المحصل</th><th>المتبقي</th></tr></thead>
-            <tbody className="divide-y divide-ink/10">{tableSales.map((item) => <tr key={item.table}><td className="px-5 py-3 font-bold">{item.table}</td><td>{item.invoices}</td><td>{money(item.total)}</td><td className="font-bold text-herb">{money(item.paid)}</td><td className="font-bold text-copper-deep">{money(item.remaining)}</td></tr>)}</tbody>
+            <thead className="bg-ink/[0.025] text-xs text-muted"><tr><th className="px-5 py-3">الطاولة</th><th>عدد الفواتير</th><th>إجمالي المبيعات</th><th>المحصل</th><th>المتبقي</th></tr></thead>
+            <tbody className="divide-y divide-ink/10">{tableSales.map((item) => <tr key={item.table}><td className="px-5 py-3 font-bold">{item.table}</td><td>{item.invoices}</td><td>{money(item.total)}</td><td className="font-bold text-herb">{money(item.paid)}</td><td className="font-bold text-copper-ink">{money(item.remaining)}</td></tr>)}</tbody>
           </table>
         </div>
       </Card>
@@ -186,5 +186,5 @@ export default function SalesReports() {
   );
 }
 
-function Stat({ icon: Icon, label, value }) { return <Card className="p-5"><div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><Icon size={19} /></span><span className="text-xs text-ink-soft/50">تقرير</span></div><p className="mt-4 text-xs text-ink-soft/60">{label}</p><p className="mt-1 text-xl font-black">{value}</p></Card>; }
-function Summary({ label, value }) { return <div className="flex items-center justify-between rounded-xl bg-ink/[0.025] px-3.5 py-3"><span className="text-xs text-ink-soft/65">{label}</span><strong className="text-sm">{value}</strong></div>; }
+function Stat({ icon: Icon, label, value }) { return <Card className="p-5"><div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><Icon size={19} /></span><span className="text-xs text-muted">تقرير</span></div><p className="mt-4 text-xs text-muted">{label}</p><p className="mt-1 text-xl font-black">{value}</p></Card>; }
+function Summary({ label, value }) { return <div className="flex items-center justify-between rounded-xl bg-ink/[0.025] px-3.5 py-3"><span className="text-xs text-muted">{label}</span><strong className="text-sm">{value}</strong></div>; }

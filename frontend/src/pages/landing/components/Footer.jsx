@@ -1,4 +1,5 @@
 import { NAV_LINKS } from "./data";
+import BrandLogo from "../../../components/brand/Logo";
 
 export default function Footer() {
   return (
@@ -8,7 +9,7 @@ export default function Footer() {
 
           {/* Brand */}
           <div>
-            <img src="/menuPilot-logo.svg" alt="menuPilot" className="h-8 w-auto" />
+            <BrandLogo on="dark" height={32} />
             <p className="mt-4 max-w-xs text-sm leading-7 text-[#F3EFE5]/40">
               نظام إدارة مطاعم مبني ليجعل التشغيل أبسط، الطلبات أسرع، وفريقك أكثر تنسيقًا.
             </p>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BrandLogo from "../../components/brand/Logo";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, LockKeyhole, Mail, Store, UserRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -11,11 +12,8 @@ const plans = [
 
 const inputClass = "w-full rounded-2xl border border-[#4B5147]/20 bg-white px-4 py-3.5 text-sm text-[#1F2420] outline-none transition placeholder:text-[#4B5147]/45 focus:border-[#EEA122] focus:ring-4 focus:ring-[#EEA122]/10";
 
-const Logo = ({ className = "h-10" }) => (
-  <span className="brand-logo-surface inline-flex shrink-0 items-center">
-    <img src="/menuPilot-logo.svg" alt="menuPilot" className={`brand-logo ${className} w-auto`} />
-  </span>
-);
+// on="dark" for the dark side panel, default light for the mobile header.
+const Logo = ({ on = "dark", height = 40 }) => <BrandLogo on={on} height={height} priority />;
 
 export default function Register() {
   const navigate = useNavigate();
@@ -104,7 +102,7 @@ export default function Register() {
           <div className="w-full max-w-2xl">
             <div className="mb-7 flex items-center justify-between">
               <Link to="/" className="lg:hidden" dir="ltr" aria-label="menuPilot">
-                <Logo className="h-9" />
+                <Logo on="light" height={34} />
               </Link>
               <Link to="/login" className="flex items-center gap-2 text-sm font-bold text-[#4B5147] transition hover:text-[#E67E22]">لديك حساب؟ تسجيل الدخول <ArrowLeft size={16} /></Link>
             </div>
@@ -117,7 +115,7 @@ export default function Register() {
                   <div key={label} className="flex items-center">
                     <div className="flex flex-col items-center gap-2">
                       <span className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs font-black transition ${active ? "border-[#EEA122] bg-[#EEA122] text-[#1F2420]" : "border-[#4B5147]/20 bg-white text-[#4B5147]/45"}`}>{active && step > number ? <Check size={15} /> : number}</span>
-                      <span className={`hidden text-[10px] font-bold sm:block ${active ? "text-[#1F2420]" : "text-[#4B5147]/40"}`}>{label}</span>
+                      <span className={`hidden text-xs font-bold sm:block ${active ? "text-[#1F2420]" : "text-[#4B5147]/40"}`}>{label}</span>
                     </div>
                     {number < 4 && <span className={`mx-1 h-px w-8 sm:w-12 ${step > number ? "bg-[#EEA122]" : "bg-[#4B5147]/15"}`} />}
                   </div>
@@ -133,7 +131,7 @@ export default function Register() {
                   {plans.map((plan) => {
                     const selected = selectedPlan === plan.id;
                     return <button key={plan.id} type="button" onClick={() => setSelectedPlan(plan.id)} className={`relative rounded-2xl border p-5 text-right transition duration-200 hover:-translate-y-1 ${selected ? "border-[#EEA122] bg-[#EEA122]/5 shadow-[0_12px_30px_rgba(238,161,34,.12)]" : "border-[#4B5147]/10 bg-[#F3EFE5]/45 hover:border-[#EEA122]/40"}`}>
-                      {plan.featured && <span className="absolute -top-3 right-4 rounded-full bg-[#1F2420] px-3 py-1 text-[10px] font-bold text-[#EEA122]">الأكثر اختيارًا</span>}
+                      {plan.featured && <span className="absolute -top-3 right-4 rounded-full bg-[#1F2420] px-3 py-1 text-xs font-bold text-[#EEA122]">الأكثر اختيارًا</span>}
                       <span className="text-lg font-black">{plan.name}</span>
                       <div className="mt-3 text-2xl font-black">{plan.price}<span className="text-xs font-normal text-[#4B5147]/50"> / شهريًا</span></div>
                       <p className="mt-3 text-xs leading-6 text-[#4B5147]/65">{plan.description}</p>
