@@ -4,6 +4,11 @@ import { LayoutGrid, Plus, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createTable, deleteTable, getTables, setTableStatus, updateTable } from "../../api/tables";
 import { useToast } from "../../components/ui/Toast";
+import Modal from "../../components/ui/Modal";
+import Alert from "../../components/ui/Alert";
+import Input from "../../components/ui/Input";
+import { money } from "../../utils/format";
+import { Link as RouterLink } from "react-router-dom";
 import { errorText } from "../../utils/errors";
 import { useAuth } from "../../context/AuthContext";
 import { getSubscriptionPlan } from "../../config/subscriptions";
@@ -23,20 +28,43 @@ export default function Tables() {
   const plan = getSubscriptionPlan(user?.plan);
   const [tables, setTables] = useState([]);
   const [statusBusy, setStatusBusy] = useState(null);
+  // Occupied table → the API returns the open session; confirm ending it here.
+  const [ending, setEnding] = useState(null); // { table, status, session, reason, saving, error }
   const toast = useToast();
 
   // Reserved / out-of-service tables can't be opened from their QR code.
-  async function handleStatusChange(table, status) {
+  const STATUS_WORD = { available: "متاحة", reserved: "محجوزة", out_of_service: "خارج الخدمة" };
+
+  async function handleStatusChange(table, status, extra) {
+    if (status === "occupied") return;
     setStatusBusy(table.id);
     try {
-      const updated = await setTableStatus(table.id, status);
+      const updated = await setTableStatus(table.id, status, extra);
       setTables((list) => list.map((t) => (t.id === table.id ? { ...t, ...updated } : t)));
-      toast.success(`أصبحت ${table.label} ${{ available: "متاحة", reserved: "محجوزة", out_of_service: "خارج الخدمة" }[status]}.`);
+      setEnding(null);
+      toast.success(extra?.close_session ? `أُنهيت الجلسة وأصبحت ${table.label} ${STATUS_WORD[status]}.` : `أصبحت ${table.label} ${STATUS_WORD[status]}.`);
     } catch (err) {
-      toast.error(errorText(err, "تعذّر تغيير حالة الطاولة."));
+      if (err.code === "TABLE_HAS_ACTIVE_SESSION" && err.data?.session) {
+        setEnding({ table, status, session: err.data.session, reason: "", saving: false, error: null });
+      } else if (ending) {
+        setEnding((e) => ({ ...e, saving: false, error: err }));
+      } else {
+        toast.error(errorText(err, "تعذّر تغيير حالة الطاولة."));
+      }
     } finally {
       setStatusBusy(null);
     }
+  }
+
+  function confirmEnd(event) {
+    event.preventDefault();
+    const owed = Number(ending.session.outstanding) > 0;
+    if (owed && ending.reason.trim().length < 3) {
+      setEnding((e) => ({ ...e, error: { message: "اكتب سبب إنهاء الجلسة دون دفع المبلغ المتبقي.", friendly: true } }));
+      return;
+    }
+    setEnding((e) => ({ ...e, saving: true, error: null }));
+    handleStatusChange(ending.table, ending.status, { close_session: true, reason: owed ? ending.reason.trim() : undefined });
   }
   const [label, setLabel] = useState("");
   const [seats, setSeats] = useState(2);
@@ -82,6 +110,47 @@ export default function Tables() {
   return (
     <div dir="rtl">
       {confirmDialog}
+      <Modal
+        open={Boolean(ending)}
+        onClose={() => !ending?.saving && setEnding(null)}
+        size="sm"
+        title={ending ? `على ${ending.table.label} جلسة نشطة` : ""}
+        description={ending ? `لجعلها «${STATUS_WORD[ending.status]}» يجب إنهاء الجلسة الحالية. بعد ذلك لن يستطيع الزبون إضافة طلبات إليها.` : ""}
+      >
+        {ending && (
+          <form onSubmit={confirmEnd} className="space-y-4">
+            <dl className="divide-y divide-line rounded-xl border border-line text-sm">
+              <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">رقم الجلسة</dt><dd className="num font-bold">#{ending.session.session_id}</dd></div>
+              <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">إجمالي الفاتورة</dt><dd className="num font-bold">{money(ending.session.billTotal)}</dd></div>
+              <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">المدفوع</dt><dd className="num font-bold text-herb">{money(ending.session.paidTotal)}</dd></div>
+              <div className="flex justify-between px-4 py-2.5"><dt className="font-bold">المتبقي</dt><dd className="num font-extrabold">{money(ending.session.outstanding)}</dd></div>
+            </dl>
+
+            {ending.session.hasPendingPayment ? (
+              <Alert tone="warning" action={<RouterLink to={`/cashier/billing/${ending.session.session_id}`} className="text-sm font-bold underline">فتح الفاتورة</RouterLink>}>
+                يوجد دفع من الزبون بانتظار التأكيد. أكّده أو ارفضه أولًا.
+              </Alert>
+            ) : Number(ending.session.outstanding) > 0 ? (
+              <>
+                <Alert tone="warning">يوجد مبلغ متبقٍ لم يُدفع. إنهاء الجلسة الآن يسجّل المبلغ واسمك والسبب في سجل التدقيق.</Alert>
+                <Input label="سبب إنهاء الجلسة دون دفع" required autoFocus maxLength={255} value={ending.reason}
+                  onChange={(e) => setEnding((x) => ({ ...x, reason: e.target.value, error: null }))} placeholder="مثل: الزبون غادر، طلب تجريبي" />
+              </>
+            ) : null}
+
+            {ending.error && <Alert tone="danger">{errorText(ending.error, "تعذّر إنهاء الجلسة.")}</Alert>}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setEnding(null)} disabled={ending.saving}>تراجع</Button>
+              {!ending.session.hasPendingPayment && (
+                <Button type="submit" variant={Number(ending.session.outstanding) > 0 ? "danger" : "dark"} loading={ending.saving}>
+                  إنهاء الجلسة وتغيير الحالة
+                </Button>
+              )}
+            </div>
+          </form>
+        )}
+      </Modal>
       {qrTable && <QRCodeModal table={qrTable} onClose={() => setQrTable(null)} />}
       <PageHeader title="الطاولات" subtitle={`إدارة طاولات المطعم وإنشاء QR خاص لكل طاولة. (${tables.length} من ${plan.limits.tables === Infinity ? "∞" : plan.limits.tables} · ${plan.name})`} />
       {atLimit && <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 border-copper/25 bg-copper/5 p-4 text-sm"><span className="flex items-center gap-2 font-medium text-copper-ink"><Crown size={16}/> وصلت للحد الأقصى لعدد الطاولات.</span><Link to="/owner/subscription/pro" className="font-bold text-copper-ink hover:underline">ترقية الباقة →</Link></Card>}

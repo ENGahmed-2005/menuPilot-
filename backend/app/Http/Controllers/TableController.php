@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use App\Support\Audit;
+use App\Support\Permissions;
+use App\Support\SessionLifecycle;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -179,26 +181,74 @@ class TableController extends Controller
     }
 
     /**
-     * PATCH tables/{id}/status {status: available|reserved|out_of_service}
-     * (permission manage_tables). "occupied" is never set by hand: it follows
-     * the dining session. A table with an active session must be closed first.
+     * PATCH tables/{id}/status {status, close_session?, reason?}
+     * status: available | reserved | out_of_service  (permission manage_tables)
+     *
+     * A table with an open dining session is occupied. Changing it means ending
+     * that session first, so the request must say so explicitly
+     * (close_session=true) and the user also needs close_session:
+     *  - nothing owed                 → closed normally
+     *  - money still owed             → only with a written reason ("force"),
+     *                                    recorded with the amount in the audit log
+     *  - customer payment unverified  → refused: verify or reject it first
+     * Without close_session the API answers 409 with the session summary, which
+     * the UI shows in a confirmation dialog.
      */
     public function updateStatus(Request $request, $id)
     {
-        $v = $request->validate(['status' => 'required|in:available,'.implode(',', self::MANUAL_STATUSES)]);
+        $v = $request->validate([
+            'status' => 'required|in:available,'.implode(',', self::MANUAL_STATUSES),
+            'close_session' => 'sometimes|boolean',
+            'reason' => 'nullable|string|max:255',
+        ]);
         $table = $this->query($request)->find($id);
         if (! $table) {
             return response()->json(['message' => 'Table not found'], 404);
         }
-        if (DB::table('dining_sessions')->where('restaurant_table_id', $id)->whereNull('closed_at')->exists()) {
-            return response()->json(['message' => 'على هذه الطاولة جلسة نشطة. أغلق الجلسة أولًا ثم غيّر حالة الطاولة.', 'code' => 'TABLE_HAS_ACTIVE_SESSION'], 409);
-        }
+        $restaurantId = (int) $table->user_id;
 
-        $before = $table->status;
-        $this->query($request)->where('id', $id)->update(['status' => $v['status'], 'updated_at' => now()]);
-        Audit::log($request, 'table.status_changed', 'restaurant_table', (int) $id, ['from' => $before, 'to' => $v['status']], (int) $table->user_id);
+        return DB::transaction(function () use ($request, $v, $id, $table, $restaurantId) {
+            $session = DB::table('dining_sessions')->where('restaurant_table_id', $id)->whereNull('closed_at')->lockForUpdate()->first();
 
-        return $this->out($this->withQr($this->query($request)->find($id)));
+            if ($session) {
+                $money = SessionLifecycle::summaries([(int) $session->id])[(int) $session->id];
+                $summary = ['session_id' => $session->id] + SessionLifecycle::present($session, $money);
+
+                if (! $request->boolean('close_session')) {
+                    return response()->json([
+                        'message' => 'على هذه الطاولة جلسة نشطة. أنهِ الجلسة لتغيير حالة الطاولة.',
+                        'code' => 'TABLE_HAS_ACTIVE_SESSION',
+                        'session' => $summary,
+                    ], 409);
+                }
+                if (! Permissions::allows($request->user(), 'close_session')) {
+                    return response()->json(['message' => 'ليس لديك صلاحية لتنفيذ هذا الإجراء.', 'code' => 'PERMISSION_DENIED', 'required' => ['close_session']], 403);
+                }
+                if ($money['has_pending_payment']) {
+                    return response()->json(['message' => 'يوجد دفع من الزبون بانتظار التأكيد. أكّده أو ارفضه من شاشة الفواتير أولًا.', 'code' => 'PAYMENT_PENDING_VERIFICATION', 'session' => $summary], 409);
+                }
+                $forced = $money['outstanding'] > 0;
+                if ($forced && mb_strlen(trim((string) ($v['reason'] ?? ''))) < 3) {
+                    return response()->json(['message' => 'يوجد مبلغ متبقٍ. اكتب سبب إنهاء الجلسة دون دفع.', 'code' => 'REASON_REQUIRED', 'session' => $summary], 422);
+                }
+
+                SessionLifecycle::closeNow($session, $restaurantId);
+                Audit::log($request, $forced ? 'session.force_closed' : 'session.closed', 'dining_session', (int) $session->id, [
+                    'table' => $table->label,
+                    'via' => 'table_status',
+                    'total' => $money['total'],
+                    'paid' => $money['paid'],
+                    'outstanding' => $money['outstanding'],
+                    'reason' => $forced ? trim($v['reason']) : null,
+                ], $restaurantId);
+            }
+
+            $before = $session ? 'occupied' : $table->status;
+            DB::table('restaurant_tables')->where('id', $id)->where('user_id', $restaurantId)->update(['status' => $v['status'], 'updated_at' => now()]);
+            Audit::log($request, 'table.status_changed', 'restaurant_table', (int) $id, ['from' => $before, 'to' => $v['status']], $restaurantId);
+
+            return $this->out($this->withQr($this->query($request)->find($id)));
+        });
     }
 
     public function status(Request $request, $id)

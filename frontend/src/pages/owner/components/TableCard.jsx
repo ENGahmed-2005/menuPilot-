@@ -24,10 +24,9 @@ export default function TableCard({ table, editing, editLabel, editSeats, saving
               حالة الطاولة
               <select
                 value={occupied ? "occupied" : table.status || "available"}
-                disabled={occupied || statusBusy}
+                disabled={statusBusy}
                 onChange={(e) => onStatusChange(table, e.target.value)}
                 aria-label={`حالة ${table.label}`}
-                title={occupied ? "على الطاولة جلسة نشطة؛ أغلقها من شاشة الفواتير أولًا." : undefined}
                 className="h-9 rounded-lg border border-line bg-surface px-2 text-xs font-bold text-ink disabled:opacity-60"
               >
                 {occupied && <option value="occupied">مشغولة (جلسة نشطة)</option>}

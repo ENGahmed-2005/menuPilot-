@@ -18,4 +18,4 @@ export const getTableQr = (tableId) => api.get(`/tables/${tableId}/qr`);
 /** حالة الطاولة (Available / Occupied) — تُستخدم بلوحة الكاشير والنادل. FR-32. */
 export const getTableStatus = (tableId) => api.get(`/tables/${tableId}/status`);
 /** Owner: set a free table available / reserved / out of service (occupied follows the session). */
-export const setTableStatus = (tableId, status) => api.patch(`/tables/${tableId}/status`, { status });
+export const setTableStatus = (tableId, status, extra = {}) => api.patch(`/tables/${tableId}/status`, { status, ...extra });

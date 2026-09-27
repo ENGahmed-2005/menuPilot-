@@ -32,11 +32,50 @@ it('lets the owner set a table reserved / out of service, which blocks QR check-
 
     $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available'], authAs($owner))->assertOk();
     openSession($this, $table);
-    // Occupied follows the session; the owner can't override it by hand.
+    // Occupied follows the session: without close_session the API explains instead of changing it.
     $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'reserved'], authAs($owner))
-        ->assertStatus(409)->assertJsonPath('code', 'TABLE_HAS_ACTIVE_SESSION');
+        ->assertStatus(409)->assertJsonPath('code', 'TABLE_HAS_ACTIVE_SESSION')->assertJsonPath('session.lifecycle', 'open');
     $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'occupied'], authAs($owner))->assertStatus(422);
     expect(DB::table('audit_logs')->where('action', 'table.status_changed')->count())->toBe(2);
+});
+
+it('lets the owner free an occupied table by ending its session, with a reason when money is owed', function () {
+    $owner = makeOwner();
+    $waiter = makeStaff($owner['id'], 'waiter');
+    $table = makeTable($owner['id'], 'T3');
+    $s = openSession($this, $table);
+
+    // Empty session (customer left without ordering): summary first, then close.
+    $summary = $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available'], authAs($owner))
+        ->assertStatus(409)->assertJsonPath('code', 'TABLE_HAS_ACTIVE_SESSION')->json('session');
+    expect($summary['canClose'])->toBeTrue()->and((float) $summary['outstanding'])->toBe(0.0);
+    $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'out_of_service', 'close_session' => true], authAs($owner))
+        ->assertOk()->assertJsonPath('data.status', 'out_of_service');
+    expect(DB::table('dining_sessions')->where('id', $s['id'])->value('closed_at'))->not->toBeNull();
+
+    // Session with an unpaid order: needs a reason, recorded as a forced close.
+    $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available'], authAs($owner))->assertOk();
+    $s2 = openSession($this, $table);
+    $this->postJson("/api/public/sessions/{$s2['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 15), 'quantity' => 1]]]);
+    $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available', 'close_session' => true], authAs($owner))
+        ->assertStatus(422)->assertJsonPath('code', 'REASON_REQUIRED');
+    // A waiter can't end sessions this way (no close_session / manage_tables).
+    $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available', 'close_session' => true, 'reason' => 'left'], authAs($waiter))->assertForbidden();
+    $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available', 'close_session' => true, 'reason' => 'Customer walked out'], authAs($owner))
+        ->assertOk()->assertJsonPath('data.status', 'available');
+
+    $log = DB::table('audit_logs')->where('action', 'session.force_closed')->first();
+    expect($log)->not->toBeNull()->and(json_decode($log->metadata, true)['outstanding'])->toEqual(15);
+});
+
+it('refuses to end a session from the table card while a customer payment awaits verification', function () {
+    $owner = makeOwner();
+    $table = makeTable($owner['id']);
+    $s = openSession($this, $table);
+    DB::table('payments')->insert(['dining_session_id' => $s['id'], 'method' => 'bank', 'status' => 'pending', 'amount' => 10, 'created_at' => now(), 'updated_at' => now()]);
+
+    $this->patchJson("/api/tables/{$table->id}/status", ['status' => 'available', 'close_session' => true, 'reason' => 'x x x'], authAs($owner))
+        ->assertStatus(409)->assertJsonPath('code', 'PAYMENT_PENDING_VERIFICATION');
 });
 
 it('lets the owner edit tables and manage order status and cancellation', function () {

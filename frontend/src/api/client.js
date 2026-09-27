@@ -54,6 +54,7 @@ export async function request(path, options = {}) {
     error.serverMessage = data?.message || null;
     error.code = data?.code || null;
     error.errors = data?.errors || null;
+    error.data = data; // extra context (e.g. the open session behind a 409)
     throw error;
   }
 

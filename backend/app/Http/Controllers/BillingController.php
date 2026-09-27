@@ -17,7 +17,6 @@ class BillingController extends Controller
 {
     use ResolvesRestaurant;
 
-
     private function out($d, $s = 200)
     {
         return response()->json(['data' => $d], $s);
@@ -297,11 +296,6 @@ class BillingController extends Controller
 
     private function closeSession(object $session, int $restaurantId): void
     {
-        $now = now();
-        DB::table('dining_sessions')->where('id', $session->id)->update(['status' => 'closed', 'closed_at' => $now, 'updated_at' => $now]);
-        DB::table('assistance_requests')->where('dining_session_id', $session->id)->where('status', 'open')
-            ->update(['status' => 'resolved', 'resolved_at' => $now, 'updated_at' => $now]);
-        DB::table('restaurant_tables')->where('id', $session->restaurant_table_id)->where('user_id', $restaurantId)
-            ->update(['status' => 'available', 'updated_at' => $now]);
+        SessionLifecycle::closeNow($session, $restaurantId);
     }
 }
