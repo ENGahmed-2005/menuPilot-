@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { money } from "../../utils/format";
 import { Download, FileSpreadsheet, Receipt, TrendingUp, Upload, WalletCards } from "lucide-react";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
@@ -27,7 +28,6 @@ const tableSales = Array.from({ length: 12 }, (_, index) => {
 });
 
 const paymentLabels = { cash: "نقدًا", electronic: "إلكتروني", ussd: "USSD" };
-const money = (value) => `${Number(value || 0).toLocaleString("ar-PS", { maximumFractionDigits: 2 })} ₪`;
 
 function downloadCsv(rows, filename) {
   const csv = "\uFEFF" + rows.map((row) => row.map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
