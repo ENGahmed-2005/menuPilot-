@@ -1,18 +1,40 @@
-/* ==========================================================================
-   Footer.jsx — تذييل صفحة الهبوط
-   ========================================================================== */
-import { QrCode } from "lucide-react";
+import { NAV_LINKS } from "./data";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-[#F3EFE5]/10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm text-[#F3EFE5]/45 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-10">
-        <div className="flex items-center gap-2 font-black text-[#F3EFE5]/75">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#EEA122] text-[#1F2420]"><QrCode size={17} /></span>
-          menuPilot
+    <footer className="border-t border-[#F3EFE5]/8 bg-[#1A1E1B]">
+      <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-10">
+        <div className="grid gap-10 md:grid-cols-[1fr_auto]">
+
+          {/* Brand */}
+          <div>
+            <img src="/menuPilot-logo.svg" alt="menuPilot" className="h-8 w-auto" />
+            <p className="mt-4 max-w-xs text-sm leading-7 text-[#F3EFE5]/40">
+              نظام إدارة مطاعم مبني ليجعل التشغيل أبسط، الطلبات أسرع، وفريقك أكثر تنسيقًا.
+            </p>
+          </div>
+
+          {/* Nav */}
+          <div>
+            <p className="mb-4 text-[11px] font-black tracking-[.15em] text-[#F3EFE5]/30 uppercase">الأقسام</p>
+            <nav className="flex flex-col gap-2.5">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm text-[#F3EFE5]/50 transition hover:text-[#EEA122]"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+          </div>
         </div>
-        <div>نظام إدارة مطاعم مبني ليجعل التشغيل أبسط.</div>
-        <div>© {new Date().getFullYear()} menuPilot</div>
+
+        <div className="mt-10 flex flex-col gap-3 border-t border-[#F3EFE5]/8 pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-[#F3EFE5]/30">© {new Date().getFullYear()} menuPilot. جميع الحقوق محفوظة.</p>
+          <p className="text-xs text-[#F3EFE5]/25">تجربة مجانية 14 يومًا — بدون بطاقة ائتمانية</p>
+        </div>
       </div>
     </footer>
   );
