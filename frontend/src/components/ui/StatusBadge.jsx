@@ -30,6 +30,17 @@ export const STATUS = {
     bill_requested: { label: "طلب الفاتورة", tone: "warning", icon: Receipt },
     closed: { label: "مغلقة", tone: "neutral", icon: CheckCheck },
   },
+  // Derived by the API (SessionLifecycle) — the one source of truth for
+  // where a dining session is: open → active → bill_requested →
+  // payment_pending → paid → closed.
+  lifecycle: {
+    open: { label: "جلسة جديدة", tone: "neutral", icon: CircleDashed },
+    active: { label: "نشطة", tone: "info", icon: Utensils },
+    bill_requested: { label: "طلبت الفاتورة", tone: "warning", icon: Receipt },
+    payment_pending: { label: "دفع بانتظار التأكيد", tone: "warning", icon: Hourglass },
+    paid: { label: "مدفوعة، جاهزة للإغلاق", tone: "success", icon: ShieldCheck },
+    closed: { label: "مغلقة", tone: "neutral", icon: CheckCheck },
+  },
   payment: {
     pending: { label: "بانتظار المراجعة", tone: "warning", icon: Clock3 },
     verified: { label: "مؤكد", tone: "success", icon: ShieldCheck },

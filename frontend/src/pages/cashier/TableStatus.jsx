@@ -15,6 +15,7 @@ import SegmentedControl from "../../components/ui/SegmentedControl";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { SkeletonCards, SkeletonStats } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
+import CloseSessionButton from "../../components/billing/CloseSessionButton";
 import { money, tableName } from "../../utils/format";
 
 // The API returns "available" / "occupied"; older mocks used "Available".
@@ -36,7 +37,7 @@ export default function TableStatus() {
   const [filter, setFilter] = useState("all");
   const [error, setError] = useState(null);
 
-  const { sessions, connected } = useWaiterRealtime();
+  const { sessions, setSessions, connected } = useWaiterRealtime();
   const prevSessionCount = useRef(null);
   // bill summaries keyed by sessionId, fetched when billRequested is true
   const [bills, setBills] = useState({});
@@ -120,6 +121,13 @@ export default function TableStatus() {
     return matchesQuery && matchesFilter;
   }).sort((a, b) => rank(a) - rank(b) || String(a.label).localeCompare(String(b.label), "ar", { numeric: true })), [tables, query, filter, sessionMap, rank]);
 
+  // After a close: drop the session and free the table right away; the live
+  // feed confirms it within seconds, so no reload is needed.
+  function handleClosed(session) {
+    setSessions((list) => list.filter((s) => String(s.id) !== String(session.id)));
+    setTables((list) => list.map((t) => (String(t.activeSessionId) === String(session.id) ? { ...t, status: "available", activeSessionId: null } : t)));
+  }
+
   if (loading) return (
     <div className="space-y-5">
       <PageHeader title="الطاولات والفواتير" subtitle="تابع حالة الطاولات واستلم الفواتير من شاشة واحدة." />
@@ -173,13 +181,24 @@ export default function TableStatus() {
                     <p className="text-lg font-extrabold text-ink">{tableName(table.label)}</p>
                     <p className="mt-0.5 text-xs text-muted" dir="ltr">{table.code}</p>
                   </div>
-                  <StatusBadge type="table" status={occupied ? "occupied" : "available"} />
+                  <div className="flex flex-col items-end gap-1.5">
+                    <StatusBadge type="table" status={occupied ? "occupied" : "available"} />
+                    {session?.lifecycle && session.lifecycle !== "active" && <StatusBadge type="lifecycle" status={session.lifecycle} />}
+                  </div>
                 </div>
 
                 <p className="mt-4 flex items-center gap-2 text-sm text-ink-soft">
                   <Receipt size={16} aria-hidden="true" className="text-muted" />
                   {table.activeSessionId ? <>جلسة <span className="num">#{table.activeSessionId}</span>{session?.customerName && <span className="text-muted">، {session.customerName}</span>}</> : "لا يوجد زبائن على الطاولة"}
                 </p>
+
+                {session && session.billTotal > 0 && (
+                  <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+                    <span>الإجمالي <b className="num text-ink">{money(session.billTotal)}</b></span>
+                    <span>المدفوع <b className="num text-herb">{money(session.paidTotal)}</b></span>
+                    <span>المتبقي <b className="num text-ink">{money(session.outstanding)}</b></span>
+                  </p>
+                )}
 
                 {session?.assistanceRequested && (
                   <div className="mt-3">
@@ -219,7 +238,7 @@ export default function TableStatus() {
               </div>
 
               {occupied && table.activeSessionId && (
-                <div className="border-t border-line p-4">
+                <div className="space-y-2 border-t border-line p-4">
                   <Link
                     to={`/cashier/billing/${table.activeSessionId}`}
                     className={buttonClasses({ variant: session?.billRequested ? "primary" : "secondary", block: true })}
@@ -227,6 +246,7 @@ export default function TableStatus() {
                     <CircleDollarSign size={17} aria-hidden="true" />
                     {session?.billRequested ? "مراجعة الفاتورة وتسجيل الدفع" : "عرض الفاتورة"}
                   </Link>
+                  {session && <CloseSessionButton block session={{ ...session, tableLabel: table.label }} onClosed={handleClosed} />}
                 </div>
               )}
             </Card>

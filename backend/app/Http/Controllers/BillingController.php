@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PaymentStatus;
+use App\Support\Audit;
 use App\Support\ResolvesRestaurant;
+use App\Support\SessionLifecycle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -77,7 +79,7 @@ class BillingController extends Controller
             'total' => $total,
             'paid' => $paid,
             'outstanding' => max(0, round($total - $paid, 2)),
-        ];
+        ] + $this->lifecycleFields($session);
     }
 
     /** US-16 / FR-27, FR-28: customer asks for the bill from their phone. */
@@ -159,8 +161,10 @@ class BillingController extends Controller
                 'updated_at' => $now,
             ]);
 
+            Audit::log($r, 'payment.recorded', 'payment', $paymentId, ['session_id' => $session->id, 'method' => $v['method'], 'amount' => $outstanding], $restaurantId);
             if ($v['close'] ?? true) {
                 $this->closeSession($session, $restaurantId);
+                Audit::log($r, 'session.closed', 'dining_session', $session->id, ['table' => $session->table_label, 'via' => 'payment'], $restaurantId);
             }
 
             return DB::table('payments')->find($paymentId);
@@ -170,26 +174,44 @@ class BillingController extends Controller
     }
 
     /** US-17 / FR-31, FR-32: close only after payment; table returns to Available. */
+    /**
+     * US-17 / FR-31, FR-32: close a dining session (permission: close_session).
+     * Allowed only when nothing is outstanding, no customer payment is waiting
+     * for verification, and a payment was recorded if there was a bill.
+     * Closing resolves open waiter calls and makes the table available.
+     * The session row is locked so two cashiers can't close it twice.
+     */
     public function close(Request $r, $sid)
     {
         $restaurantId = $this->restaurantId($r);
-        $session = $this->sessionForRestaurant($sid, $restaurantId);
-        if (! $session) {
+        if (! $this->sessionForRestaurant($sid, $restaurantId)) {
             return response()->json(['message' => 'Session not found'], 404);
         }
-        if ($session->closed_at) {
-            return response()->json(['message' => 'Session already closed'], 409);
-        }
 
-        $summary = $this->summary($session);
-        $hasPayment = collect($summary['payments'])->whereIn('status', PaymentStatus::settled())->isNotEmpty();
-        if ($summary['outstanding'] > 0 || ($summary['total'] > 0 && ! $hasPayment)) {
-            return response()->json(['message' => 'Payment must be recorded before closing the session.', 'outstanding' => $summary['outstanding']], 422);
-        }
+        $result = DB::transaction(function () use ($r, $sid, $restaurantId) {
+            DB::table('dining_sessions')->where('id', $sid)->lockForUpdate()->first();
+            $session = $this->sessionForRestaurant($sid, $restaurantId);
+            $money = SessionLifecycle::summaries([(int) $sid])[(int) $sid];
 
-        DB::transaction(fn () => $this->closeSession($session, $restaurantId));
+            if ($blocker = SessionLifecycle::closeBlocker($session, $money)) {
+                return response()->json([
+                    'message' => $blocker['message'],
+                    'code' => $blocker['code'],
+                    'outstanding' => $money['outstanding'],
+                ], $blocker['status']);
+            }
 
-        return $this->out(DB::table('dining_sessions')->find($sid));
+            $this->closeSession($session, $restaurantId);
+            Audit::log($r, 'session.closed', 'dining_session', (int) $sid, [
+                'table' => $session->table_label,
+                'total' => $money['total'],
+                'paid' => $money['paid'],
+            ], $restaurantId);
+
+            return null;
+        });
+
+        return $result ?? $this->out(DB::table('dining_sessions')->find($sid));
     }
 
     /** Mark a USSD/offline payment as reconciled once connectivity is back (US-18). */
@@ -216,6 +238,7 @@ class BillingController extends Controller
             'verified_by' => $r->user()->id,
             'updated_at' => now(),
         ]);
+        Audit::log($r, 'payment.reconciled', 'payment', (int) $paymentId, ['amount' => $payment->amount], $this->restaurantId($r));
 
         return $this->out(DB::table('payments')->find($paymentId));
     }
@@ -259,8 +282,17 @@ class BillingController extends Controller
             ]);
             DB::table('order_items')->where('id', $item)->update(['unit_price' => $v['new_price'], 'updated_at' => now()]);
         });
+        Audit::log($r, 'bill.price_adjusted', 'order_item', (int) $item, ['session_id' => (int) $sid, 'old_price' => $x->unit_price, 'new_price' => $v['new_price'], 'reason' => $v['reason'] ?? null], $session->restaurant_id);
 
         return $this->out($this->summary($session));
+    }
+
+    private function lifecycleFields(object $session): array
+    {
+        $money = SessionLifecycle::summaries([(int) $session->id])[(int) $session->id];
+        $fields = SessionLifecycle::present($session, $money);
+
+        return ['lifecycle' => $fields['lifecycle'], 'can_close' => $fields['canClose'], 'close_blocker' => $fields['closeBlocker'], 'has_pending_payment' => $fields['hasPendingPayment']];
     }
 
     private function closeSession(object $session, int $restaurantId): void

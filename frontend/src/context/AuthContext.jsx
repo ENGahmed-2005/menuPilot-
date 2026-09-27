@@ -5,6 +5,7 @@
    سؤال يحتاجه أكثر من مكوّن بعيد عن بعضه (Navbar، ProtectedRoute، لوحات
    التحكم)، فتمرير الحالة عبر props يدويًا (prop drilling) يصبح مزعجًا.
    ========================================================================== */
+import { ROLE_DEFAULTS } from "../config/permissions";
 import { createContext, useContext, useEffect, useState } from "react";
 import { login as apiLogin, logout as apiLogout, register as apiRegister, fetchCurrentUser } from "../api/auth";
 import { getToken } from "../api/client";
@@ -53,9 +54,16 @@ export function AuthProvider({ children }) {
     setUser((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
+  // Permissions come from the API (GET /auth/me, login). They only drive what
+  // the UI shows; Laravel enforces every one of them on the server.
+  const permissions = user?.permissions || ROLE_DEFAULTS[user?.role] || [];
+  const can = (permission) => user?.role === "admin" || permissions.includes(permission);
+
   const value = {
     user,
-    role: user?.role ?? null, // "owner" | "kitchen" | "cashier" | "waiter"
+    role: user?.role ?? null, // "owner" | "manager" | "kitchen" | "cashier" | "waiter" | "admin"
+    permissions,
+    can,
     isAuthenticated: Boolean(user),
     loading,
     login,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Staff;
 use App\Models\User;
+use App\Support\Permissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -80,10 +81,16 @@ class AuthController extends Controller
         if ($u->login_locked_until) {
             $u->update(['login_locked_until' => null]);
         }
+        if ($u->is_active === false) {
+            return response()->json(['message' => 'تم تعطيل هذا الحساب. تواصل مع إدارة المنصة.', 'code' => 'ACCOUNT_DISABLED'], 403);
+        }
         if ($u->role !== 'owner' && $u->role !== 'admin') {
             $staff = Staff::where('account_user_id', $u->id)->first();
             if (! $staff || ! $staff->active || $staff->role !== $u->role) {
-                return response()->json(['message' => 'This staff account is disabled or not linked to a restaurant.'], 403);
+                return response()->json(['message' => 'This staff account is disabled or not linked to a restaurant.', 'code' => 'ACCOUNT_DISABLED'], 403);
+            }
+            if (User::where('id', $staff->user_id)->value('is_active') === false) {
+                return response()->json(['message' => 'This restaurant account is disabled.', 'code' => 'ACCOUNT_DISABLED'], 403);
             }
         }
         $u->refreshSubscriptionStatus();
@@ -93,6 +100,8 @@ class AuthController extends Controller
             'login_failed_attempts' => 0,
             'login_locked_until' => null,
         ]);
+
+        $u->setAttribute('permissions', Permissions::for($u));
 
         return $this->out(['token' => $token, 'user' => $u]);
     }
@@ -109,7 +118,11 @@ class AuthController extends Controller
         $u = $r->user();
         $u->refreshSubscriptionStatus();
 
-        return $this->out($u->load('restaurantSetting'));
+        $u->load('restaurantSetting');
+        // The frontend mirrors these to hide actions; the API enforces them.
+        $u->setAttribute('permissions', Permissions::for($u));
+
+        return $this->out($u);
     }
 
     public function forgotPassword(Request $r)

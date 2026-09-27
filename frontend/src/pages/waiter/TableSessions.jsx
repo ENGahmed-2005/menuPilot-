@@ -17,6 +17,7 @@ import LiveIndicator from "../../components/ui/LiveIndicator";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { SkeletonCards, SkeletonStats } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
+import { usePermissions } from "../../hooks/usePermissions";
 import { tableName } from "../../utils/format";
 
 const priority = (s) => (s.assistanceRequested ? 0 : s.billRequested ? 1 : 2);
@@ -32,6 +33,7 @@ export default function TableSessions() {
   const [resolving, setResolving] = useState(null);
   const [filter, setFilter] = useState("all");
   const { sessions, setSessions, connected } = useWaiterRealtime([]);
+  const { can } = usePermissions();
 
   useEffect(() => {
     getActiveSessions().then((data) => setSessions(data || [])).catch(setError).finally(() => setLoading(false));
@@ -92,7 +94,7 @@ export default function TableSessions() {
                       <p className="text-lg font-extrabold text-ink">{tableName(s.tableLabel || s.table_label)}</p>
                       <p className="mt-0.5 truncate text-sm text-muted">{s.customerName || s.customer_name || "زبون"}</p>
                     </div>
-                    <StatusBadge type="session" status={s.status} />
+                    <StatusBadge type={s.lifecycle ? "lifecycle" : "session"} status={s.lifecycle || s.status} />
                   </div>
 
                   {s.assistanceRequested ? (
@@ -104,9 +106,11 @@ export default function TableSessions() {
                         </p>
                       </div>
                       {s.assistanceRequest?.note && <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-sm font-bold text-ink">«{s.assistanceRequest.note}»</p>}
-                      <Button block size="md" variant="dark" className="mt-3" loading={resolving === s.id} onClick={() => resolve(s.id)}>
-                        <Check size={17} aria-hidden="true" /> تمت الخدمة
-                      </Button>
+                      {can("handle_assistance") && (
+                        <Button block size="md" variant="dark" className="mt-3" loading={resolving === s.id} onClick={() => resolve(s.id)}>
+                          <Check size={17} aria-hidden="true" /> تمت الخدمة
+                        </Button>
+                      )}
                     </div>
                   ) : s.billRequested ? (
                     <p className="mt-4 flex items-center gap-2 rounded-xl bg-copper/10 p-3 text-sm font-extrabold text-copper-ink">

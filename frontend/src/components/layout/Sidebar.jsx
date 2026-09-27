@@ -15,39 +15,56 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { getSubscriptionPlan, hasPlanFeature } from "../../config/subscriptions";
 
-// [to, label, icon, plan feature (null = always available)]
+// [to, label, icon, plan feature (null = always), permission(s) "a|b" (null = any)]
+// Links are shown only when the plan includes the feature AND the user holds
+// the permission. The API enforces the same permissions on every request.
+const OPERATIONS = [
+  ["/owner/dashboard", "نظرة عامة", LayoutDashboard, "dashboard", "view_dashboard"],
+  ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
+  ["/waiter", "طلبات النادل", HandPlatter, "waiter", "handle_assistance"],
+  ["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"],
+];
 const NAV = {
   owner: [
-    { title: "التشغيل", links: [
-      ["/owner/dashboard", "نظرة عامة", LayoutDashboard, "dashboard"],
-      ["/owner/tables", "الطاولات ورموز QR", QrCode, "tables"],
-      ["/owner/menu", "المنيو", UtensilsCrossed, "menu"],
-      ["/owner/staff", "فريق المطعم", Users, null],
-      ["/owner/reports", "التقارير", BarChart3, "reports"],
+    { title: "التشغيل", links: OPERATIONS },
+    { title: "الإدارة", links: [
+      ["/owner/tables", "الطاولات ورموز QR", QrCode, "tables", "manage_tables"],
+      ["/owner/menu", "المنيو", UtensilsCrossed, "menu", "manage_menu"],
+      ["/owner/staff", "الفريق والصلاحيات", Users, null, "manage_staff"],
+      ["/owner/reports", "التقارير", BarChart3, "reports", "view_reports"],
     ] },
     { title: "الهوية والإعدادات", links: [
-      ["/owner/theme", "ألوان اللوحة", Sparkles, "theme-presets"],
-      ["/owner/branding", "تصميم المنيو", Palette, "branding"],
-      ["/owner/settings", "إعدادات المطعم", Settings, null],
+      ["/owner/theme", "ألوان اللوحة", Sparkles, "theme-presets", "manage_branding"],
+      ["/owner/branding", "تصميم المنيو", Palette, "branding", "manage_branding"],
+      ["/owner/settings", "إعدادات المطعم", Settings, null, "manage_settings"],
+      ["/owner/subscription/current", "الاشتراك", Crown, null, "manage_subscription"],
     ] },
   ],
-  kitchen: [{ links: [["/kitchen", "شاشة المطبخ", ChefHat, "kitchen"]] }],
+  manager: [
+    { title: "التشغيل", links: OPERATIONS },
+    { title: "الإدارة", links: [
+      ["/owner/tables", "الطاولات ورموز QR", QrCode, "tables", "manage_tables"],
+      ["/owner/menu", "المنيو", UtensilsCrossed, "menu", "manage_menu"],
+      ["/owner/staff", "الفريق والصلاحيات", Users, null, "manage_staff"],
+    ] },
+  ],
+  kitchen: [{ links: [["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"]] }],
   cashier: [{ links: [
-    ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier"],
-    ["/cashier/reports", "تقارير المبيعات", BarChart3, "cashier"],
+    ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
+    ["/cashier/reports", "تقارير المبيعات", BarChart3, "cashier", "view_reports|view_payments"],
   ] }],
-  waiter: [{ links: [["/waiter", "الطاولات والطلبات", HandPlatter, "waiter"]] }],
+  waiter: [{ links: [["/waiter", "الطاولات والطلبات", HandPlatter, "waiter", "view_tables"]] }],
   admin: [
     { title: "إدارة المنصة", links: [
-      ["/admin/dashboard", "نظرة عامة", LayoutDashboard, null],
-      ["/admin/restaurants", "المطاعم", UtensilsCrossed, null],
-      ["/admin/owners", "المستخدمون", Users, null],
-      ["/admin/subscriptions", "الاشتراكات", Crown, null],
-      ["/admin/reports", "التقارير", BarChart3, null],
+      ["/admin/dashboard", "نظرة عامة", LayoutDashboard, null, null],
+      ["/admin/restaurants", "المطاعم", UtensilsCrossed, null, null],
+      ["/admin/owners", "أصحاب المطاعم", Users, null, null],
+      ["/admin/subscriptions", "الاشتراكات", Crown, null, null],
+      ["/admin/reports", "التقارير", BarChart3, null, null],
     ] },
     { title: "النظام", links: [
-      ["/admin/settings", "الإعدادات", Settings, null],
-      ["/admin/notifications", "الإشعارات", Bell, null],
+      ["/admin/settings", "إعدادات النظام", Settings, null, null],
+      ["/admin/notifications", "الإشعارات", Bell, null, null],
     ] },
   ],
 };
@@ -77,13 +94,14 @@ function PlanCard({ user }) {
 }
 
 export default function Sidebar() {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, can } = useAuth();
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
   const planId = user?.plan || "basic";
   const trial = user?.plan === "trial" && user?.trial_ends_at && new Date(user.trial_ends_at) > new Date();
-  const allowed = ([, , , feature]) => !feature || trial || (feature === "branding" && ["pro", "premium"].includes(planId)) || hasPlanFeature(planId, feature);
+  const planAllows = (feature) => !feature || trial || (feature === "branding" && ["pro", "premium"].includes(planId)) || hasPlanFeature(planId, feature);
+  const allowed = ([, , , feature, permission]) => planAllows(feature) && (!permission || permission.split("|").some((p) => can(p)));
   const groups = (NAV[role] || []).map((group) => ({ ...group, links: group.links.filter(allowed) })).filter((group) => group.links.length);
   const current = groups.flatMap((g) => g.links).find(([to]) => location.pathname.startsWith(to));
 
@@ -133,7 +151,7 @@ export default function Sidebar() {
                 {group.links.map(([to, label, Icon]) => (
                   <li key={to}>
                     <NavLink
-                      to={to}
+                      to={to.replace("/current", `/${planId}`)}
                       className={({ isActive }) => `group relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold transition-colors ${
                         isActive ? "bg-copper text-ink" : "text-paper/75 hover:bg-paper/[0.08] hover:text-paper"
                       }`}

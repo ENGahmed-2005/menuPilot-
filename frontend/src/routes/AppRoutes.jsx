@@ -58,28 +58,38 @@ export default function AppRoutes() {
       <Route path="/bill-request" element={<BillRequest />} />
 
       <Route element={<ProtectedRoute allow={["owner"]} />}>
-        <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} />
         <Route path="/owner/subscription/:planId" element={<DashboardShell><SubscriptionPlanPage /></DashboardShell>} />
         <Route path="/owner/settings" element={<DashboardShell><RestaurantSettings /></DashboardShell>} />
         <Route path="/owner/branding" element={<DashboardShell><BrandingCustomization /></DashboardShell>} />
-        <Route path="/owner/tables" element={<FeatureProtectedRoute feature="tables"><DashboardShell><Tables /></DashboardShell></FeatureProtectedRoute>} />
-        <Route path="/owner/menu" element={<FeatureProtectedRoute feature="menu"><DashboardShell><MenuManagement /></DashboardShell></FeatureProtectedRoute>} />
         <Route path="/owner/reports" element={<FeatureProtectedRoute feature="reports"><DashboardShell><Reports /></DashboardShell></FeatureProtectedRoute>} />
         <Route path="/owner/theme" element={<FeatureProtectedRoute feature="theme-presets"><DashboardShell><ThemeCustomization /></DashboardShell></FeatureProtectedRoute>} />
+      </Route>
+
+      {/* Restaurant operations: owner, or a manager whose permissions allow it. */}
+      <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="view_dashboard|view_orders" />}>
+        <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} />
+      </Route>
+      <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="manage_tables" />}>
+        <Route path="/owner/tables" element={<FeatureProtectedRoute feature="tables"><DashboardShell><Tables /></DashboardShell></FeatureProtectedRoute>} />
+      </Route>
+      <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="manage_menu" />}>
+        <Route path="/owner/menu" element={<FeatureProtectedRoute feature="menu"><DashboardShell><MenuManagement /></DashboardShell></FeatureProtectedRoute>} />
+      </Route>
+      <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="manage_staff" />}>
         <Route path="/owner/staff" element={<DashboardShell><StaffManagement /></DashboardShell>} />
       </Route>
 
-      <Route element={<ProtectedRoute allow={["kitchen"]} />}>
+      <Route element={<ProtectedRoute allow={["kitchen", "owner", "manager"]} permission="manage_orders" />}>
         <Route element={<FeatureProtectedRoute feature="kitchen" />}><Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} /></Route>
       </Route>
-      <Route element={<ProtectedRoute allow={["cashier"]} />}>
+      <Route element={<ProtectedRoute allow={["cashier", "owner", "manager"]} permission="view_payments" />}>
         <Route element={<FeatureProtectedRoute feature="cashier" />}>
           <Route path="/cashier/tables" element={<DashboardShell><TableStatus /></DashboardShell>} />
           <Route path="/cashier/billing/:sessionId" element={<DashboardShell><Billing /></DashboardShell>} />
           <Route path="/cashier/reports" element={<DashboardShell><SalesReports /></DashboardShell>} />
         </Route>
       </Route>
-      <Route element={<ProtectedRoute allow={["waiter"]} />}>
+      <Route element={<ProtectedRoute allow={["waiter", "owner", "manager"]} permission="view_tables" />}>
         <Route element={<FeatureProtectedRoute feature="waiter" />}><Route path="/waiter" element={<DashboardShell><TableSessions /></DashboardShell>} /></Route>
       </Route>
 

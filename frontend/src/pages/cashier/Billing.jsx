@@ -15,6 +15,8 @@ import {
 import Spinner from "../../components/ui/Spinner";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
+import CloseSessionButton from "../../components/billing/CloseSessionButton";
+import { usePermissions } from "../../hooks/usePermissions";
 import Input from "../../components/ui/Input";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
@@ -63,6 +65,11 @@ function mapBill(data, sessionId) {
     paymentMethod: lastSettled?.method || "",
     paymentStatus: lastSettled?.status || "",
     pendingPayments,
+    // Lifecycle from the API (SessionLifecycle): drives the close button.
+    lifecycle: data?.lifecycle,
+    canClose: Boolean(data?.can_close),
+    closeBlocker: data?.close_blocker || null,
+    tableLabel: session.table_label,
     real: true,
   };
 }
@@ -122,6 +129,7 @@ const PAYMENT_METHODS = [
 export default function Billing() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
+  const { can } = usePermissions();
   const importRef = useRef(null);
 
   const [bill, setBill] = useState(null);
@@ -287,7 +295,7 @@ export default function Billing() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+            {can("verify_payments") && <div className="flex gap-2">
               <button
                 onClick={() => handleVerify(p.id)}
                 disabled={!!verifying}
@@ -303,7 +311,7 @@ export default function Billing() {
               >
                 <X size={15} /> رفض
               </button>
-            </div>
+            </div>}
           </div>
         </div>
       ))}
@@ -357,7 +365,7 @@ export default function Billing() {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="rounded-xl border border-ink/10 px-3 py-1.5 text-sm font-bold">×{item.quantity}</span>
-                  {bill.real && !isPaid && (
+                  {bill.real && !isPaid && can("adjust_bill") && (
                     <button
                       onClick={() => handleAdjust(item)}
                       className="rounded-lg px-2 py-1 text-xs font-bold text-copper hover:bg-copper/10"
@@ -391,7 +399,9 @@ export default function Billing() {
       </Card>
 
       {/* ── Payment section ────────────────────────────────────────────── */}
-      {!isPaid ? (
+      {!isPaid && !can("record_payment") ? (
+        <Card className="p-5 text-sm text-muted">تسجيل الدفع يحتاج صلاحية «تسجيل الدفع». اطلبها من صاحب المطعم إذا كانت ضمن عملك.</Card>
+      ) : !isPaid ? (
         <Card className="p-5">
           <h2 className="mb-4 text-sm font-bold">تسجيل الدفع</h2>
           {hasPending && (
@@ -432,12 +442,21 @@ export default function Billing() {
           </Button>
         </Card>
       ) : (
-        <Card className="flex items-center justify-center gap-3 p-6 text-herb">
-          <CheckCircle2 size={22} />
-          <div>
-            <p className="font-bold">تم تسجيل الدفع وإغلاق الجلسة</p>
-            {bill.paymentMethod && <p className="text-xs opacity-70">طريقة الدفع: {METHOD_LABELS[bill.paymentMethod] || bill.paymentMethod}</p>}
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="flex items-center gap-3 text-herb">
+            <CheckCircle2 size={22} aria-hidden="true" />
+            <div>
+              <p className="font-bold">{bill.closed ? "دُفعت الفاتورة وأُغلقت الجلسة" : "الفاتورة مدفوعة بالكامل"}</p>
+              {bill.paymentMethod && <p className="text-xs opacity-80">طريقة الدفع: {METHOD_LABELS[bill.paymentMethod] || bill.paymentMethod}</p>}
+              {!bill.closed && <p className="mt-0.5 text-xs text-muted">أغلق الجلسة لتصبح الطاولة متاحة للزبون التالي.</p>}
+            </div>
           </div>
+          {bill.real && !bill.closed && (
+            <CloseSessionButton
+              session={{ id: sessionId, tableLabel: bill.tableLabel, billTotal: bill.total, paidTotal: bill.paidAmount, outstanding: bill.outstanding, canClose: bill.canClose, closeBlocker: bill.closeBlocker }}
+              onClosed={() => navigate("/cashier/tables")}
+            />
+          )}
         </Card>
       )}
 
