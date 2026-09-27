@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import BrandLogo from "../../components/brand/Logo";
-import { BellRing, Check, ChevronRight, Clock3, FileText, Loader2, Utensils, X } from "lucide-react";
+import { BellRing, Check, ChevronRight, Clock3, FileText, Loader2, Plus, Utensils, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOrderTracking } from "../../hooks/useOrderTracking";
-import { requestWaiterAssistance } from "../../api/sessions";
+import { getSession, requestWaiterAssistance } from "../../api/sessions";
 import { requestBill } from "../../api/billing";
 import Spinner from "../../components/ui/Spinner";
 
 const STATUS_META = {
+  // Pay-first flow: the kitchen starts after the cashier confirms the payment.
+  payment_pending: { label: "بانتظار تأكيد الدفع", description: "سيؤكد الكاشير دفعتك خلال لحظات، ثم يبدأ المطبخ بتحضير طلبك." },
   pending: { label: "تم استلام الطلب", description: "المطبخ استلم طلبك وسيبدأ تحضيره قريبًا." },
   preparing: { label: "قيد التحضير", description: "طلبك الآن قيد التحضير في المطبخ." },
   ready: { label: "طلبك جاهز", description: "الطلب جاهز وسيتم تقديمه لك من فريق المطعم." },
@@ -22,7 +24,8 @@ const STEPS = [
   { key: "served", label: "تم التقديم" },
 ];
 
-const STATUS_ORDER = { pending: 0, preparing: 1, ready: 2, served: 3 };
+// payment_pending: no kitchen step is reached yet.
+const STATUS_ORDER = { payment_pending: -1, pending: 0, preparing: 1, ready: 2, served: 3 };
 
 function normalizeStatus(status) {
   return String(status || "").trim().toLowerCase();
@@ -58,6 +61,26 @@ export default function OrderTracking() {
   const [notice, setNotice] = useState("");
   const [noticeType, setNoticeType] = useState("success");
   const [busy, setBusy] = useState("");
+  // The guest's own session: table code (to go back to the same menu) and
+  // whether a previous payment is still waiting for the cashier.
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    if (!sessionId) return undefined;
+    let active = true;
+    const load = () => getSession(sessionId).then((data) => active && setSession(data)).catch(() => {});
+    load();
+    const timer = setInterval(load, 10000);
+    return () => { active = false; clearInterval(timer); };
+  }, [sessionId]);
+
+  const tableCode = session?.table_code || session?.tableCode;
+  const sessionClosed = Boolean(session?.is_closed || session?.closed_at);
+  const canAddOrder = Boolean(tableCode) && !sessionClosed;
+
+  function addAnotherOrder() {
+    navigate(`/t/${encodeURIComponent(tableCode)}/menu?session=${encodeURIComponent(sessionId)}&more=1`);
+  }
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -120,14 +143,14 @@ export default function OrderTracking() {
   }
 
   return (
-    <main dir="rtl" className="min-h-screen bg-paper-2 pb-32 text-ink">
+    <main dir="rtl" className="min-h-screen bg-paper-2 pb-40 text-ink">
       <header className="bg-ink text-paper">
         <div className="mx-auto max-w-3xl px-5 pb-8 pt-6 sm:px-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div><div><BrandLogo on="dark" height={22} /><p className="mt-0.5 text-xs text-paper/50">تتبع طلبك</p></div></div>
             <div className="flex items-center gap-2 rounded-full border border-paper/10 bg-paper/5 px-3 py-2 text-xs text-paper/65"><span className="h-2 w-2 animate-pulse rounded-full bg-herb" /> تحديث تلقائي</div>
           </div>
-          <div className="mt-8"><p className="text-sm text-paper/50">جلسة الطعام #{sessionId}</p><h1 className="mt-1 font-display text-4xl">طلبك في الطريق إليك</h1></div>
+          <div className="mt-8"><p className="text-sm text-paper/50">جلسة الطعام #{sessionId}</p><h1 className="mt-1 font-display text-4xl">{normalizedOrders.length > 1 ? `طلباتك (${normalizedOrders.length})` : "طلبك في الطريق إليك"}</h1></div>
         </div>
       </header>
 
@@ -156,6 +179,28 @@ export default function OrderTracking() {
 
         <div className="mt-5 flex items-center justify-center gap-1 text-xs text-muted"><span>تحديث حالة الطلب تلقائيًا</span><ChevronRight size={13} className="rotate-180" /></div>
       </div>
+
+      {/* Order more without leaving the session: back to the same table's menu. */}
+      {(canAddOrder || sessionClosed) && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-paper-2/95 px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur">
+          <div className="mx-auto max-w-3xl">
+            {sessionClosed ? (
+              <p className="py-2 text-center text-sm font-bold text-muted">أُغلقت جلسة هذه الطاولة. شكرًا لزيارتك!</p>
+            ) : (
+              <>
+                <button onClick={addAnotherOrder} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-base font-bold text-paper shadow-lg transition active:scale-[0.99]">
+                  <Plus size={20} aria-hidden="true" /> إضافة طلب جديد
+                </button>
+                <p className="mt-2 text-center text-xs leading-5 text-muted">
+                  {session?.has_pending_payment
+                    ? "دفعتك السابقة بانتظار تأكيد الكاشير. جهّز طلبك الجديد الآن، ويُرسَل بعد التأكيد مباشرة."
+                    : "أضف أصنافًا أخرى لنفس الطاولة، وتظهر هنا مع طلباتك السابقة."}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

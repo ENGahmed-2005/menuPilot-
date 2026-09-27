@@ -35,6 +35,8 @@ export default function Menu() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
+  // Came from the tracking page to order more for the same table.
+  const addingMore = searchParams.get("more") === "1";
   const { addItem, items, updateQuantity, removeItem, total: cartTotal } = useCart();
   // Index of a menu item in the cart (plain line without a note) for the inline stepper.
   const cartIndex = (id) => items.findIndex((it) => String(it.menuItemId) === String(id) && !it.note);
@@ -170,6 +172,14 @@ export default function Menu() {
       </div>
 
       <main className={`mx-auto max-w-5xl px-5 sm:px-8 ${cartCount > 0 ? "pb-32" : "pb-10"}`}>
+        {addingMore && sessionId && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-copper/25 bg-copper/10 px-4 py-3 text-sm">
+            <span className="font-bold text-ink">تضيف طلبًا جديدًا لنفس الطاولة. طلباتك السابقة مستمرة كما هي.</span>
+            <button onClick={() => navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`)} className="min-h-10 rounded-xl px-3 font-bold text-copper-ink underline-offset-4 hover:underline">
+              العودة لتتبع طلباتك
+            </button>
+          </div>
+        )}
         <div className="flex gap-2 overflow-x-auto py-5">
           {categories.map((c) => (
             <button

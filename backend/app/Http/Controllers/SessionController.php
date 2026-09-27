@@ -98,11 +98,29 @@ class SessionController extends Controller
         return $result;
     }
 
+    /**
+     * The customer's own session (token-protected). Includes the table code so
+     * the tracking page can send the guest back to the same table's menu to
+     * add another order, and whether a payment is still awaiting the cashier.
+     */
     public function show($id)
     {
-        $s = DB::table('dining_sessions')->find($id);
+        $s = DB::table('dining_sessions')
+            ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
+            ->where('dining_sessions.id', $id)
+            ->select('dining_sessions.*', 'restaurant_tables.table_code', 'restaurant_tables.label as table_label')
+            ->first();
+        if (! $s) {
+            return response()->json(['message' => 'Session not found'], 404);
+        }
 
-        return $s ? $this->out($s) : response()->json(['message' => 'Session not found'], 404);
+        $s->is_closed = (bool) $s->closed_at;
+        $s->has_pending_payment = DB::table('payments')->where('dining_session_id', $id)->where('status', 'pending')->exists();
+        // Adding an order is possible while the session is open; the payment
+        // step is held only while a previous payment awaits verification.
+        $s->can_add_order = ! $s->is_closed;
+
+        return $this->out($s);
     }
 
     public function updateCustomer(Request $request, $id)
