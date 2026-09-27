@@ -25,6 +25,10 @@ class TestMail extends Command
         $smtp = config('mail.mailers.smtp');
 
         $this->line("Mailer : {$mailer}");
+        if ($mailer === 'mailersend') {
+            $key = (string) config('mail.mailers.mailersend.key');
+            $this->line('API    : MailerSend ('.($key ? substr($key, 0, 9).'…' : 'MAILERSEND_API_KEY missing').')');
+        }
         if ($mailer === 'smtp') {
             $this->line("Host   : {$smtp['host']}:{$smtp['port']} (".($smtp['scheme'] ?? $smtp['encryption'] ?? 'auto').')');
             $this->line('User   : '.($smtp['username'] ?: '(none)'));
