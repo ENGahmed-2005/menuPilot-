@@ -6,9 +6,10 @@
    gating is unchanged.
    ========================================================================== */
 import { useEffect, useState } from "react";
+import BrandLogo from "../brand/Logo";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  BarChart3, ChefHat, Crown, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
+  BarChart3, Bell, ChefHat, Crown, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
   QrCode, Receipt, Settings, Sparkles, UtensilsCrossed, Users, X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -36,20 +37,25 @@ const NAV = {
     ["/cashier/reports", "تقارير المبيعات", BarChart3, "cashier"],
   ] }],
   waiter: [{ links: [["/waiter", "الطاولات والطلبات", HandPlatter, "waiter"]] }],
-  admin: [{ links: [
-    ["/admin/dashboard", "نظرة عامة", LayoutDashboard, null],
-    ["/admin/restaurants", "المطاعم", UtensilsCrossed, null],
-  ] }],
+  admin: [
+    { title: "إدارة المنصة", links: [
+      ["/admin/dashboard", "نظرة عامة", LayoutDashboard, null],
+      ["/admin/restaurants", "المطاعم", UtensilsCrossed, null],
+      ["/admin/owners", "المستخدمون", Users, null],
+      ["/admin/subscriptions", "الاشتراكات", Crown, null],
+      ["/admin/reports", "التقارير", BarChart3, null],
+    ] },
+    { title: "النظام", links: [
+      ["/admin/settings", "الإعدادات", Settings, null],
+      ["/admin/notifications", "الإشعارات", Bell, null],
+    ] },
+  ],
 };
 
 const ROLE_LABEL = { owner: "صاحب المطعم", kitchen: "المطبخ", cashier: "الكاشير", waiter: "النادل", admin: "إدارة المنصة", manager: "مدير" };
 
 function Logo({ compact = false }) {
-  return (
-    <span className={`brand-logo-surface inline-flex shrink-0 items-center ${compact ? "h-10 px-2" : "h-11 px-2.5"}`}>
-      <img src="/menuPilot-logo.svg" alt="menuPilot" className={`${compact ? "h-8" : "h-9"} w-auto`} />
-    </span>
-  );
+  return <BrandLogo on="dark" height={compact ? 30 : 36} priority />;
 }
 
 function PlanCard({ user }) {

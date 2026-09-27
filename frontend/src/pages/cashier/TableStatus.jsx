@@ -15,11 +15,11 @@ import SegmentedControl from "../../components/ui/SegmentedControl";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { SkeletonCards, SkeletonStats } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
+import { money, tableName } from "../../utils/format";
 
 // The API returns "available" / "occupied"; older mocks used "Available".
 const isAvailable = (table) => String(table.status || "").toLowerCase() === "available";
 
-const money = (v) => `${Number(v || 0).toLocaleString("ar-PS", { maximumFractionDigits: 2 })} ₪`;
 
 const FILTERS = [
   { value: "all", label: "الكل" },
@@ -170,7 +170,7 @@ export default function TableStatus() {
               <div className="flex-1 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-lg font-extrabold text-ink">طاولة {table.label}</p>
+                    <p className="text-lg font-extrabold text-ink">{tableName(table.label)}</p>
                     <p className="mt-0.5 text-xs text-muted" dir="ltr">{table.code}</p>
                   </div>
                   <StatusBadge type="table" status={occupied ? "occupied" : "available"} />

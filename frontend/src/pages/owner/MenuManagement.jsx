@@ -8,7 +8,12 @@ import { Link } from "react-router-dom";
 import { createMenuItem, deleteMenuItem, getMenuItems, updateMenuItem } from "../../api/menu";
 import { useAuth } from "../../context/AuthContext";
 import { getSubscriptionPlan } from "../../config/subscriptions";
-import Spinner from "../../components/ui/Spinner";
+import Input from "../../components/ui/Input";
+import Alert from "../../components/ui/Alert";
+import { SkeletonCards } from "../../components/ui/Skeleton";
+import { useConfirm } from "../../components/ui/ConfirmDialog";
+import { errorText } from "../../utils/errors";
+import { money } from "../../utils/format";
 import Button from "../../components/ui/Button";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
@@ -33,6 +38,9 @@ function fileToDataUrl(file) {
 const MAX_IMAGE_MB = 3;
 
 export default function MenuManagement() {
+  const [confirm, confirmDialog] = useConfirm();
+  const [adding, setAdding] = useState(false);
+  const [notice, setNotice] = useState("");
   const { user } = useAuth();
   const plan = getSubscriptionPlan(user?.plan);
   const [items, setItems] = useState([]);
@@ -105,16 +113,30 @@ export default function MenuManagement() {
 
   async function handleAdd(e) {
     e.preventDefault();
+    if (adding) return;
+    setAdding(true);
+    setError(null);
     try {
       await createMenuItem({ ...form, price: Number(form.price) });
+      setNotice(`أُضيف «${form.name.trim()}» إلى المنيو.`);
       setForm(EMPTY_FORM);
       load();
     } catch (err) {
-      setError(err);
+      setError(err); // the form keeps what the owner typed
+    } finally {
+      setAdding(false);
     }
   }
 
   async function handleDelete(itemId) {
+    const item = items.find((x) => x.id === itemId);
+    const ok = await confirm({
+      title: `حذف «${item?.name ?? "الصنف"}» من المنيو؟`,
+      description: "لن يظهر الصنف للزبائن بعد الآن. الطلبات السابقة التي تحتويه تبقى في السجل.",
+      confirmLabel: "حذف الصنف",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       await deleteMenuItem(itemId);
       load();
@@ -208,35 +230,19 @@ export default function MenuManagement() {
       )}
 
       <Card as="form" onSubmit={handleAdd} className="mb-6 space-y-4 p-4 sm:p-5">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <input
-            placeholder="الاسم"
-            value={form.name}
-            onChange={handleChange("name")}
-            required
-            className={`${fieldClass} lg:col-span-2`}
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="السعر"
-            value={form.price}
-            onChange={handleChange("price")}
-            required
-            className={fieldClass}
-          />
-          <input
-            placeholder="الفئة"
-            value={form.category}
-            onChange={handleChange("category")}
-            className={fieldClass}
-          />
-          <input
-            placeholder="الوصف"
-            value={form.description}
-            onChange={handleChange("description")}
-            className={`${fieldClass} lg:col-span-4`}
-          />
+        <h2 className="text-base font-extrabold text-ink">إضافة صنف جديد</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="lg:col-span-2">
+            <Input label="اسم الصنف" required maxLength={120} value={form.name} onChange={handleChange("name")} placeholder="مثل: شاورما دجاج" />
+          </div>
+          <Input label="السعر (₪)" type="number" inputMode="decimal" step="0.01" min="0.01" required value={form.price} onChange={handleChange("price")} placeholder="0.00" />
+          <Input label="التصنيف" list="menu-categories" value={form.category} onChange={handleChange("category")} placeholder="مثل: مشروبات" hint="اختر تصنيفًا موجودًا أو اكتب جديدًا." />
+          <datalist id="menu-categories">
+            {[...new Set(items.map((x) => x.category).filter(Boolean))].map((c) => <option key={c} value={c} />)}
+          </datalist>
+          <div className="sm:col-span-2 lg:col-span-4">
+            <Input label="الوصف" maxLength={300} value={form.description} onChange={handleChange("description")} placeholder="المكونات أو طريقة التحضير، في سطر واحد" />
+          </div>
         </div>
 
         {/* رفع صورة الصنف — معاينة فورية عبر FileReader (base64)، لحين توفر
@@ -268,24 +274,22 @@ export default function MenuManagement() {
 
           {imageError && <span className="text-xs text-brick">{imageError}</span>}
 
-          <Button type="submit" disabled={atLimit} className="mr-auto disabled:cursor-not-allowed disabled:opacity-50">
-            <Plus size={16} />
-            إضافة صنف
+          <Button type="submit" disabled={atLimit} loading={adding} className="mr-auto">
+            {!adding && <Plus size={16} aria-hidden="true" />}
+            إضافة الصنف
           </Button>
         </div>
       </Card>
 
-      {error && (
-        <p role="alert" className="mb-4 rounded-lg bg-brick/10 px-3 py-2 text-sm text-brick">
-          {error.message}
-        </p>
-      )}
+      {confirmDialog}
+      {notice && <Alert tone="success" className="mb-4" onDismiss={() => setNotice("")}>{notice}</Alert>}
+      {error && <Alert tone="danger" className="mb-4" onDismiss={() => setError(null)}>{errorText(error, "تعذّر حفظ التغيير.")}</Alert>}
 
       {loading ? (
-        <Spinner label="جارِ تحميل القائمة…" />
+        <SkeletonCards count={4} className="space-y-3" cardClassName="h-20" label="جارِ تحميل المنيو…" />
       ) : items.length === 0 ? (
         <Card>
-          <EmptyState icon={UtensilsCrossed} title="لا توجد أصناف بعد" description="أضف أول صنف من الفورم أعلاه." />
+          <EmptyState icon={UtensilsCrossed} title="المنيو فارغ" description="أضف أول صنف من النموذج أعلاه، وسيظهر للزبائن فور حفظه." />
         </Card>
       ) : (
         <div className="space-y-6">
@@ -309,6 +313,7 @@ export default function MenuManagement() {
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                           <input
                             placeholder="الاسم"
+                            aria-label="الاسم"
                             value={editForm.name}
                             onChange={handleEditChange("name")}
                             required
@@ -319,6 +324,7 @@ export default function MenuManagement() {
                             type="number"
                             step="0.01"
                             placeholder="السعر"
+                            aria-label="السعر"
                             value={editForm.price}
                             onChange={handleEditChange("price")}
                             required
@@ -326,12 +332,14 @@ export default function MenuManagement() {
                           />
                           <input
                             placeholder="الفئة"
+                            aria-label="الفئة"
                             value={editForm.category}
                             onChange={handleEditChange("category")}
                             className={fieldClass}
                           />
                           <input
                             placeholder="الوصف"
+                            aria-label="الوصف"
                             value={editForm.description}
                             onChange={handleEditChange("description")}
                             className={`${fieldClass} lg:col-span-4`}
@@ -412,19 +420,19 @@ export default function MenuManagement() {
                           )}
                         </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-4">
-                        <span className="text-sm font-medium text-copper-ink">{item.price}</span>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <span className="num ml-2 text-sm font-bold text-ink">{money(item.price)}</span>
                         <button
                           onClick={() => startEdit(item)}
-                          aria-label="تعديل الصنف"
-                          className="text-ink-soft transition-colors hover:opacity-75"
+                          aria-label={`تعديل ${item.name}`}
+                          className="grid h-10 w-10 place-items-center rounded-xl text-ink-soft transition-colors hover:bg-ink/[0.06] hover:text-ink"
                         >
                           <Pencil size={16} aria-hidden="true" />
                         </button>
                         <button
                           onClick={() => handleDelete(item.id)}
-                          aria-label="حذف الصنف"
-                          className="text-brick transition-colors hover:text-brick/80"
+                          aria-label={`حذف ${item.name}`}
+                          className="grid h-10 w-10 place-items-center rounded-xl text-brick transition-colors hover:bg-brick/10"
                         >
                           <Trash2 size={16} aria-hidden="true" />
                         </button>

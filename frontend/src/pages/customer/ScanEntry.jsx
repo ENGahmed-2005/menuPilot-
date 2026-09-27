@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BrandLogo from "../../components/brand/Logo";
 import {
   AlertCircle,
   ArrowLeft,
@@ -89,12 +90,7 @@ export default function ScanEntry() {
             <div className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-[#5B7A52]/20 blur-3xl" />
 
             <div className="relative z-10">
-              <div className="flex items-center gap-3" dir="ltr">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EEA122] font-black text-[#1F2420] shadow-lg">
-                  m
-                </span>
-                <span className="text-xl font-black">menuPilot</span>
-              </div>
+              <div dir="ltr"><BrandLogo on="dark" height={40} priority /></div>
 
               <div className="mt-20 max-w-md">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#EEA122]/25 bg-[#EEA122]/10 px-3 py-1.5 text-xs font-bold text-[#EEA122]">
@@ -121,12 +117,7 @@ export default function ScanEntry() {
           <section className="flex items-center justify-center p-5 sm:p-8 lg:p-12">
             <div className="w-full max-w-xl">
               <div className="mb-8 flex items-center justify-between lg:hidden">
-                <div className="flex items-center gap-2" dir="ltr">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEA122] font-black">
-                    m
-                  </span>
-                  <span className="font-black">menuPilot</span>
-                </div>
+                <div dir="ltr"><BrandLogo height={32} priority /></div>
                 <span className="rounded-full bg-[#EEA122]/10 px-3 py-1.5 text-xs font-bold text-[#9A6410]">
                   طاولة {tableCode}
                 </span>

@@ -25,8 +25,8 @@ import Button, { buttonClasses } from "../../components/ui/Button";
 import StatusBadge from "../../components/ui/StatusBadge";
 import Skeleton, { SkeletonStats } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
+import { money, orderNo, tableName } from "../../utils/format";
 
-const money = (v) => `${Number(v || 0).toLocaleString("ar-PS", { maximumFractionDigits: 2 })} ₪`;
 const ACTIVE = ["pending", "preparing", "ready"];
 const LATE_AFTER_MIN = 20;
 const todayKey = () => new Date().toISOString().slice(0, 10);
@@ -180,7 +180,7 @@ export default function SubscriptionDashboard() {
                 {liveOrders.map((o) => (
                   <li key={o.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
                     <div className="min-w-0">
-                      <p className="font-extrabold text-ink"><span className="num">#{o.order_number || o.id}</span> <span className="text-sm font-bold text-muted">طاولة {o.table_label}</span></p>
+                      <p className="font-extrabold text-ink"><span className="num">{orderNo(o.order_number || o.id)}</span> <span className="text-sm font-bold text-muted">{tableName(o.table_label)}</span></p>
                       <p className="mt-0.5 text-xs text-muted">{timeAgo(o.submitted_at)} <span className="num">، {money(o.total)}</span></p>
                     </div>
                     <StatusBadge type="order" status={o.status} />
@@ -195,8 +195,8 @@ export default function SubscriptionDashboard() {
                   <tbody className="divide-y divide-line">
                     {liveOrders.map((o) => (
                       <tr key={o.id} className="hover:bg-surface-2/60">
-                        <td className="num px-5 py-3.5 font-extrabold text-ink">#{o.order_number || o.id}</td>
-                        <td className="px-3 py-3.5">{o.table_label}{o.customer_name && <span className="block text-xs text-muted">{o.customer_name}</span>}</td>
+                        <td className="num px-5 py-3.5 font-extrabold text-ink">{orderNo(o.order_number || o.id)}</td>
+                        <td className="px-3 py-3.5">{o.table_label ? tableName(o.table_label) : "—"}{o.customer_name && <span className="block text-xs text-muted">{o.customer_name}</span>}</td>
                         <td className="px-3 py-3.5"><StatusBadge type="order" status={o.status} /></td>
                         <td className="num px-3 py-3.5 font-bold">{money(o.total)}</td>
                         <td className="px-5 py-3.5 text-xs text-muted">{timeAgo(o.submitted_at)}</td>

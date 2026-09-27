@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import BrandLogo from "../../components/brand/Logo";
 import { BellRing, Check, ChevronRight, Clock3, FileText, Loader2, Utensils, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOrderTracking } from "../../hooks/useOrderTracking";
@@ -123,7 +124,7 @@ export default function OrderTracking() {
       <header className="bg-ink text-paper">
         <div className="mx-auto max-w-3xl px-5 pb-8 pt-6 sm:px-8">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div><div><p className="text-xs font-bold tracking-[0.18em] text-copper">MENUPILOT</p><p className="mt-0.5 text-xs text-paper/50">تتبع طلبك</p></div></div>
+            <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div><div><BrandLogo on="dark" height={22} /><p className="mt-0.5 text-xs text-paper/50">تتبع طلبك</p></div></div>
             <div className="flex items-center gap-2 rounded-full border border-paper/10 bg-paper/5 px-3 py-2 text-xs text-paper/65"><span className="h-2 w-2 animate-pulse rounded-full bg-herb" /> تحديث تلقائي</div>
           </div>
           <div className="mt-8"><p className="text-sm text-paper/50">جلسة الطعام #{sessionId}</p><h1 className="mt-1 font-display text-4xl">طلبك في الطريق إليك</h1></div>

@@ -17,6 +17,7 @@ import LiveIndicator from "../../components/ui/LiveIndicator";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { SkeletonCards, SkeletonStats } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
+import { tableName } from "../../utils/format";
 
 const priority = (s) => (s.assistanceRequested ? 0 : s.billRequested ? 1 : 2);
 const sinceLabel = (iso) => {
@@ -88,7 +89,7 @@ export default function TableSessions() {
                 <Card className={`flex h-full flex-col p-4 ${s.assistanceRequested ? "border-brick/50 ring-1 ring-brick/30" : s.billRequested ? "border-copper/50" : ""}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-lg font-extrabold text-ink">طاولة {s.tableLabel || s.table_label}</p>
+                      <p className="text-lg font-extrabold text-ink">{tableName(s.tableLabel || s.table_label)}</p>
                       <p className="mt-0.5 truncate text-sm text-muted">{s.customerName || s.customer_name || "زبون"}</p>
                     </div>
                     <StatusBadge type="session" status={s.status} />

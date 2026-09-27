@@ -1,6 +1,6 @@
 import { api } from "./client";
 
-const useMocks = () => import.meta.env.VITE_USE_MOCKS === "true";
+const isMockMode = () => import.meta.env.VITE_USE_MOCKS === "true";
 
 const locationError = (message, code = "LOCATION_REQUIRED") => { const error = new Error(message); error.status = 403; error.code = code; return error; };
 
@@ -15,7 +15,7 @@ function getLocation() {
 
 export const openSession = async (payload) => {
   const body = { name: payload.name, phone: payload.phone };
-  if (!useMocks()) { const position = await getLocation(); body.latitude = position.coords.latitude; body.longitude = position.coords.longitude; }
+  if (!isMockMode()) { const position = await getLocation(); body.latitude = position.coords.latitude; body.longitude = position.coords.longitude; }
   return api.post(`/public/tables/${payload.tableCode}/sessions`, body);
 };
 

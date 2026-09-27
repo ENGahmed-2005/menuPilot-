@@ -419,13 +419,39 @@ export async function mockRequest(method, rawPath, body, token) {
 
   // ------- Owner: orders list (FR-21) -------
   if (method === "GET" && path === "/owner/orders") {
-    return orders.map((o) => ({
+    // Same field names as the real API (order_number, table_label, submitted_at).
+    return orders.map((o, index) => ({
       id: o.id,
-      orderNumber: o.orderNumber,
-      tableLabel: o.tableLabel,
-      status: o.status,
+      order_number: o.orderNumber,
+      table_label: o.tableLabel,
+      customer_name: o.customerName || null,
+      status: String(o.status).toLowerCase(),
+      submitted_at: o.submittedAt || new Date(Date.now() - (index + 1) * 7 * 60000).toISOString(),
       total: Number(orderTotal(o).toFixed(2)),
     }));
+  }
+
+  // ------- Owner: 7-day sales trend (FR-40) — demo data for presentations -------
+  if (method === "GET" && path === "/owner/reports/sales-trend") {
+    const days = Number(url.searchParams.get("days")) || 7;
+    const trend = Array.from({ length: days }, (_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (days - 1 - i));
+      const ordersCount = 18 + ((i * 7) % 11);
+      return { date: d.toISOString().slice(0, 10), orders: ordersCount, revenue: ordersCount * 31 + ((i * 53) % 90) };
+    });
+    const revenue = trend.reduce((sum, d) => sum + d.revenue, 0);
+    const totalOrders = trend.reduce((sum, d) => sum + d.orders, 0);
+    return {
+      period: { days, from: trend[0].date, to: trend[trend.length - 1].date },
+      summary: { totalOrders, completedOrders: totalOrders - 6, pendingOrders: 4, cancelledOrders: 2, revenue, paymentsCount: totalOrders - 6, averageOrder: Math.round(revenue / (totalOrders - 6)) },
+      trend,
+      topItems: [
+        { name: "Slow-Braised Lamb Kofta", quantity: 42, revenue: 1596 },
+        { name: "Herb-Crusted Chicken", quantity: 35, revenue: 1225 },
+        { name: "Mint & Cucumber Lemonade", quantity: 31, revenue: 403 },
+        { name: "Rosemary Fries", quantity: 24, revenue: 312 },
+      ],
+    };
   }
 
   // ------- Waiter assistance (FR-41) -------

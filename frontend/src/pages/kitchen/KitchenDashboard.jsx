@@ -17,6 +17,7 @@ import LiveIndicator from "../../components/ui/LiveIndicator";
 import StatusBadge, { statusMeta } from "../../components/ui/StatusBadge";
 import { SkeletonCards } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
+import { orderNo, tableName } from "../../utils/format";
 
 const FLOW = ["pending", "preparing", "ready", "served"];
 const NEXT_ACTION = { pending: "ابدأ التحضير", preparing: "جاهز للتقديم", ready: "تم التقديم" };
@@ -63,7 +64,8 @@ export default function KitchenDashboard() {
   const enriched = useMemo(() => orders.map((o) => {
     const elapsed = minutesSince(o.submittedAt, now);
     const limit = Number(o.expectedPrepMinutes || o.avgPrepTimeMinutes || 15);
-    return { ...o, elapsed, limit, late: o.status !== "served" && elapsed > limit };
+    // Only tickets still in the kitchen can be late; "ready" is waiting on a waiter.
+    return { ...o, elapsed, limit, late: ["pending", "preparing"].includes(o.status) && elapsed > limit };
   }), [orders, now]);
 
   const counts = useMemo(() => ({
@@ -133,16 +135,18 @@ export default function KitchenDashboard() {
               <Card className={`flex h-full flex-col ${o.late ? "border-brick/50 ring-1 ring-brick/30" : ""}`}>
                 <div className="flex items-start justify-between gap-3 border-b border-line p-4">
                   <div>
-                    <p className="num text-2xl font-extrabold leading-none text-ink">#{o.orderNumber}</p>
-                    <p className="mt-1.5 text-sm font-bold text-ink-soft">طاولة {o.tableLabel}{o.customerName ? <span className="font-medium text-muted"> ، {o.customerName}</span> : null}</p>
+                    <p className="num text-2xl font-extrabold leading-none text-ink">{orderNo(o.orderNumber)}</p>
+                    <p className="mt-1.5 text-sm font-bold text-ink-soft">{tableName(o.tableLabel)}{o.customerName ? <span className="font-medium text-muted">، {o.customerName}</span> : null}</p>
                   </div>
                   <StatusBadge type="order" status={o.status} />
                 </div>
 
                 <div className={`flex items-center gap-2 px-4 pt-3 text-sm font-bold ${o.late ? "text-brick" : "text-muted"}`}>
                   {o.late ? <AlarmClock size={16} aria-hidden="true" /> : <Clock3 size={16} aria-hidden="true" />}
-                  <span className="num">منذ {o.elapsed} د</span>
-                  <span className="font-medium">{o.late ? `، تجاوز الوقت المتوقع (${o.limit} د)` : `من ${o.limit} د متوقعة`}</span>
+                  <span>
+                    <span className="num">منذ {o.elapsed} د</span>
+                    <span className="font-medium">{o.late ? `، تجاوز الوقت المتوقع (${o.limit} د)` : ` من ${o.limit} د متوقعة`}</span>
+                  </span>
                 </div>
 
                 <ul className="flex-1 space-y-2 px-4 py-3">

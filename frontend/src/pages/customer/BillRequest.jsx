@@ -1,4 +1,5 @@
 import { CheckCircle2, Clock3, ReceiptText, Utensils, ArrowRight } from "lucide-react";
+import BrandLogo from "../../components/brand/Logo";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function BillRequest() {
@@ -14,7 +15,7 @@ export default function BillRequest() {
             <div className="absolute -left-10 -top-12 h-36 w-36 rounded-full bg-copper/20 blur-2xl" />
             <div className="relative flex items-center gap-3">
               <div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div>
-              <div><p className="text-xs font-bold tracking-[0.18em] text-copper">MENUPILOT</p><p className="text-xs text-paper/50">إدارة جلسة الطعام</p></div>
+              <div><BrandLogo on="dark" height={22} /><p className="text-xs text-paper/50">إدارة جلسة الطعام</p></div>
             </div>
           </div>
 

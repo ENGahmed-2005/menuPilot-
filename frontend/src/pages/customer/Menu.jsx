@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import BrandLogo from "../../components/brand/Logo";
 import { ArrowRight, Check, Search, ShoppingBag, Plus, Minus, Utensils, ChevronLeft, AlertCircle } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getPublicMenuByTableCode } from "../../api/menu";
@@ -235,7 +236,11 @@ export default function Menu() {
         </div>
       )}
 
-      {branding.show_menupilot_branding && <p className="mt-8 text-center text-xs opacity-40">Powered by menuPilot</p>}
+      {branding.show_menupilot_branding && (
+        <a href="/" className="mx-auto mt-8 flex w-fit items-center gap-2 text-xs font-bold opacity-60 transition-opacity hover:opacity-100" dir="ltr">
+          Powered by <BrandLogo height={20} />
+        </a>
+      )}
     </div>
   );
 }

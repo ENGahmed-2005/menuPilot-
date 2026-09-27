@@ -4,7 +4,8 @@ import { getSessionOrders } from "../api/orders";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 // "polling" avoids long-lived SSE connections, which block the single-worker
 // `php artisan serve` on Windows. Production keeps the default "sse".
-const POLLING = import.meta.env.VITE_REALTIME_MODE === "polling";
+// The mock API (VITE_USE_MOCKS) has no streaming endpoint, so demos poll too.
+const POLLING = import.meta.env.VITE_REALTIME_MODE === "polling" || import.meta.env.VITE_USE_MOCKS === "true";
 const POLL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS) || 3000;
 
 export function useOrderTracking(sessionId) {

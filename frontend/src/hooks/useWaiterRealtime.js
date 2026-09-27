@@ -4,7 +4,8 @@ import { getActiveSessions } from "../api/sessions";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 // See useOrderTracking: "polling" is for local development on Windows.
-const POLLING = import.meta.env.VITE_REALTIME_MODE === "polling";
+// The mock API (VITE_USE_MOCKS) has no streaming endpoint, so demos poll too.
+const POLLING = import.meta.env.VITE_REALTIME_MODE === "polling" || import.meta.env.VITE_USE_MOCKS === "true";
 const POLL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS) || 3000;
 
 async function consumeStream(url, onSessions, signal) {

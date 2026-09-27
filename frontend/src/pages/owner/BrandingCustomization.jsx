@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Image, Lock, Palette, RotateCcw, Upload, Wand2 } from 'lucide-react';
 import { getBranding, resetBranding, saveBranding } from '../../api/branding';
 import { useAuth } from '../../context/AuthContext';
@@ -10,7 +10,6 @@ export default function BrandingCustomization(){
  const paid=['pro','premium'].includes(user?.plan); const fullAccess=trial||paid; const premium=trial||user?.plan==='premium';
  const [settings,setSettings]=useState(defaults),[logo,setLogo]=useState(null),[background,setBackground]=useState(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[message,setMessage]=useState('');
  useEffect(()=>{getBranding().then(x=>setSettings({...defaults,...(x||{})})).catch(()=>{}).finally(()=>setLoading(false));},[]);
- const previewStyle=useMemo(()=>({backgroundColor:settings.primary_color,color:settings.text_color}),[settings]);
  async function save(){setSaving(true);setMessage('');try{const updated=await saveBranding({...settings,logo,background,show_menupilot_branding:premium?settings.show_menupilot_branding:true});setSettings({...defaults,...updated});setLogo(null);setBackground(null);setMessage('تم حفظ هوية المنيو بنجاح.');}catch(e){setMessage(e.message)}finally{setSaving(false)}}
  async function reset(){setSaving(true);try{const updated=await resetBranding();setSettings({...defaults,...updated});setMessage('تمت استعادة التصميم الافتراضي.')}catch(e){setMessage(e.message)}finally{setSaving(false)}}
  if(loading)return <div className="p-8 text-center">جارِ تحميل إعدادات الهوية…</div>;

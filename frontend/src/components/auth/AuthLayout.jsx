@@ -1,5 +1,6 @@
 /* إطار مشترك لصفحات auth مع شعار menuPilot الرسمي */
 import { CheckCircle2 } from "lucide-react";
+import BrandLogo from "../brand/Logo";
 
 const FEATURES = [
   "طلب مباشر من الطاولة عبر QR",
@@ -14,9 +15,7 @@ export default function AuthLayout({ eyebrow, title, subtitle, children }) {
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, #F3EFE5 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
 
         <div className="relative">
-          <span className="brand-logo-surface inline-flex items-center rounded-xl px-3 py-2">
-            <img src="/menuPilot-logo.svg" alt="menuPilot" className="brand-logo h-10 w-auto" />
-          </span>
+          <a href="/" aria-label="menuPilot، الصفحة الرئيسية" className="inline-flex"><BrandLogo on="dark" height={40} priority /></a>
         </div>
 
         <div className="relative space-y-6">

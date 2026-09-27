@@ -39,7 +39,8 @@ export const STATUS = {
 };
 
 export function statusMeta(type, status) {
-  const key = String(status || "").toLowerCase();
+  // Accept "bill_requested", "Bill Requested" and "PREPARING" alike.
+  const key = String(status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   return STATUS[type]?.[key] || { label: status || "—", tone: "neutral", icon: CircleDashed };
 }
 

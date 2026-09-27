@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import FeatureProtectedRoute from "./FeatureProtectedRoute";
 import DashboardShell from "../components/layout/DashboardShell";
+import { PageLoader } from "../components/loading/LoadingScreen";
 import Landing from "../pages/landing/LandingPage";
 import Login from "../pages/auth/Login";
 const Register = lazy(() => import("../pages/auth/Register"));
@@ -39,20 +40,9 @@ const AdminNotifications = lazy(() => import("../pages/admin/AdminNotifications"
 
 // Each role only downloads its own screens: a customer scanning a QR code
 // never loads the admin or cashier bundles.
-function RouteFallback() {
-  return (
-    <div role="status" aria-live="polite" className="grid min-h-[60vh] place-items-center bg-paper-2 text-sm font-bold text-muted">
-      <span className="flex items-center gap-3">
-        <span aria-hidden="true" className="h-5 w-5 animate-spin rounded-full border-2 border-ink/15 border-t-copper" />
-        جارِ فتح الصفحة…
-      </span>
-    </div>
-  );
-}
-
 export default function AppRoutes() {
   return (
-    <Suspense fallback={<RouteFallback />}>
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />

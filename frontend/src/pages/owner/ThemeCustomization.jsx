@@ -2,14 +2,13 @@
 import { useState } from "react";
 import { Check, Loader2, Lock, Palette, RotateCcw } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { getSubscriptionPlan, hasPlanFeature } from "../../config/subscriptions";
+import { hasPlanFeature } from "../../config/subscriptions";
 import { THEME_PRESETS } from "../../config/themes";
 import { saveTheme } from "../../api/theme";
 
 export default function ThemeCustomization() {
   const { user, updateUser } = useAuth();
   const planId = user?.plan === "trial" ? "premium" : (user?.plan || "basic");
-  const plan = getSubscriptionPlan(planId);
   const canPresets = hasPlanFeature(planId, "theme-presets");
   const canCustom = hasPlanFeature(planId, "custom-theme");
   const [selectedPreset, setSelectedPreset] = useState(user?.theme?.preset && user.theme.preset !== "custom" ? user.theme.preset : "menuPilot");

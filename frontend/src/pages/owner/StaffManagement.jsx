@@ -7,6 +7,8 @@ import PageHeader from "../../components/dashboard/PageHeader";
 import Spinner from "../../components/ui/Spinner";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
+import Alert from "../../components/ui/Alert";
+import { errorText } from "../../utils/errors";
 
 const roles = [
   { value: "kitchen", label: "المطبخ" },
@@ -86,7 +88,7 @@ export default function StaffManagement() {
     <div dir="rtl" className="space-y-6">
       {confirmDialog}
       <PageHeader title="فريق المطعم" subtitle="أنشئ حسابات الموظفين وربطها بصلاحيات المطبخ والنادل والكاشير من مكان واحد." />
-      {error && <p role="alert" className="rounded-xl bg-brick/10 px-4 py-3 text-sm text-brick">{error.message}</p>}
+      {error && <Alert tone="danger" onDismiss={() => setError(null)}>{errorText(error, "تعذّر حفظ التغيير.")}</Alert>}
 
       {credentials && (
         <Card className="border border-copper/30 bg-copper/5 p-5">
