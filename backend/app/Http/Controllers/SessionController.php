@@ -6,6 +6,7 @@ use App\Support\ResolvesRestaurant;
 use App\Support\SessionLifecycle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class SessionController extends Controller
 {
@@ -44,6 +45,16 @@ class SessionController extends Controller
                 return response()->json(['message' => 'رمز الطاولة غير صالح.'], 404);
             }
 
+            // A table the owner set aside can't be opened from the QR code
+            // (an existing session on it is still resumed below).
+            $hasActive = DB::table('dining_sessions')->where('restaurant_table_id', $table->id)->whereNull('closed_at')->exists();
+            if (! $hasActive && in_array($table->status, ['reserved', 'out_of_service'], true)) {
+                return response()->json([
+                    'message' => $table->status === 'reserved' ? 'هذه الطاولة محجوزة حاليًا. اطلب المساعدة من أحد أفراد الطاقم.' : 'هذه الطاولة خارج الخدمة حاليًا. اطلب المساعدة من أحد أفراد الطاقم.',
+                    'code' => 'TABLE_UNAVAILABLE',
+                ], 409);
+            }
+
             $restaurant = DB::table('users')->where('id', $table->user_id)->first();
             if (! $restaurant || $restaurant->latitude === null || $restaurant->longitude === null) {
                 return response()->json(['message' => 'لم يضبط المطعم موقعه الجغرافي بعد. يجب على صاحب المطعم تحديد موقع المطعم من الإعدادات.', 'code' => 'RESTAURANT_LOCATION_NOT_CONFIGURED'], 503);
@@ -58,6 +69,10 @@ class SessionController extends Controller
             // table joins the existing session instead of creating a duplicate.
             $active = DB::table('dining_sessions')->where('restaurant_table_id', $table->id)->whereNull('closed_at')->first();
             if ($active) {
+                if (! $active->access_token) {
+                    $active->access_token = Str::random(48);
+                    DB::table('dining_sessions')->where('id', $active->id)->update(['access_token' => $active->access_token]);
+                }
                 $active->resumed = true;
 
                 return $this->out($active, 200);
@@ -69,6 +84,7 @@ class SessionController extends Controller
                 'customer_name' => trim($v['name']),
                 'customer_phone' => trim($v['phone']),
                 'status' => 'opened',
+                'access_token' => Str::random(48),
                 'opened_at' => $now,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -251,6 +267,7 @@ class SessionController extends Controller
         $money = SessionLifecycle::summaries($sessions->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         return $sessions->map(function ($s) use ($open, $money) {
+            unset($s->access_token); // customer secret, never shown to staff
             foreach (SessionLifecycle::present($s, $money[(int) $s->id]) as $key => $value) {
                 $s->{$key} = $value;
             }

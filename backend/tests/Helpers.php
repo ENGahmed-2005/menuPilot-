@@ -94,3 +94,9 @@ function openSession($test, object $table, string $name = 'Sara'): array
         'longitude' => 34.46,
     ])->json('data');
 }
+
+/** Headers a customer's phone sends for its own dining session (session secret). */
+function customer(array $session): array
+{
+    return ['X-Session-Token' => $session['access_token'] ?? '', 'Accept' => 'application/json'];
+}

@@ -2,8 +2,6 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -36,11 +34,11 @@ it('submits orders with sequential numbers per restaurant (US-10)', function () 
     $s1 = openSession($this, makeTable($owner['id'], 'A'));
     $s2 = openSession($this, makeTable($other['id'], 'B'));
 
-    $n1 = $this->postJson("/api/public/sessions/{$s1['id']}/orders", ['items' => [['menuItemId' => $item, 'quantity' => 2, 'note' => 'no onions']]])
+    $n1 = $this->postJson("/api/public/sessions/{$s1['id']}/orders", ['items' => [['menuItemId' => $item, 'quantity' => 2, 'note' => 'no onions']]], customer($s1))
         ->assertCreated()->json('data.order_number');
-    $n2 = $this->postJson("/api/public/sessions/{$s1['id']}/orders", ['items' => [['menuItemId' => $item, 'quantity' => 1]]])
+    $n2 = $this->postJson("/api/public/sessions/{$s1['id']}/orders", ['items' => [['menuItemId' => $item, 'quantity' => 1]]], customer($s1))
         ->assertCreated()->json('data.order_number');
-    $otherN = $this->postJson("/api/sessions/{$s2['id']}/orders", ['items' => [['menuItemId' => $otherItem, 'quantity' => 1]]])
+    $otherN = $this->postJson("/api/sessions/{$s2['id']}/orders", ['items' => [['menuItemId' => $otherItem, 'quantity' => 1]]], customer($s2))
         ->assertCreated()->json('data.order_number');
 
     expect([$n1, $n2, $otherN])->toBe([1, 2, 1]);
@@ -52,11 +50,11 @@ it('rejects an empty cart and items from another restaurant', function () {
     $other = makeOwner('Other');
     $s = openSession($this, makeTable($owner['id']));
 
-    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => []])
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => []], customer($s))
         ->assertStatus(422)
         ->assertJsonPath('message', 'Add at least one item before placing your order.');
 
-    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($other['id']), 'quantity' => 1]]])
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($other['id']), 'quantity' => 1]]], customer($s))
         ->assertStatus(422);
 });
 
@@ -65,8 +63,8 @@ it('deduplicates waiter calls and lets staff resolve them (US-11)', function () 
     $waiter = makeStaff($owner['id'], 'waiter');
     $s = openSession($this, makeTable($owner['id']));
 
-    $this->postJson("/api/public/sessions/{$s['id']}/assistance-requests", ['note' => 'Water please'])->assertCreated();
-    $this->postJson("/api/sessions/{$s['id']}/call-waiter")->assertOk()->assertJsonPath('data.duplicate', true);
+    $this->postJson("/api/public/sessions/{$s['id']}/assistance-requests", ['note' => 'Water please'], customer($s))->assertCreated();
+    $this->postJson("/api/sessions/{$s['id']}/call-waiter", [], customer($s))->assertOk()->assertJsonPath('data.duplicate', true);
     expect(DB::table('assistance_requests')->count())->toBe(1);
 
     $sessions = $this->getJson('/api/sessions', authAs($waiter))->assertOk()->json('data');
@@ -88,7 +86,7 @@ it('moves orders forward only and records timestamped history (US-13)', function
     $owner = makeOwner();
     $kitchen = makeStaff($owner['id'], 'kitchen');
     $s = openSession($this, makeTable($owner['id']));
-    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id']), 'quantity' => 1]]])->json('data.id');
+    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id']), 'quantity' => 1]]], customer($s))->json('data.id');
 
     // Skipping a step is rejected.
     $this->patchJson("/api/kitchen/orders/{$orderId}/status", ['status' => 'ready'], authAs($kitchen))
@@ -111,7 +109,7 @@ it('returns the kitchen queue in the shape the dashboard reads (US-12, US-14)', 
     $owner = makeOwner();
     $kitchen = makeStaff($owner['id'], 'kitchen');
     $s = openSession($this, makeTable($owner['id'], 'Patio 3'));
-    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 10, 25), 'quantity' => 2, 'note' => 'spicy']]]);
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 10, 25), 'quantity' => 2, 'note' => 'spicy']]], customer($s));
 
     $order = $this->getJson('/api/kitchen/orders?sort_by=prepTime', authAs($kitchen))->assertOk()->json('data.0');
 
@@ -134,10 +132,10 @@ it('requires an order before the bill can be requested (US-16)', function () {
     $owner = makeOwner();
     $s = openSession($this, makeTable($owner['id']));
 
-    $this->postJson("/api/public/sessions/{$s['id']}/bill-request")->assertStatus(422);
+    $this->postJson("/api/public/sessions/{$s['id']}/bill-request", [], customer($s))->assertStatus(422);
 
-    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id']), 'quantity' => 1]]]);
-    $this->postJson("/api/sessions/{$s['id']}/request-bill")->assertOk();
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id']), 'quantity' => 1]]], customer($s));
+    $this->postJson("/api/sessions/{$s['id']}/request-bill", [], customer($s))->assertOk();
 
     expect(DB::table('dining_sessions')->value('status'))->toBe('bill_requested');
 });
@@ -150,8 +148,8 @@ it('combines all session orders, takes payment and frees the table (US-17)', fun
     $burger = makeItem($owner['id'], 18);
     $juice = makeItem($owner['id'], 6);
 
-    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => $burger, 'quantity' => 2]]]);
-    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => $juice, 'quantity' => 1]]]);
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => $burger, 'quantity' => 2]]], customer($s));
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => $juice, 'quantity' => 1]]], customer($s));
 
     $bill = $this->getJson("/api/sessions/{$s['id']}/bill", authAs($cashier))->assertOk()->json('data');
     expect((float) $bill['total'])->toBe(42.0)->and($bill['items'])->toHaveCount(2);
@@ -172,7 +170,7 @@ it('does not charge again for orders already paid in the pay-first flow', functi
     $owner = makeOwner();
     $cashier = makeStaff($owner['id'], 'cashier');
     $s = openSession($this, makeTable($owner['id']));
-    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 20), 'quantity' => 1]]]);
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 20), 'quantity' => 1]]], customer($s));
     DB::table('payments')->insert(['dining_session_id' => $s['id'], 'method' => 'bank', 'status' => 'verified', 'amount' => 20, 'created_at' => now(), 'updated_at' => now()]);
 
     $bill = $this->getJson("/api/sessions/{$s['id']}/bill", authAs($cashier))->json('data');
@@ -185,7 +183,7 @@ it('records USSD payments for reconciliation and audits adjustments (US-18)', fu
     $cashier = makeStaff($owner['id'], 'cashier');
     $s = openSession($this, makeTable($owner['id']));
     $orderItemId = DB::table('order_items')->where('order_id',
-        $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 12), 'quantity' => 1]]])->json('data.id')
+        $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 12), 'quantity' => 1]]], customer($s))->json('data.id')
     )->value('id');
 
     $bill = $this->patchJson("/api/sessions/{$s['id']}/bill-items/{$orderItemId}", ['new_price' => 10, 'reason' => 'Loyalty'], authAs($cashier))
@@ -212,7 +210,7 @@ it('requires a reason to cancel and removes the item from the kitchen (US-19)', 
     $cashier = makeStaff($owner['id'], 'cashier');
     $kitchen = makeStaff($owner['id'], 'kitchen');
     $s = openSession($this, makeTable($owner['id']));
-    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id']), 'quantity' => 1]]])->json('data.id');
+    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id']), 'quantity' => 1]]], customer($s))->json('data.id');
     $itemId = DB::table('order_items')->where('order_id', $orderId)->value('id');
 
     $this->postJson("/api/order-items/{$itemId}/cancel", ['reason' => ''], authAs($cashier))
@@ -233,7 +231,7 @@ it('reassigns a cancelled item to another active session without double billing 
     $cashier = makeStaff($owner['id'], 'cashier');
     $from = openSession($this, makeTable($owner['id'], 'T3'));
     $to = openSession($this, makeTable($owner['id'], 'T5'));
-    $orderId = $this->postJson("/api/public/sessions/{$from['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 9), 'quantity' => 1]]])->json('data.id');
+    $orderId = $this->postJson("/api/public/sessions/{$from['id']}/orders", ['items' => [['menuItemId' => makeItem($owner['id'], 9), 'quantity' => 1]]], customer($from))->json('data.id');
     $itemId = DB::table('order_items')->where('order_id', $orderId)->value('id');
 
     // Active items cannot be reassigned.
@@ -259,7 +257,7 @@ it('never exposes another restaurant\'s data (US-15, US-23)', function () {
     $bCashier = makeStaff($b['id'], 'cashier');
     $bKitchen = makeStaff($b['id'], 'kitchen');
     $s = openSession($this, makeTable($a['id']));
-    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($a['id']), 'quantity' => 1]]])->json('data.id');
+    $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => makeItem($a['id']), 'quantity' => 1]]], customer($s))->json('data.id');
     $itemId = DB::table('order_items')->where('order_id', $orderId)->value('id');
 
     $this->getJson("/api/owner/orders/{$orderId}", authAs($b))->assertNotFound();

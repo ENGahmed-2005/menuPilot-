@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { money } from "../../utils/format";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -30,8 +31,6 @@ import {
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
-const money = (v) =>
-  `${Number(v || 0).toLocaleString("ar-PS", { maximumFractionDigits: 2 })} ₪`;
 
 function mapBill(data, sessionId) {
   const session = data?.session || {};

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RestaurantSetting;
 use App\Models\Staff;
+use App\Support\MediaStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -63,10 +64,8 @@ class MenuController extends Controller
             throw new \InvalidArgumentException('Image must not be larger than 3 MB.');
         }
 
-        $path = 'menu-items/'.Str::uuid().'.'.$extension;
-        Storage::disk('public')->put($path, $decoded);
-
-        return asset('storage/'.$path);
+        // Database-backed so images survive redeploys (Render's disk is ephemeral).
+        return MediaStore::put($decoded, 'image/'.($extension === 'jpg' ? 'jpeg' : $extension), request()->user()?->id);
     }
 
     private function deleteStoredImage(?string $value): void
@@ -74,6 +73,8 @@ class MenuController extends Controller
         if (! $value || Str::startsWith($value, 'data:image/')) {
             return;
         }
+
+        MediaStore::forget($value);
 
         $prefix = rtrim(asset('storage/'), '/').'/';
         if (Str::startsWith($value, $prefix)) {

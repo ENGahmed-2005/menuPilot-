@@ -7,7 +7,9 @@ export default function QRCodeModal({ table, onClose }) {
 
   const code = table.table_code || table.code;
   const scanUrl = new URL(`/t/${code}`, window.location.origin).href;
-  const qrImage = table.qrImageUrl || table.qr_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=640x640&margin=16&data=${encodeURIComponent(scanUrl)}`;
+  // Built from this app's own address so a printed QR always opens the customer
+  // menu on the frontend (the API's host is not a page customers can open).
+  const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=640x640&margin=16&data=${encodeURIComponent(scanUrl)}`;
 
   async function downloadQr() {
     setDownloading(true);

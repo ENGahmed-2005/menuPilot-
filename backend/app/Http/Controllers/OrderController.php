@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Audit;
 use App\Support\OrderWorkflow;
 use App\Support\ResolvesRestaurant;
 use Illuminate\Http\Request;
@@ -307,6 +308,35 @@ class OrderController extends Controller
         });
 
         return $this->out(DB::table('order_items')->find($id));
+    }
+
+    /**
+     * POST orders/{id}/cancel {reason} — cancel every active item of an order
+     * in one step (same rules as item cancellation, audited).
+     */
+    public function cancelOrder(Request $r, $id)
+    {
+        $v = $r->validate(['reason' => 'required|string|min:2|max:500'], ['reason.required' => 'A reason is required to cancel this order.']);
+        $restaurantId = $this->restaurantId($r);
+        if (! $this->orderBelongsToRestaurant($id, $restaurantId)) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        $order = DB::table('orders')->find($id);
+        if (in_array($order->status, ['served', 'cancelled'], true)) {
+            return response()->json(['message' => 'لا يمكن إلغاء طلب تم تقديمه أو إلغاؤه مسبقًا.', 'code' => 'ORDER_NOT_CANCELLABLE'], 409);
+        }
+
+        DB::transaction(function () use ($r, $id, $v, $order) {
+            DB::table('order_items')->where('order_id', $id)->where('status', 'active')->update([
+                'status' => 'cancelled', 'cancel_reason' => trim($v['reason']), 'cancelled_by' => $r->user()->id, 'cancelled_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('orders')->where('id', $id)->update(['status' => 'cancelled', 'updated_at' => now()]);
+            OrderWorkflow::logStatus((int) $id, $order->status, 'cancelled', $r->user()->id);
+        });
+        Audit::log($r, 'order.cancelled', 'order', (int) $id, ['reason' => trim($v['reason']), 'from' => $order->status], $restaurantId);
+
+        return $this->out(DB::table('orders')->find($id));
     }
 
     /**

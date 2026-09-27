@@ -6,6 +6,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BrandingController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
@@ -20,8 +21,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
-    Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+    Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
     Route::middleware('api.auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
@@ -32,20 +33,27 @@ Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
 // SRS-compatible public QR menu endpoint. Alias of the table-code menu route.
 Route::get('menu/{table_token}', [MenuController::class, 'publicMenu']);
 Route::post('public/tables/{code}/sessions', [SessionController::class, 'open']);
-Route::get('public/sessions/{id}', [SessionController::class, 'show']);
-Route::patch('public/sessions/{id}/customer', [SessionController::class, 'updateCustomer']);
-Route::get('public/sessions/{id}/orders', [OrderController::class, 'session']);
-// US-10: submit an order for an open dining session (no login). SRS alias below.
-Route::post('public/sessions/{id}/orders', [OrderController::class, 'submit'])->middleware('throttle:30,1');
-Route::post('sessions/{id}/orders', [OrderController::class, 'submit'])->middleware('throttle:30,1');
-Route::get('public/sessions/{id}/orders/stream', [OrderController::class, 'stream']);
-Route::get('public/sessions/{id}/payment-options', [PaymentController::class, 'options']);
-Route::post('public/sessions/{id}/payment', [PaymentController::class, 'submit']);
-Route::post('public/sessions/{id}/assistance-requests', [SessionController::class, 'assistance'])->middleware('throttle:10,1');
-Route::post('public/sessions/{id}/bill-request', [BillingController::class, 'request'])->middleware('throttle:10,1');
-// SRS-compatible aliases (US-11, US-16).
-Route::post('sessions/{id}/call-waiter', [SessionController::class, 'assistance'])->middleware('throttle:10,1');
-Route::post('sessions/{id}/request-bill', [BillingController::class, 'request'])->middleware('throttle:10,1');
+// Customer (no login) session endpoints. They require the session secret
+// issued when the QR session opens (X-Session-Token header, or ?token= for SSE).
+Route::middleware('session.token')->group(function () {
+    Route::get('public/sessions/{id}', [SessionController::class, 'show']);
+    Route::patch('public/sessions/{id}/customer', [SessionController::class, 'updateCustomer']);
+    Route::get('public/sessions/{id}/orders', [OrderController::class, 'session']);
+    // US-10: submit an order for an open dining session. SRS alias below.
+    Route::post('public/sessions/{id}/orders', [OrderController::class, 'submit'])->middleware('throttle:30,1');
+    Route::post('sessions/{id}/orders', [OrderController::class, 'submit'])->middleware('throttle:30,1');
+    Route::get('public/sessions/{id}/orders/stream', [OrderController::class, 'stream']);
+    Route::get('public/sessions/{id}/payment-options', [PaymentController::class, 'options']);
+    Route::post('public/sessions/{id}/payment', [PaymentController::class, 'submit'])->middleware('throttle:20,1');
+    Route::post('public/sessions/{id}/assistance-requests', [SessionController::class, 'assistance'])->middleware('throttle:10,1');
+    Route::post('public/sessions/{id}/bill-request', [BillingController::class, 'request'])->middleware('throttle:10,1');
+    // SRS-compatible aliases (US-11, US-16).
+    Route::post('sessions/{id}/call-waiter', [SessionController::class, 'assistance'])->middleware('throttle:10,1');
+    Route::post('sessions/{id}/request-bill', [BillingController::class, 'request'])->middleware('throttle:10,1');
+});
+
+// Uploaded images (stored in the database so they survive redeploys).
+Route::get('media/{uuid}', [MediaController::class, 'show'])->where('uuid', '[0-9a-fA-F-]{36}');
 
 // ─────────────────────────────────────────────────────────────────────────
 // Authenticated API. Authorization is permission-based (App\Support\Permissions):
@@ -63,6 +71,7 @@ Route::middleware('api.auth')->group(function () {
     Route::middleware('permission:manage_tables')->group(function () {
         Route::apiResource('tables', TableController::class)->except(['show', 'create', 'index']);
         Route::get('tables/{id}/qr', [TableController::class, 'qr']);
+        Route::patch('tables/{id}/status', [TableController::class, 'updateStatus']);
     });
     Route::middleware('permission:manage_staff')->group(function () {
         Route::apiResource('staff', StaffController::class)->except(['show', 'create']);
@@ -88,7 +97,10 @@ Route::middleware('api.auth')->group(function () {
     Route::middleware('permission:manage_orders')->group(function () {
         Route::get('kitchen/orders', [OrderController::class, 'kitchen']);
         Route::patch('kitchen/orders/{id}/status', [OrderController::class, 'status']);
+        // Same action for the owner's orders screen.
+        Route::patch('orders/{id}/status', [OrderController::class, 'status']);
     });
+    Route::post('orders/{id}/cancel', [OrderController::class, 'cancelOrder'])->middleware('permission:cancel_orders');
     // US-19 / US-20: waiters and cashiers cancel/reassign without approval.
     Route::post('order-items/{id}/cancel', [OrderController::class, 'cancel'])->middleware('permission:cancel_orders');
     Route::post('order-items/{id}/reassign', [OrderController::class, 'reassign'])->middleware('permission:reassign_orders');
@@ -121,6 +133,9 @@ Route::middleware('api.auth')->group(function () {
     // Platform admin: role AND permission; any other role gets 403.
     Route::middleware(['role:admin', 'permission:manage_admin'])->group(function () {
         Route::get('admin/restaurants', [AdminController::class, 'restaurants']);
+        Route::post('admin/restaurants', [AdminController::class, 'storeRestaurant']);
+        Route::patch('admin/restaurants/{id}', [AdminController::class, 'updateOwner']);
+        Route::delete('admin/restaurants/{id}', [AdminController::class, 'destroyRestaurant']);
         Route::get('admin/reports', [AdminController::class, 'reports']);
         Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
         Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);

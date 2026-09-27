@@ -1,5 +1,6 @@
 import { mockRequest } from './mockServer';
 import { friendlyMessage } from '../utils/errors';
+import { sessionHeaders, sessionIdFromPath } from '../utils/sessionToken';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -28,6 +29,10 @@ export async function request(path, options = {}) {
     ...(options.headers || {}),
   };
 
+  // Customer session endpoints need the session secret (see utils/sessionToken).
+  const sessionId = sessionIdFromPath(path);
+  if (sessionId) Object.assign(headers, sessionHeaders(sessionId));
+
   let response;
   try {
     response = await fetch(`${BASE_URL}${path}`, {
@@ -54,6 +59,7 @@ export async function request(path, options = {}) {
     error.serverMessage = data?.message || null;
     error.code = data?.code || null;
     error.errors = data?.errors || null;
+    error.data = data; // extra context (e.g. the open session behind a 409)
     throw error;
   }
 
@@ -65,5 +71,5 @@ export const api = {
   post: (p, b) => request(p, { method: 'POST', body: b }),
   put: (p, b) => request(p, { method: 'PUT', body: b }),
   patch: (p, b) => request(p, { method: 'PATCH', body: b }),
-  delete: (p) => request(p, { method: 'DELETE' }),
+  delete: (p, b) => request(p, { method: 'DELETE', body: b }),
 };

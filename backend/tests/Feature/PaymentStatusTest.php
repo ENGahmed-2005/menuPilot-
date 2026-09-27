@@ -186,8 +186,11 @@ it('cannot verify a payment that is not in pending status', function () {
 // ─── Cashier billing flow ─────────────────────────────────────────────────────
 
 it('cashier pay sets status to verified for cash payments', function () {
-    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']);
-    $item = psItem($owner['id'], 30); $session = psSession($this, $table);
+    $owner = psOwner();
+    $cashier = psStaff($owner['id'], 'cashier');
+    $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 30);
+    $session = psSession($this, $table);
     $orderId = DB::table('orders')->insertGetId([
         'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
         'status' => 'served', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
@@ -201,8 +204,11 @@ it('cashier pay sets status to verified for cash payments', function () {
 });
 
 it('cashier pay sets status to pending_reconciliation for USSD', function () {
-    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']);
-    $item = psItem($owner['id'], 25); $session = psSession($this, $table);
+    $owner = psOwner();
+    $cashier = psStaff($owner['id'], 'cashier');
+    $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 25);
+    $session = psSession($this, $table);
     $orderId = DB::table('orders')->insertGetId([
         'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
         'status' => 'served', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
@@ -216,7 +222,10 @@ it('cashier pay sets status to pending_reconciliation for USSD', function () {
 });
 
 it('reconcile moves pending_reconciliation to verified', function () {
-    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']); $session = psSession($this, $table);
+    $owner = psOwner();
+    $cashier = psStaff($owner['id'], 'cashier');
+    $table = psTable($owner['id']);
+    $session = psSession($this, $table);
     $paymentId = DB::table('payments')->insertGetId([
         'dining_session_id' => $session['id'], 'method' => 'ussd', 'status' => PaymentStatus::PendingReconciliation->value,
         'reconciliation_status' => 'pending', 'amount' => 60, 'paid_at' => now(), 'created_at' => now(), 'updated_at' => now(),
@@ -227,7 +236,10 @@ it('reconcile moves pending_reconciliation to verified', function () {
 });
 
 it('cannot reconcile a payment that is not pending_reconciliation', function () {
-    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']); $session = psSession($this, $table);
+    $owner = psOwner();
+    $cashier = psStaff($owner['id'], 'cashier');
+    $table = psTable($owner['id']);
+    $session = psSession($this, $table);
     $paymentId = DB::table('payments')->insertGetId([
         'dining_session_id' => $session['id'], 'method' => 'cash', 'status' => PaymentStatus::Verified->value,
         'amount' => 60, 'paid_at' => now(), 'created_at' => now(), 'updated_at' => now(),
@@ -238,8 +250,11 @@ it('cannot reconcile a payment that is not pending_reconciliation', function () 
 // ─── Double-pay guard ─────────────────────────────────────────────────────────
 
 it('blocks cashier billing payment when customer pending payment exists', function () {
-    $owner = psOwner(); $cashier = psStaff($owner['id'], 'cashier'); $table = psTable($owner['id']);
-    $item = psItem($owner['id'], 40); $session = psSession($this, $table);
+    $owner = psOwner();
+    $cashier = psStaff($owner['id'], 'cashier');
+    $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 40);
+    $session = psSession($this, $table);
     $orderId = DB::table('orders')->insertGetId([
         'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
         'status' => 'payment_pending', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
@@ -256,7 +271,10 @@ it('blocks cashier billing payment when customer pending payment exists', functi
 });
 
 it('blocks second customer payment submission when one is already pending', function () {
-    $owner = psOwner(); $table = psTable($owner['id']); $item = psItem($owner['id'], 15); $session = psSession($this, $table);
+    $owner = psOwner();
+    $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 15);
+    $session = psSession($this, $table);
     DB::table('payments')->insert([
         'dining_session_id' => $session['id'], 'method' => 'bank', 'status' => PaymentStatus::Pending->value,
         'amount' => 15, 'created_at' => now(), 'updated_at' => now(),
@@ -264,5 +282,5 @@ it('blocks second customer payment submission when one is already pending', func
     $this->postJson("/api/public/sessions/{$session['id']}/payment", [
         'method' => 'bank', 'payer_name' => 'Ali', 'payer_phone' => '0599111222',
         'items' => json_encode([['menuItemId' => $item, 'quantity' => 1]]),
-    ])->assertStatus(409);
+    ], customer($session))->assertStatus(409);
 });

@@ -3,14 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Staff;
-use Illuminate\Http\Request;
+use App\Support\Audit;
+use App\Support\Permissions;
+use App\Support\SessionLifecycle;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class TableController extends Controller
 {
+    /** Statuses an owner can set by hand (besides available). */
+    public const MANUAL_STATUSES = ['reserved', 'out_of_service'];
+
     private function out($data, $status = 200)
     {
         return response()->json(['data' => $data], $status);
@@ -31,9 +37,15 @@ class TableController extends Controller
         return DB::table('restaurant_tables')->where('user_id', $this->restaurantId($request));
     }
 
+    private function menuUrl(string $tableCode): string
+    {
+        return rtrim(config('app.frontend_url'), '/').'/t/'.$tableCode;
+    }
+
     private function qrImageUrl(string $tableCode): string
     {
-        $menuUrl = url('/t/'.$tableCode);
+        $menuUrl = $this->menuUrl($tableCode);
+
         return 'https://api.qrserver.com/v1/create-qr-code/?size=640x640&margin=16&data='.rawurlencode($menuUrl);
     }
 
@@ -50,9 +62,13 @@ class TableController extends Controller
             ->first();
 
         $table->activeSessionId = $activeSession?->id;
-        $table->status = $activeSession ? 'occupied' : 'available';
+        // An active session always means occupied. Otherwise the owner may have
+        // set the table aside manually (reserved / out of service).
+        $table->status = $activeSession ? 'occupied' : (in_array($table->status, self::MANUAL_STATUSES, true) ? $table->status : 'available');
         $table->qrCodeUrl = '/t/'.$table->table_code;
-        $table->qrImageUrl = $table->qr_image_url ?: $this->qrImageUrl($table->table_code);
+        // Always derived from FRONTEND_URL, so changing the domain fixes every QR.
+        $table->qrImageUrl = $this->qrImageUrl($table->table_code);
+        $table->menuUrl = $this->menuUrl($table->table_code);
 
         return $table;
     }
@@ -89,13 +105,11 @@ class TableController extends Controller
         while ($id === null) {
             $code = Str::upper(Str::random(10));
             try {
-                $qrImageUrl = $this->qrImageUrl($code);
                 $id = DB::table('restaurant_tables')->insertGetId([
                     'user_id' => $restaurantId,
                     'label' => trim($v['label']),
                     'seats' => $v['seats'],
                     'table_code' => $code,
-                    'qr_image_url' => $qrImageUrl,
                     'status' => 'available',
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -158,17 +172,85 @@ class TableController extends Controller
             return response()->json(['message' => 'Table not found'], 404);
         }
 
-        $qrImageUrl = $table->qr_image_url ?: $this->qrImageUrl($table->table_code);
-        if (! $table->qr_image_url) {
-            DB::table('restaurant_tables')->where('id', $id)->update(['qr_image_url' => $qrImageUrl, 'updated_at' => now()]);
-        }
+        $qrImageUrl = $this->qrImageUrl($table->table_code);
 
         return $this->out([
             'table_id' => $table->id,
             'table_code' => $table->table_code,
-            'menu_url' => url('/t/'.$table->table_code),
+            'menu_url' => $this->menuUrl($table->table_code),
             'qr_image_url' => $qrImageUrl,
         ]);
+    }
+
+    /**
+     * PATCH tables/{id}/status {status, close_session?, reason?}
+     * status: available | reserved | out_of_service  (permission manage_tables)
+     *
+     * A table with an open dining session is occupied. Changing it means ending
+     * that session first, so the request must say so explicitly
+     * (close_session=true) and the user also needs close_session:
+     *  - nothing owed                 → closed normally
+     *  - money still owed             → only with a written reason ("force"),
+     *                                    recorded with the amount in the audit log
+     *  - customer payment unverified  → refused: verify or reject it first
+     * Without close_session the API answers 409 with the session summary, which
+     * the UI shows in a confirmation dialog.
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $v = $request->validate([
+            'status' => 'required|in:available,'.implode(',', self::MANUAL_STATUSES),
+            'close_session' => 'sometimes|boolean',
+            'reason' => 'nullable|string|max:255',
+        ]);
+        $table = $this->query($request)->find($id);
+        if (! $table) {
+            return response()->json(['message' => 'Table not found'], 404);
+        }
+        $restaurantId = (int) $table->user_id;
+
+        return DB::transaction(function () use ($request, $v, $id, $table, $restaurantId) {
+            $session = DB::table('dining_sessions')->where('restaurant_table_id', $id)->whereNull('closed_at')->lockForUpdate()->first();
+
+            if ($session) {
+                $money = SessionLifecycle::summaries([(int) $session->id])[(int) $session->id];
+                $summary = ['session_id' => $session->id] + SessionLifecycle::present($session, $money);
+
+                if (! $request->boolean('close_session')) {
+                    return response()->json([
+                        'message' => 'على هذه الطاولة جلسة نشطة. أنهِ الجلسة لتغيير حالة الطاولة.',
+                        'code' => 'TABLE_HAS_ACTIVE_SESSION',
+                        'session' => $summary,
+                    ], 409);
+                }
+                if (! Permissions::allows($request->user(), 'close_session')) {
+                    return response()->json(['message' => 'ليس لديك صلاحية لتنفيذ هذا الإجراء.', 'code' => 'PERMISSION_DENIED', 'required' => ['close_session']], 403);
+                }
+                if ($money['has_pending_payment']) {
+                    return response()->json(['message' => 'يوجد دفع من الزبون بانتظار التأكيد. أكّده أو ارفضه من شاشة الفواتير أولًا.', 'code' => 'PAYMENT_PENDING_VERIFICATION', 'session' => $summary], 409);
+                }
+                $forced = $money['outstanding'] > 0;
+                if ($forced && mb_strlen(trim((string) ($v['reason'] ?? ''))) < 3) {
+                    return response()->json(['message' => 'يوجد مبلغ متبقٍ. اكتب سبب إنهاء الجلسة دون دفع.', 'code' => 'REASON_REQUIRED', 'session' => $summary], 422);
+                }
+
+                SessionLifecycle::closeNow($session, $restaurantId);
+                Audit::log($request, $forced ? 'session.force_closed' : 'session.closed', 'dining_session', (int) $session->id, [
+                    'table' => $table->label,
+                    'via' => 'table_status',
+                    'total' => $money['total'],
+                    'paid' => $money['paid'],
+                    'outstanding' => $money['outstanding'],
+                    'reason' => $forced ? trim($v['reason']) : null,
+                ], $restaurantId);
+            }
+
+            $before = $session ? 'occupied' : $table->status;
+            DB::table('restaurant_tables')->where('id', $id)->where('user_id', $restaurantId)->update(['status' => $v['status'], 'updated_at' => now()]);
+            Audit::log($request, 'table.status_changed', 'restaurant_table', (int) $id, ['from' => $before, 'to' => $v['status']], $restaurantId);
+
+            return $this->out($this->withQr($this->query($request)->find($id)));
+        });
     }
 
     public function status(Request $request, $id)

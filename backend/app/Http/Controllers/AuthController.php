@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ResetPasswordLink;
 use App\Models\Staff;
 use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -71,10 +74,12 @@ class AuthController extends Controller
                         'login_failed_attempts' => 0,
                         'login_locked_until' => now()->addMinutes(15),
                     ]);
+
                     return response()->json(['message' => 'Account temporarily locked. Try again in 15 minutes.'], 429);
                 }
                 $u->update(['login_failed_attempts' => $attempts]);
             }
+
             return response()->json(['message' => 'Invalid credentials.'], 422);
         }
 
@@ -128,10 +133,24 @@ class AuthController extends Controller
     public function forgotPassword(Request $r)
     {
         $v = $r->validate(['email' => 'required|email']);
-        $token = Str::random(64);
-        DB::table('password_reset_tokens')->updateOrInsert(['email' => $v['email']], ['token' => hash('sha256', $token), 'created_at' => now()]);
+        $email = Str::lower(trim($v['email']));
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
-        return $this->out(['message' => 'Reset token created', 'reset_token' => $token]);
+        // The token is only ever sent by e-mail (it used to be returned here,
+        // which let anyone reset any account). Same answer whether or not the
+        // e-mail exists, so accounts can't be enumerated.
+        if ($user && $user->is_active !== false) {
+            $token = Str::random(64);
+            DB::table('password_reset_tokens')->updateOrInsert(['email' => $user->email], ['token' => hash('sha256', $token), 'created_at' => now()]);
+            $link = rtrim(config('app.frontend_url'), '/').'/reset-password?token='.$token.'&email='.rawurlencode($user->email);
+            try {
+                Mail::to($user->email)->send(new ResetPasswordLink($user->name ?: $user->email, $link));
+            } catch (\Throwable $e) {
+                Log::error('password reset mail failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->out(['message' => 'إذا كان البريد مسجلًا لدينا، ستصلك رسالة فيها رابط إعادة التعيين خلال دقائق.']);
     }
 
     public function resetPassword(Request $r)
@@ -139,7 +158,12 @@ class AuthController extends Controller
         $v = $r->validate(['token' => 'required', 'email' => 'required|email', 'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()]]);
         $row = DB::table('password_reset_tokens')->where('email', $v['email'])->first();
         if (! $row || ! hash_equals($row->token, hash('sha256', $v['token']))) {
-            return response()->json(['message' => 'Invalid reset token.'], 422);
+            return response()->json(['message' => 'رابط إعادة التعيين غير صالح.', 'code' => 'RESET_TOKEN_INVALID'], 422);
+        }
+        if (now()->diffInMinutes($row->created_at, true) > 60) {
+            DB::table('password_reset_tokens')->where('email', $v['email'])->delete();
+
+            return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين. اطلب رابطًا جديدًا.', 'code' => 'RESET_TOKEN_EXPIRED'], 422);
         }
         User::where('email', $v['email'])->update(['password' => Hash::make($v['password']), 'api_token' => null, 'login_failed_attempts' => 0, 'login_locked_until' => null]);
         DB::table('password_reset_tokens')->where('email', $v['email'])->delete();

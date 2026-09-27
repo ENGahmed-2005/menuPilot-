@@ -1,9 +1,10 @@
 import { getToken } from "./client";
+import { sessionHeaders } from "../utils/sessionToken";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export const getPaymentOptions = (sessionId) =>
-  fetch(`${BASE_URL}/public/sessions/${sessionId}/payment-options`, { headers: { Accept: "application/json" } })
+  fetch(`${BASE_URL}/public/sessions/${sessionId}/payment-options`, { headers: { Accept: "application/json", ...sessionHeaders(sessionId) } })
     .then(async (response) => {
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.message || `Request failed: ${response.status}`);
@@ -21,7 +22,7 @@ export async function submitPayment(sessionId, payload) {
 
   const response = await fetch(`${BASE_URL}/public/sessions/${sessionId}/payment`, {
     method: "POST",
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", ...sessionHeaders(sessionId) },
     body: form,
   });
   const data = await response.json().catch(() => null);

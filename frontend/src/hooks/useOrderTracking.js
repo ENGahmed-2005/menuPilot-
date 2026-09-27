@@ -1,3 +1,4 @@
+import { getSessionToken } from "../utils/sessionToken";
 import { useEffect, useState } from "react";
 import { getSessionOrders } from "../api/orders";
 
@@ -24,7 +25,9 @@ export function useOrderTracking(sessionId) {
       return () => { active = false; clearInterval(timer); };
     }
 
-    const source = new EventSource(`${BASE_URL}/public/sessions/${sessionId}/orders/stream`);
+    // EventSource can't send headers, so the session secret goes in the query string.
+    const token = getSessionToken(sessionId);
+    const source = new EventSource(`${BASE_URL}/public/sessions/${sessionId}/orders/stream${token ? `?token=${encodeURIComponent(token)}` : ""}`);
     source.addEventListener("orders", (event) => { if (!active) return; try { setOrders(JSON.parse(event.data) || []); setError(null); setLoading(false); } catch { /* ignore */ } });
     source.onerror = () => { /* EventSource reconnects automatically. Keep the last known state visible. */ };
     return () => { active = false; source.close(); };
