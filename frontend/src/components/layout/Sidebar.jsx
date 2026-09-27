@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import BrandLogo from "../brand/Logo";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  BarChart3, Bell, ChefHat, Crown, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
+  BarChart3, Bell, ChefHat, ClipboardList, Crown, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
   QrCode, Receipt, Settings, Sparkles, UtensilsCrossed, Users, X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -20,6 +20,7 @@ import { getSubscriptionPlan, hasPlanFeature } from "../../config/subscriptions"
 // the permission. The API enforces the same permissions on every request.
 const OPERATIONS = [
   ["/owner/dashboard", "نظرة عامة", LayoutDashboard, "dashboard", "view_dashboard"],
+  ["/owner/orders", "الطلبات", ClipboardList, null, "view_orders"],
   ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
   ["/waiter", "طلبات النادل", HandPlatter, "waiter", "handle_assistance"],
   ["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"],

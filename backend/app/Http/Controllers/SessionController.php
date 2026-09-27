@@ -44,6 +44,16 @@ class SessionController extends Controller
                 return response()->json(['message' => 'رمز الطاولة غير صالح.'], 404);
             }
 
+            // A table the owner set aside can't be opened from the QR code
+            // (an existing session on it is still resumed below).
+            $hasActive = DB::table('dining_sessions')->where('restaurant_table_id', $table->id)->whereNull('closed_at')->exists();
+            if (! $hasActive && in_array($table->status, ['reserved', 'out_of_service'], true)) {
+                return response()->json([
+                    'message' => $table->status === 'reserved' ? 'هذه الطاولة محجوزة حاليًا. اطلب المساعدة من أحد أفراد الطاقم.' : 'هذه الطاولة خارج الخدمة حاليًا. اطلب المساعدة من أحد أفراد الطاقم.',
+                    'code' => 'TABLE_UNAVAILABLE',
+                ], 409);
+            }
+
             $restaurant = DB::table('users')->where('id', $table->user_id)->first();
             if (! $restaurant || $restaurant->latitude === null || $restaurant->longitude === null) {
                 return response()->json(['message' => 'لم يضبط المطعم موقعه الجغرافي بعد. يجب على صاحب المطعم تحديد موقع المطعم من الإعدادات.', 'code' => 'RESTAURANT_LOCATION_NOT_CONFIGURED'], 503);

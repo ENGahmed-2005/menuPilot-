@@ -63,6 +63,7 @@ Route::middleware('api.auth')->group(function () {
     Route::middleware('permission:manage_tables')->group(function () {
         Route::apiResource('tables', TableController::class)->except(['show', 'create', 'index']);
         Route::get('tables/{id}/qr', [TableController::class, 'qr']);
+        Route::patch('tables/{id}/status', [TableController::class, 'updateStatus']);
     });
     Route::middleware('permission:manage_staff')->group(function () {
         Route::apiResource('staff', StaffController::class)->except(['show', 'create']);
@@ -88,7 +89,10 @@ Route::middleware('api.auth')->group(function () {
     Route::middleware('permission:manage_orders')->group(function () {
         Route::get('kitchen/orders', [OrderController::class, 'kitchen']);
         Route::patch('kitchen/orders/{id}/status', [OrderController::class, 'status']);
+        // Same action for the owner's orders screen.
+        Route::patch('orders/{id}/status', [OrderController::class, 'status']);
     });
+    Route::post('orders/{id}/cancel', [OrderController::class, 'cancelOrder'])->middleware('permission:cancel_orders');
     // US-19 / US-20: waiters and cashiers cancel/reassign without approval.
     Route::post('order-items/{id}/cancel', [OrderController::class, 'cancel'])->middleware('permission:cancel_orders');
     Route::post('order-items/{id}/reassign', [OrderController::class, 'reassign'])->middleware('permission:reassign_orders');
@@ -121,6 +125,9 @@ Route::middleware('api.auth')->group(function () {
     // Platform admin: role AND permission; any other role gets 403.
     Route::middleware(['role:admin', 'permission:manage_admin'])->group(function () {
         Route::get('admin/restaurants', [AdminController::class, 'restaurants']);
+        Route::post('admin/restaurants', [AdminController::class, 'storeRestaurant']);
+        Route::patch('admin/restaurants/{id}', [AdminController::class, 'updateOwner']);
+        Route::delete('admin/restaurants/{id}', [AdminController::class, 'destroyRestaurant']);
         Route::get('admin/reports', [AdminController::class, 'reports']);
         Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
         Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);

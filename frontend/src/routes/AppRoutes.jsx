@@ -22,6 +22,7 @@ const ThemeCustomization = lazy(() => import("../pages/owner/ThemeCustomization"
 const BrandingCustomization = lazy(() => import("../pages/owner/BrandingCustomization"));
 const RestaurantSettings = lazy(() => import("../pages/owner/RestaurantSettings"));
 const Tables = lazy(() => import("../pages/owner/Tables"));
+const Orders = lazy(() => import("../pages/owner/Orders"));
 const MenuManagement = lazy(() => import("../pages/owner/MenuManagement"));
 const Reports = lazy(() => import("../pages/owner/Reports"));
 const StaffManagement = lazy(() => import("../pages/owner/StaffManagement"));
@@ -68,6 +69,9 @@ export default function AppRoutes() {
       {/* Restaurant operations: owner, or a manager whose permissions allow it. */}
       <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="view_dashboard|view_orders" />}>
         <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} />
+      </Route>
+      <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="view_orders" />}>
+        <Route path="/owner/orders" element={<DashboardShell><Orders /></DashboardShell>} />
       </Route>
       <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="manage_tables" />}>
         <Route path="/owner/tables" element={<FeatureProtectedRoute feature="tables"><DashboardShell><Tables /></DashboardShell></FeatureProtectedRoute>} />

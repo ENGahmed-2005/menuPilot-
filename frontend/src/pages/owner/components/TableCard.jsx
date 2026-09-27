@@ -1,11 +1,11 @@
 import { Check, Pencil, QrCode, Trash2, Users, X } from "lucide-react";
 import Card from "../../../components/dashboard/Card";
 import Button from "../../../components/ui/Button";
-import TableStatusBadge from "./TableStatusBadge";
+import StatusBadge from "../../../components/ui/StatusBadge";
 
 const fieldClass = "w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink outline-none focus:border-copper focus:ring-2 focus:ring-copper/20";
 
-export default function TableCard({ table, editing, editLabel, editSeats, saving, onStartEdit, onCancelEdit, onSaveEdit, onDelete, onQr, onLabelChange, onSeatsChange }) {
+export default function TableCard({ table, editing, editLabel, editSeats, saving, onStartEdit, onCancelEdit, onSaveEdit, onDelete, onQr, onLabelChange, onSeatsChange, onStatusChange, statusBusy = false }) {
   const occupied = Boolean(table.activeSessionId) || String(table.status).toLowerCase() === "occupied";
 
   return (
@@ -18,7 +18,25 @@ export default function TableCard({ table, editing, editLabel, editSeats, saving
         </form>
       ) : (
         <>
-          <div className="flex items-start justify-between gap-2"><div><span className="block font-medium text-ink">{table.label}</span><span className="mt-0.5 flex items-center gap-1 text-xs text-ink-soft"><Users size={13}/> {table.seats} مقاعد</span></div><TableStatusBadge occupied={occupied}/></div>
+          <div className="flex items-start justify-between gap-2"><div><span className="block font-medium text-ink">{table.label}</span><span className="mt-0.5 flex items-center gap-1 text-xs text-ink-soft"><Users size={13}/> {table.seats} مقاعد</span></div><StatusBadge type="table" status={occupied ? "occupied" : table.status}/></div>
+          {onStatusChange && (
+            <label className="flex items-center justify-between gap-3 text-xs font-bold text-muted">
+              حالة الطاولة
+              <select
+                value={occupied ? "occupied" : table.status || "available"}
+                disabled={occupied || statusBusy}
+                onChange={(e) => onStatusChange(table, e.target.value)}
+                aria-label={`حالة ${table.label}`}
+                title={occupied ? "على الطاولة جلسة نشطة؛ أغلقها من شاشة الفواتير أولًا." : undefined}
+                className="h-9 rounded-lg border border-line bg-surface px-2 text-xs font-bold text-ink disabled:opacity-60"
+              >
+                {occupied && <option value="occupied">مشغولة (جلسة نشطة)</option>}
+                <option value="available">متاحة</option>
+                <option value="reserved">محجوزة</option>
+                <option value="out_of_service">خارج الخدمة</option>
+              </select>
+            </label>
+          )}
           <div className="mt-1 flex items-center justify-between border-t border-ink/8 pt-3 text-sm"><button type="button" onClick={() => onQr(table)} className="flex items-center gap-1.5 font-medium text-copper-ink hover:underline"><QrCode size={14}/> عرض رمز QR</button><div className="flex items-center gap-3"><button type="button" onClick={() => onStartEdit(table)} className="text-ink-soft hover:opacity-75" title="تعديل الطاولة"><Pencil size={16}/></button><button type="button" onClick={() => onDelete(table.id)} className="text-brick hover:opacity-75" title="حذف الطاولة"><Trash2 size={16}/></button></div></div>
         </>
       )}

@@ -6,6 +6,9 @@ use App\Models\User;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
@@ -80,6 +83,97 @@ class AdminController extends Controller
         Audit::log($r, 'admin.owner_updated', 'user', $u->id, ['fields' => array_keys($v)], $u->id);
 
         return response()->json(['data' => $u->fresh()]);
+    }
+
+    /**
+     * POST admin/restaurants — create a restaurant (owner account) from the
+     * admin panel. The password is generated when not given and returned once.
+     */
+    public function storeRestaurant(Request $r)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $v = $r->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'restaurant_name' => 'required|string|max:255',
+            'restaurant_phone' => 'nullable|string|max:50',
+            'plan' => 'nullable|in:trial,basic,pro,premium',
+            'password' => 'nullable|string|min:8',
+        ]);
+        $plan = $v['plan'] ?? 'trial';
+        $password = $v['password'] ?? 'MP-'.Str::upper(Str::random(6)).'-'.random_int(100, 999);
+        $now = now();
+
+        $owner = User::create([
+            'name' => $v['name'],
+            'email' => Str::lower(trim($v['email'])),
+            'restaurant_name' => $v['restaurant_name'],
+            'restaurant_phone' => $v['restaurant_phone'] ?? null,
+            'password' => Hash::make($password),
+            'role' => 'owner',
+            'plan' => $plan,
+            'is_active' => true,
+            'trial_started_at' => $plan === 'trial' ? $now : null,
+            'trial_ends_at' => $plan === 'trial' ? $now->copy()->addDays(14) : null,
+            'subscription_started_at' => $plan === 'trial' ? null : $now,
+        ]);
+        Audit::log($r, 'admin.restaurant_created', 'restaurant', $owner->id, ['restaurant' => $owner->restaurant_name, 'plan' => $plan], $owner->id);
+
+        return response()->json(['data' => ['restaurant' => $owner->fresh(), 'generated_password' => isset($v['password']) ? null : $password]], 201);
+    }
+
+    /**
+     * DELETE admin/restaurants/{id} {confirm_email}
+     * Permanently removes a restaurant: owner, staff accounts, tables, menu,
+     * sessions, orders and payments. Requires typing the owner's email and is
+     * refused while a table has an active dining session.
+     */
+    public function destroyRestaurant(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $owner = User::where('role', 'owner')->findOrFail($id);
+        $r->validate(['confirm_email' => 'required|string']);
+        if (Str::lower(trim($r->input('confirm_email'))) !== Str::lower($owner->email)) {
+            return response()->json(['message' => 'البريد المدخل لا يطابق بريد صاحب المطعم.', 'code' => 'CONFIRMATION_MISMATCH'], 422);
+        }
+
+        $tableIds = DB::table('restaurant_tables')->where('user_id', $owner->id)->pluck('id');
+        $sessionIds = DB::table('dining_sessions')->whereIn('restaurant_table_id', $tableIds)->pluck('id');
+        if (DB::table('dining_sessions')->whereIn('id', $sessionIds)->whereNull('closed_at')->exists()) {
+            return response()->json(['message' => 'في المطعم جلسات طاولات مفتوحة. يجب إغلاقها قبل الحذف.', 'code' => 'RESTAURANT_HAS_ACTIVE_SESSIONS'], 409);
+        }
+
+        $snapshot = ['restaurant' => $owner->restaurant_name, 'email' => $owner->email, 'plan' => $owner->plan];
+        DB::transaction(function () use ($owner, $sessionIds) {
+            // Children first, so this works whether or not every FK cascades.
+            $orderIds = DB::table('orders')->where('user_id', $owner->id)->orWhereIn('dining_session_id', $sessionIds)->pluck('id');
+            foreach (['order_status_histories' => 'order_id', 'order_items' => 'order_id'] as $table => $column) {
+                if (Schema::hasTable($table)) {
+                    DB::table($table)->whereIn($column, $orderIds)->delete();
+                }
+            }
+            if (Schema::hasTable('bill_adjustments')) {
+                DB::table('bill_adjustments')->whereIn('dining_session_id', $sessionIds)->delete();
+            }
+            DB::table('payments')->whereIn('dining_session_id', $sessionIds)->delete();
+            DB::table('orders')->whereIn('id', $orderIds)->delete();
+            DB::table('assistance_requests')->whereIn('dining_session_id', $sessionIds)->delete();
+            DB::table('dining_sessions')->whereIn('id', $sessionIds)->delete();
+
+            $staffUserIds = DB::table('staff')->where('user_id', $owner->id)->pluck('account_user_id')->filter();
+            DB::table('staff')->where('user_id', $owner->id)->delete();
+            User::whereIn('id', $staffUserIds)->where('role', '!=', 'admin')->delete();
+            $owner->delete(); // cascades tables, menu, categories, branding
+        });
+        Audit::log($r, 'admin.restaurant_deleted', 'restaurant', (int) $id, $snapshot, null);
+
+        return response()->json(['data' => ['message' => 'Deleted']]);
     }
 
     /**

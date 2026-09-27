@@ -237,25 +237,47 @@ export async function mockRequest(method, rawPath, body, token) {
   }
 
   // ------- Admin: نظرة عامة على كل المطاعم (Platform Admin) -------
+  // ------- Admin: restaurants (same field names as the real API) -------
+  const adminOnly = () => { const a = decodeToken(token); if (!a || a.role !== "admin") fail(403, "ليس لديك صلاحية لتنفيذ هذا الإجراء."); };
+  const ownerRow = (o, i) => ({
+    id: i, email: o.email, name: o.name || o.email.split("@")[0], restaurant_name: o.restaurantName || null,
+    restaurant_phone: o.phone || null, plan: o.plan || "basic", is_active: o.active !== false,
+    trial_ends_at: o.trialEndsAt || null, created_at: o.createdAt || "2026-09-01T09:00:00Z",
+  });
   if (method === "GET" && path === "/admin/restaurants") {
-    const account = decodeToken(token);
-    if (!account || account.role !== "admin") fail(403, "Admins only.");
-    return owners.map((o, i) => ({
-      id: i,
-      email: o.email,
-      restaurantName: o.restaurantName || "—",
-      plan: o.plan || "basic",
-    }));
+    adminOnly();
+    return owners.map(ownerRow).filter((r) => !r.deleted && owners[r.id] && !owners[r.id].deleted && (owners[r.id].role || "owner") === "owner");
   }
-
+  if (method === "POST" && path === "/admin/restaurants") {
+    adminOnly();
+    if (owners.some((o) => o.email === body.email)) fail(422, "هذا البريد مستخدم بالفعل.");
+    owners.push({ email: body.email, name: body.name, restaurantName: body.restaurant_name, phone: body.restaurant_phone, plan: body.plan || "trial", role: "owner", trialEndsAt: new Date(Date.now() + 14 * 86400000).toISOString(), createdAt: new Date().toISOString() });
+    return { restaurant: ownerRow(owners[owners.length - 1], owners.length - 1), generated_password: "MP-DEMO1-234" };
+  }
+  if (seg[0] === "admin" && seg[1] === "restaurants" && seg[2] !== undefined && seg.length === 3) {
+    adminOnly();
+    const target = owners[Number(seg[2])];
+    if (!target || target.deleted) fail(404, "Restaurant not found.");
+    if (method === "PATCH") { Object.assign(target, { name: body.name, email: body.email, restaurantName: body.restaurant_name, phone: body.restaurant_phone }); return ownerRow(target, Number(seg[2])); }
+    if (method === "DELETE") {
+      if (String(body?.confirm_email || "").toLowerCase() !== target.email.toLowerCase()) fail(422, "البريد المدخل لا يطابق بريد صاحب المطعم.");
+      target.deleted = true; return { message: "Deleted" };
+    }
+  }
+  if (method === "PATCH" && seg[0] === "admin" && seg[1] === "owners" && seg[3] === "status") {
+    adminOnly();
+    const target = owners[Number(seg[2])];
+    if (!target) fail(404, "Owner not found.");
+    target.active = Boolean(body.active);
+    return ownerRow(target, Number(seg[2]));
+  }
   if (method === "PATCH" && seg[0] === "admin" && seg[1] === "restaurants" && seg[3] === "plan") {
-    const account = decodeToken(token);
-    if (!account || account.role !== "admin") fail(403, "Admins only.");
-    if (!SUBSCRIPTION_PLAN_IDS.includes(body.plan)) fail(422, "Unknown plan.");
+    adminOnly();
+    if (!SUBSCRIPTION_PLAN_IDS.includes(body.plan) && body.plan !== "trial") fail(422, "Unknown plan.");
     const target = owners[Number(seg[2])];
     if (!target) fail(404, "Restaurant not found.");
     target.plan = body.plan;
-    return { email: target.email, restaurantName: target.restaurantName, plan: target.plan };
+    return ownerRow(target, Number(seg[2]));
   }
 
   // ------- Owner: تبديل باقة الاشتراك (اختبار مباشر من صفحة الاشتراك) -------

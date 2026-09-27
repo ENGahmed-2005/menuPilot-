@@ -22,6 +22,8 @@ export const STATUS = {
   table: {
     available: { label: "متاحة", tone: "success", icon: CheckCircle2 },
     occupied: { label: "مشغولة", tone: "warning", icon: Utensils },
+    reserved: { label: "محجوزة", tone: "info", icon: Clock3 },
+    out_of_service: { label: "خارج الخدمة", tone: "danger", icon: Ban },
   },
   session: {
     open: { label: "جلسة جديدة", tone: "neutral", icon: CircleDashed },

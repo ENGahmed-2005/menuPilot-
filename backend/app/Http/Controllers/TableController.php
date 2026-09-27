@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Staff;
-use Illuminate\Http\Request;
+use App\Support\Audit;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class TableController extends Controller
 {
+    /** Statuses an owner can set by hand (besides available). */
+    public const MANUAL_STATUSES = ['reserved', 'out_of_service'];
+
     private function out($data, $status = 200)
     {
         return response()->json(['data' => $data], $status);
@@ -34,6 +38,7 @@ class TableController extends Controller
     private function qrImageUrl(string $tableCode): string
     {
         $menuUrl = url('/t/'.$tableCode);
+
         return 'https://api.qrserver.com/v1/create-qr-code/?size=640x640&margin=16&data='.rawurlencode($menuUrl);
     }
 
@@ -50,7 +55,9 @@ class TableController extends Controller
             ->first();
 
         $table->activeSessionId = $activeSession?->id;
-        $table->status = $activeSession ? 'occupied' : 'available';
+        // An active session always means occupied. Otherwise the owner may have
+        // set the table aside manually (reserved / out of service).
+        $table->status = $activeSession ? 'occupied' : (in_array($table->status, self::MANUAL_STATUSES, true) ? $table->status : 'available');
         $table->qrCodeUrl = '/t/'.$table->table_code;
         $table->qrImageUrl = $table->qr_image_url ?: $this->qrImageUrl($table->table_code);
 
@@ -169,6 +176,29 @@ class TableController extends Controller
             'menu_url' => url('/t/'.$table->table_code),
             'qr_image_url' => $qrImageUrl,
         ]);
+    }
+
+    /**
+     * PATCH tables/{id}/status {status: available|reserved|out_of_service}
+     * (permission manage_tables). "occupied" is never set by hand: it follows
+     * the dining session. A table with an active session must be closed first.
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $v = $request->validate(['status' => 'required|in:available,'.implode(',', self::MANUAL_STATUSES)]);
+        $table = $this->query($request)->find($id);
+        if (! $table) {
+            return response()->json(['message' => 'Table not found'], 404);
+        }
+        if (DB::table('dining_sessions')->where('restaurant_table_id', $id)->whereNull('closed_at')->exists()) {
+            return response()->json(['message' => 'على هذه الطاولة جلسة نشطة. أغلق الجلسة أولًا ثم غيّر حالة الطاولة.', 'code' => 'TABLE_HAS_ACTIVE_SESSION'], 409);
+        }
+
+        $before = $table->status;
+        $this->query($request)->where('id', $id)->update(['status' => $v['status'], 'updated_at' => now()]);
+        Audit::log($request, 'table.status_changed', 'restaurant_table', (int) $id, ['from' => $before, 'to' => $v['status']], (int) $table->user_id);
+
+        return $this->out($this->withQr($this->query($request)->find($id)));
     }
 
     public function status(Request $request, $id)

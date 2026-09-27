@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useConfirm } from "../../components/ui/ConfirmDialog";
 import { LayoutGrid, Plus, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
-import { createTable, deleteTable, getTables, updateTable } from "../../api/tables";
+import { createTable, deleteTable, getTables, setTableStatus, updateTable } from "../../api/tables";
+import { useToast } from "../../components/ui/Toast";
+import { errorText } from "../../utils/errors";
 import { useAuth } from "../../context/AuthContext";
 import { getSubscriptionPlan } from "../../config/subscriptions";
 import Spinner from "../../components/ui/Spinner";
@@ -20,6 +22,22 @@ export default function Tables() {
   const { user } = useAuth();
   const plan = getSubscriptionPlan(user?.plan);
   const [tables, setTables] = useState([]);
+  const [statusBusy, setStatusBusy] = useState(null);
+  const toast = useToast();
+
+  // Reserved / out-of-service tables can't be opened from their QR code.
+  async function handleStatusChange(table, status) {
+    setStatusBusy(table.id);
+    try {
+      const updated = await setTableStatus(table.id, status);
+      setTables((list) => list.map((t) => (t.id === table.id ? { ...t, ...updated } : t)));
+      toast.success(`أصبحت ${table.label} ${{ available: "متاحة", reserved: "محجوزة", out_of_service: "خارج الخدمة" }[status]}.`);
+    } catch (err) {
+      toast.error(errorText(err, "تعذّر تغيير حالة الطاولة."));
+    } finally {
+      setStatusBusy(null);
+    }
+  }
   const [label, setLabel] = useState("");
   const [seats, setSeats] = useState(2);
   const [loading, setLoading] = useState(true);
@@ -71,7 +89,7 @@ export default function Tables() {
         <fieldset disabled={atLimit} className="contents"><div className="min-w-40 flex-1"><label className="mb-1.5 block text-xs font-medium text-ink-soft">اسم الطاولة</label><input placeholder="مثال: طاولة 07" value={label} onChange={(e) => setLabel(e.target.value)} required className={fieldClass}/></div><div className="w-24"><label className="mb-1.5 block text-xs font-medium text-ink-soft">المقاعد</label><input type="number" min={1} max={100} value={seats} onChange={(e) => setSeats(e.target.value)} className={fieldClass}/></div><Button type="submit"><Plus size={16}/> إضافة طاولة</Button></fieldset>
       </Card>
       {error && <p role="alert" className="mb-4 rounded-lg bg-brick/10 px-3 py-2 text-sm text-brick">{error?.response?.data?.message || error?.message || "حدث خطأ أثناء تنفيذ العملية."}</p>}
-      {loading ? <Spinner label="جارِ تحميل الطاولات…" /> : tables.length === 0 ? <Card><EmptyState icon={LayoutGrid} title="لا توجد طاولات بعد" description="أضف أول طاولة من الفورم أعلاه." /></Card> : <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{tables.map((table) => <TableCard key={table.id} table={table} editing={editingId === table.id} editLabel={editLabel} editSeats={editSeats} saving={savingEdit} onStartEdit={startEdit} onCancelEdit={cancelEdit} onSaveEdit={handleSaveEdit} onDelete={handleDelete} onQr={setQrTable} onLabelChange={setEditLabel} onSeatsChange={setEditSeats} />)}</ul>}
+      {loading ? <Spinner label="جارِ تحميل الطاولات…" /> : tables.length === 0 ? <Card><EmptyState icon={LayoutGrid} title="لا توجد طاولات بعد" description="أضف أول طاولة من الفورم أعلاه." /></Card> : <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{tables.map((table) => <TableCard key={table.id} table={table} editing={editingId === table.id} editLabel={editLabel} editSeats={editSeats} saving={savingEdit} onStartEdit={startEdit} onCancelEdit={cancelEdit} onSaveEdit={handleSaveEdit} onDelete={handleDelete} onStatusChange={handleStatusChange} statusBusy={statusBusy === table.id} onQr={setQrTable} onLabelChange={setEditLabel} onSeatsChange={setEditSeats} />)}</ul>}
     </div>
   );
 }
