@@ -39,7 +39,7 @@ export default function AuthLayout({ eyebrow, title, subtitle, children }) {
 
       <main className="flex flex-1 items-center justify-center px-6 py-12 lg:px-16">
         <div className="w-full max-w-md rounded-2xl bg-white/70 p-8 shadow-xl shadow-ink/5 sm:p-10">
-          {eyebrow && <span className="mb-2 block text-xs font-medium tracking-wide text-copper-deep">{eyebrow}</span>}
+          {eyebrow && <span className="mb-2 block text-xs font-medium tracking-wide text-copper-ink">{eyebrow}</span>}
           {children}
         </div>
       </main>

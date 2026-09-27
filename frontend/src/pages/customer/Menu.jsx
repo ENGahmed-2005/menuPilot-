@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, Search, ShoppingBag, Plus, Utensils, ChevronLeft, AlertCircle } from "lucide-react";
+import { ArrowRight, Check, Search, ShoppingBag, Plus, Minus, Utensils, ChevronLeft, AlertCircle } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getPublicMenuByTableCode } from "../../api/menu";
 import { useCart } from "../../context/CartContext";
@@ -34,7 +34,9 @@ export default function Menu() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
-  const { addItem, items } = useCart();
+  const { addItem, items, updateQuantity, removeItem, total: cartTotal } = useCart();
+  // Index of a menu item in the cart (plain line without a note) for the inline stepper.
+  const cartIndex = (id) => items.findIndex((it) => String(it.menuItemId) === String(id) && !it.note);
 
   const [menuItems, setMenuItems] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
@@ -132,20 +134,20 @@ export default function Menu() {
         <div className="mx-auto max-w-5xl px-5 pb-8 pt-6 sm:px-8">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <button onClick={() => navigate(-1)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/20 bg-white/10">
-                <ArrowRight size={19} />
+              <button onClick={() => navigate(-1)} aria-label="رجوع" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/20 bg-white/10">
+                <ArrowRight size={19} aria-hidden="true" />
               </button>
               <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/90 text-ink">
-                {branding.logo_url ? <img src={branding.logo_url} className="h-full w-full object-cover" /> : <Utensils size={20} />}
+                {branding.logo_url ? <img src={branding.logo_url} alt={restaurantName} className="h-full w-full object-cover" /> : <Utensils size={20} aria-hidden="true" />}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-base font-black">{restaurantName}</p>
                 <p className="text-xs text-white/70">طاولة {tableCode}</p>
               </div>
             </div>
-            <button onClick={() => navigate(cartPath)} className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/20 bg-white/10">
-              <ShoppingBag size={20} />
-              {cartCount > 0 && <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-black" style={{ background: branding.secondary_color }}>{cartCount}</span>}
+            <button onClick={() => navigate(cartPath)} aria-label={cartCount ? `السلة، ${cartCount} عناصر` : "السلة فارغة"} className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/20 bg-white/10">
+              <ShoppingBag size={20} aria-hidden="true" />
+              {cartCount > 0 && <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-black" style={{ background: branding.secondary_color }}>{cartCount}</span>}
             </button>
           </div>
 
@@ -162,15 +164,18 @@ export default function Menu() {
         </div>
       </header>
 
-      {addedItem && <div className="fixed inset-x-4 top-4 z-50 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-2xl bg-herb px-4 py-3 text-sm font-bold text-paper"><Check size={17} />تمت إضافة الطبق إلى السلة</div>}
+      <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-4 top-4 z-50 mx-auto max-w-sm">
+        {addedItem && <div className="flex items-center justify-center gap-2 rounded-2xl bg-herb px-4 py-3 text-sm font-bold text-paper shadow-lg animate-dialog-in"><Check size={17} aria-hidden="true" />أُضيف «{menuItems.find((m) => m.id === addedItem)?.name || "الطبق"}» إلى السلة</div>}
+      </div>
 
-      <main className="mx-auto max-w-5xl px-5 sm:px-8">
+      <main className={`mx-auto max-w-5xl px-5 sm:px-8 ${cartCount > 0 ? "pb-32" : "pb-10"}`}>
         <div className="flex gap-2 overflow-x-auto py-5">
           {categories.map((c) => (
             <button
               key={c}
               onClick={() => setActiveCategory(c)}
-              className="whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold"
+              aria-pressed={activeCategory === c}
+              className="min-h-11 whitespace-nowrap rounded-full px-5 text-sm font-bold transition-colors"
               style={activeCategory === c ? { background: branding.button_color, color: "#fff" } : { background: "#fff", border: "1px solid #0002" }}
             >
               {c}
@@ -183,6 +188,14 @@ export default function Menu() {
           <span className="text-xs opacity-55">{filtered.length} طبق</span>
         </div>
 
+        {filtered.length === 0 && (
+          <div className="flex flex-col items-center gap-3 rounded-3xl border border-black/10 bg-white px-6 py-12 text-center">
+            <Search size={28} className="opacity-50" aria-hidden="true" />
+            <p className="text-base font-bold">{query ? `لا توجد أطباق تطابق «${query}»` : "لا توجد أطباق في هذا التصنيف حاليًا"}</p>
+            <button onClick={() => { setQuery(""); setActiveCategory("الكل"); }} className="min-h-11 rounded-2xl border border-black/15 px-5 text-sm font-bold">عرض كل الأطباق</button>
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => (
             <article key={item.id} className="overflow-hidden border border-black/10 bg-white shadow-sm" style={{ borderRadius: radius }}>
@@ -191,12 +204,21 @@ export default function Menu() {
               </div>
               <div className="p-5">
                 <h3 className="text-xl font-bold">{item.name}</h3>
-                <p className="mt-2 min-h-12 text-sm leading-6 opacity-65">{item.description || "طبق محضر بعناية."}</p>
+                {item.description && <p className="mt-2 line-clamp-2 text-sm leading-6 opacity-75">{item.description}</p>}
                 <div className="mt-5 flex items-center justify-between gap-3">
                   <span className="text-lg font-black" style={{ color: branding.primary_color }}>{item.price} ₪</span>
-                  <button onClick={() => { addItem(item); setAddedItem(item.id); setTimeout(() => setAddedItem(""), 1600); }} className="flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: branding.button_color }}>
-                    <Plus size={17} />إضافة
-                  </button>
+                  {cartIndex(item.id) >= 0 ? (
+                    // Already in the cart: adjust here instead of opening the cart.
+                    <div className="flex items-center gap-1 rounded-2xl p-1 text-white" style={{ background: branding.button_color }}>
+                      <button onClick={() => { const i = cartIndex(item.id); items[i].quantity > 1 ? updateQuantity(i, items[i].quantity - 1) : removeItem(i); }} aria-label={`إنقاص ${item.name}`} className="grid h-10 w-10 place-items-center rounded-xl hover:bg-black/10"><Minus size={17} aria-hidden="true" /></button>
+                      <span className="min-w-6 text-center text-base font-black tabular-nums" aria-live="polite" aria-label={`الكمية ${items[cartIndex(item.id)].quantity}`}>{items[cartIndex(item.id)].quantity}</span>
+                      <button onClick={() => addItem(item)} aria-label={`زيادة ${item.name}`} className="grid h-10 w-10 place-items-center rounded-xl hover:bg-black/10"><Plus size={17} aria-hidden="true" /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { addItem(item); setAddedItem(item.id); setTimeout(() => setAddedItem(""), 1600); }} aria-label={`إضافة ${item.name} إلى السلة`} className="flex min-h-11 items-center gap-2 rounded-2xl px-4 text-sm font-bold text-white transition-transform active:scale-95" style={{ background: branding.button_color }}>
+                      <Plus size={17} aria-hidden="true" />إضافة
+                    </button>
+                  )}
                 </div>
               </div>
             </article>
@@ -207,13 +229,13 @@ export default function Menu() {
       {cartCount > 0 && (
         <div className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-5xl">
           <button onClick={() => navigate(cartPath)} className="flex w-full items-center justify-between rounded-2xl bg-ink px-5 py-4 text-paper shadow-2xl">
-            <span className="flex items-center gap-3"><ShoppingBag size={19} /><span className="text-right"><b className="block text-sm">عرض طلبك</b><span className="text-xs text-paper/50">{cartCount} عناصر في السلة</span></span></span>
+            <span className="flex items-center gap-3"><ShoppingBag size={19} /><span className="text-right"><b className="block text-sm">عرض طلبك</b><span className="text-xs text-paper/70">{cartCount} عناصر، <span className="tabular-nums">{Number(cartTotal || 0).toFixed(2)} ₪</span></span></span></span>
             <span className="flex items-center gap-1 rounded-xl px-4 py-2.5 text-sm font-black text-white" style={{ background: branding.button_color }}>السلة <ChevronLeft size={17} /></span>
           </button>
         </div>
       )}
 
-      {branding.show_menupilot_branding && <p className="mt-8 text-center text-[11px] opacity-40">Powered by menuPilot</p>}
+      {branding.show_menupilot_branding && <p className="mt-8 text-center text-xs opacity-40">Powered by menuPilot</p>}
     </div>
   );
 }

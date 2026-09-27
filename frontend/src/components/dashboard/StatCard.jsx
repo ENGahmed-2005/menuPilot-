@@ -1,27 +1,37 @@
 /* ==========================================================================
-   StatCard.jsx — بطاقة إحصائية صغيرة (رقم + تسمية + أيقونة)، تُستخدم في
-   صف الملخّص أعلى لوحة owner Dashboard.
+   StatCard.jsx — KPI tile. When onClick is given it becomes a filter button
+   (aria-pressed shows which filter is active).
+   tone colours only the icon; the number stays high-contrast ink.
    ========================================================================== */
-import Card from "./Card";
+const TONES = {
+  ink: "bg-ink/[0.07] text-ink",
+  copper: "bg-copper/15 text-copper-ink",
+  herb: "bg-herb/12 text-herb",
+  brick: "bg-brick/10 text-brick",
+  info: "bg-info/10 text-info",
+};
 
-export default function StatCard({ icon: Icon, label, value, tone = "ink" }) {
-  const toneClass = {
-    
-    ink: "bg-ink/8 text-ink",
-    copper: "bg-copper/15 text-copper-deep",
-    herb: "bg-herb/15 text-herb",
-    brick: "bg-brick/12 text-brick",
-  }[tone];
-
+export default function StatCard({ icon: Icon, label, value, hint, tone = "ink", onClick, active = false, emphasis = false }) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <Card className="flex items-center gap-4 p-4">
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${toneClass}`}>
-        <Icon size={20} aria-hidden="true" />
+    <Tag
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      aria-pressed={onClick ? active : undefined}
+      className={`flex w-full items-center gap-3.5 rounded-[var(--radius-card)] border bg-surface p-4 text-right shadow-[var(--shadow-card)] transition-colors ${
+        active ? "border-copper ring-2 ring-copper/25" : emphasis ? "border-brick/40" : "border-line"
+      } ${onClick ? "hover:border-ink/25" : ""}`}
+    >
+      {Icon && (
+        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${TONES[tone] || TONES.ink}`}>
+          <Icon size={20} aria-hidden="true" />
+        </span>
+      )}
+      <span className="min-w-0">
+        <span className="num block text-2xl font-extrabold leading-tight text-ink">{value}</span>
+        <span className="block truncate text-xs font-bold text-muted">{label}</span>
+        {hint && <span className="mt-0.5 block truncate text-xs text-muted">{hint}</span>}
       </span>
-      <div className="min-w-0">
-        <div className="truncate text-2xl font-semibold leading-tight text-ink">{value}</div>
-        <div className="truncate text-xs text-ink-soft">{label}</div>
-      </div>
-    </Card>
+    </Tag>
   );
 }

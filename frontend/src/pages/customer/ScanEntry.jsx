@@ -15,7 +15,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { openSession } from "../../api/sessions";
 
 const fieldBase =
-  "w-full rounded-2xl border bg-white px-12 py-3.5 text-sm text-ink outline-none transition placeholder:text-ink-soft/40 focus:border-copper focus:ring-4 focus:ring-copper/10";
+  "w-full rounded-2xl border bg-white px-12 py-3.5 text-sm text-ink outline-none transition placeholder:text-muted focus:border-copper focus:ring-4 focus:ring-copper/10";
 
 export default function ScanEntry() {
   const { tableCode } = useParams();
@@ -218,7 +218,7 @@ export default function ScanEntry() {
                 </button>
               </form>
 
-              <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-[11px] leading-5 text-[#4B5147]/45">
+              <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs leading-5 text-[#4B5147]/45">
                 <ShieldCheck size={14} />
                 بياناتك تستخدم فقط لتشغيل جلسة الطلب على هذه الطاولة.
               </p>

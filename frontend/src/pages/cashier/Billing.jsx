@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import Spinner from "../../components/ui/Spinner";
 import Button from "../../components/ui/Button";
+import Modal from "../../components/ui/Modal";
+import Input from "../../components/ui/Input";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
 import {
@@ -179,21 +181,26 @@ export default function Billing() {
     }
   }
 
-  async function handleAdjust(item) {
-    const value = window.prompt(`السعر الجديد للوحدة لـ "${item.name}"`, String(item.price));
-    if (value === null) return;
-    const newPrice = Number(value);
-    if (!Number.isFinite(newPrice) || newPrice < 0) {
-      setNotice({ type: "error", text: "أدخل سعرًا صحيحًا." });
+  // US-18: price adjustment in a dialog (validated, with reason) instead of window.prompt.
+  const [adjusting, setAdjusting] = useState(null);
+  function handleAdjust(item) {
+    setAdjusting({ item, price: String(item.price), reason: "", error: "", saving: false });
+  }
+  async function submitAdjust(event) {
+    event.preventDefault();
+    const newPrice = Number(adjusting.price);
+    if (adjusting.price === "" || !Number.isFinite(newPrice) || newPrice < 0) {
+      setAdjusting((a) => ({ ...a, error: "أدخل سعرًا صحيحًا يساوي صفرًا أو أكثر." }));
       return;
     }
-    const reason = window.prompt("سبب التعديل (اختياري)", "") || undefined;
+    setAdjusting((a) => ({ ...a, saving: true, error: "" }));
     try {
-      const data = await adjustBillItem(sessionId, item.id, { new_price: newPrice, reason });
+      const data = await adjustBillItem(sessionId, adjusting.item.id, { new_price: newPrice, reason: adjusting.reason.trim() || undefined });
       setBill(mapBill(data, sessionId));
-      setNotice({ type: "success", text: "تم تعديل السعر." });
+      setAdjusting(null);
+      setNotice({ type: "success", text: "تم تعديل السعر وتسجيله في سجل التدقيق." });
     } catch (err) {
-      setNotice({ type: "error", text: err.message || "تعذر تعديل السعر." });
+      setAdjusting((a) => ({ ...a, saving: false, error: err.message || "تعذّر تعديل السعر." }));
     }
   }
 
@@ -272,8 +279,8 @@ export default function Billing() {
                 <AlertTriangle size={18} />
               </span>
               <div>
-                <p className="font-bold text-copper-deep">دفعة معلّقة من العميل — يتطلب إجراء</p>
-                <p className="mt-0.5 text-xs text-ink-soft/70">
+                <p className="font-bold text-copper-ink">دفعة معلّقة من العميل — يتطلب إجراء</p>
+                <p className="mt-0.5 text-xs text-muted">
                   {p.payer_name && <span className="ml-2">{p.payer_name}</span>}
                   {p.method && <span className="ml-2">· {METHOD_LABELS[p.method] || p.method}</span>}
                   {p.amount > 0 && <span>· {money(p.amount)}</span>}
@@ -309,7 +316,7 @@ export default function Billing() {
           ["الحالة", isPaid ? "مدفوعة ✓" : "مفتوحة"],
         ].map(([label, value]) => (
           <Card key={label} className="p-4">
-            <p className="text-[11px] text-ink-soft/50">{label}</p>
+            <p className="text-xs text-muted">{label}</p>
             <p className={`mt-1 font-bold ${label === "الحالة" && isPaid ? "text-herb" : ""}`}>{value}</p>
           </Card>
         ))}
@@ -324,7 +331,7 @@ export default function Billing() {
             </span>
             <div>
               <h2 className="text-sm font-bold">بنود الفاتورة</h2>
-              <p className="text-[11px] text-ink-soft/50">{bill.items.length} صنف — {bill.real ? "بيانات حقيقية" : "بيانات وهمية"}</p>
+              <p className="text-xs text-muted">{bill.items.length} صنف — {bill.real ? "بيانات حقيقية" : "بيانات وهمية"}</p>
             </div>
           </div>
           {!bill.real && (
@@ -336,24 +343,24 @@ export default function Billing() {
         </div>
 
         {bill.items.length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-ink-soft/50">لا توجد أصناف في هذه الجلسة بعد.</div>
+          <div className="px-5 py-10 text-center text-sm text-muted">لا توجد أصناف في هذه الجلسة بعد.</div>
         ) : (
           <div className="divide-y divide-ink/[0.06]">
             {bill.items.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-ink/[0.015]">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{item.name}</p>
-                  <p className="mt-0.5 text-[11px] text-ink-soft/50">
+                  <p className="mt-0.5 text-xs text-muted">
                     {item.code} · {item.category} · {money(item.price)} للوحدة
                   </p>
-                  {item.note && <p className="mt-0.5 text-[11px] text-copper">{item.note}</p>}
+                  {item.note && <p className="mt-0.5 text-xs text-copper">{item.note}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="rounded-xl border border-ink/10 px-3 py-1.5 text-sm font-bold">×{item.quantity}</span>
                   {bill.real && !isPaid && (
                     <button
                       onClick={() => handleAdjust(item)}
-                      className="rounded-lg px-2 py-1 text-[11px] font-bold text-copper hover:bg-copper/10"
+                      className="rounded-lg px-2 py-1 text-xs font-bold text-copper hover:bg-copper/10"
                     >
                       تعديل
                     </button>
@@ -367,16 +374,16 @@ export default function Billing() {
 
         {/* Totals */}
         <div className="border-t border-ink/10 bg-paper-2 px-5 py-5 space-y-2">
-          <div className="flex justify-between text-sm text-ink-soft/60"><span>المجموع الفرعي</span><span>{money(bill.subtotal)}</span></div>
+          <div className="flex justify-between text-sm text-muted"><span>المجموع الفرعي</span><span>{money(bill.subtotal)}</span></div>
           {bill.real && bill.paidAmount > 0 && (
             <div className="flex justify-between text-sm text-herb"><span>مدفوع مسبقًا</span><span>{money(bill.paidAmount)}</span></div>
           )}
           <div className="flex justify-between border-t border-ink/10 pt-3">
             <strong className="text-base">الإجمالي المستحق</strong>
-            <strong className={`text-2xl ${isPaid ? "text-herb" : "text-copper-deep"}`}>{money(bill.outstanding)}</strong>
+            <strong className={`text-2xl ${isPaid ? "text-herb" : "text-copper-ink"}`}>{money(bill.outstanding)}</strong>
           </div>
           {bill.paymentStatus === "pending_reconciliation" && (
-            <p className="rounded-lg bg-copper/10 px-3 py-2 text-[11px] font-bold text-copper-deep">
+            <p className="rounded-lg bg-copper/10 px-3 py-2 text-xs font-bold text-copper-ink">
               دفعة USSD بانتظار التسوية
             </p>
           )}
@@ -388,7 +395,7 @@ export default function Billing() {
         <Card className="p-5">
           <h2 className="mb-4 text-sm font-bold">تسجيل الدفع</h2>
           {hasPending && (
-            <p className="mb-4 rounded-xl border border-copper/25 bg-copper/5 px-4 py-2.5 text-xs font-semibold text-copper-deep">
+            <p className="mb-4 rounded-xl border border-copper/25 bg-copper/5 px-4 py-2.5 text-xs font-semibold text-copper-ink">
               يجب قبول أو رفض دفعة العميل أعلاه قبل تسجيل دفع جديد.
             </p>
           )}
@@ -409,7 +416,7 @@ export default function Billing() {
                 />
                 <span>
                   <span className="block text-sm font-bold">{item.label}</span>
-                  <span className="block text-[11px] text-ink-soft/50">{item.description}</span>
+                  <span className="block text-xs text-muted">{item.description}</span>
                 </span>
               </label>
             ))}
@@ -446,7 +453,7 @@ export default function Billing() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setRejectModal(null)}>
           <div dir="rtl" className="w-full max-w-sm rounded-2xl bg-paper p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-1 text-base font-black">رفض دفعة العميل</h3>
-            <p className="mb-4 text-xs text-ink-soft/60">سيُرفض الطلب ويُعلَم العميل. أدخل سبب الرفض.</p>
+            <p className="mb-4 text-xs text-muted">سيُرفض الطلب ويُعلَم العميل. أدخل سبب الرفض.</p>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -472,6 +479,27 @@ export default function Billing() {
           </div>
         </div>
       )}
+      <Modal
+        open={Boolean(adjusting)}
+        onClose={() => !adjusting?.saving && setAdjusting(null)}
+        size="sm"
+        title={adjusting ? `تعديل سعر «${adjusting.item.name}»` : ""}
+        description="يُحفظ السعر القديم والجديد واسم الكاشير في سجل التدقيق."
+      >
+        {adjusting && (
+          <form id="adjust-form" onSubmit={submitAdjust} className="space-y-4">
+            <Input label="السعر الجديد للوحدة (₪)" type="number" inputMode="decimal" min="0" step="0.01" required value={adjusting.price}
+              onChange={(e) => setAdjusting((a) => ({ ...a, price: e.target.value, error: "" }))} error={adjusting.error}
+              hint={`السعر الحالي ${adjusting.item.price} ₪ × ${adjusting.item.quantity}`} autoFocus />
+            <Input label="سبب التعديل" placeholder="مثل: خصم ولاء، طبق بديل" maxLength={255} value={adjusting.reason}
+              onChange={(e) => setAdjusting((a) => ({ ...a, reason: e.target.value }))} hint="اختياري، لكنه يساعد عند مراجعة الحسابات." />
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="secondary" onClick={() => setAdjusting(null)} disabled={adjusting.saving}>تراجع</Button>
+              <Button type="submit" loading={adjusting.saving}>حفظ السعر</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

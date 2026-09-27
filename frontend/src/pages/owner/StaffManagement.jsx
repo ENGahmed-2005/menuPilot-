@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useConfirm } from "../../components/ui/ConfirmDialog";
 import { UserPlus, Copy, Check, Trash2, Shield, KeyRound, Eye, EyeOff } from "lucide-react";
 import { getStaff, createStaff, updateStaff, deleteStaff } from "../../api/staff";
 import Card from "../../components/dashboard/Card";
@@ -16,6 +17,7 @@ const roles = [
 const labels = Object.fromEntries(roles.map((r) => [r.value, r.label]));
 
 export default function StaffManagement() {
+  const [confirm, confirmDialog] = useConfirm();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,7 +57,13 @@ export default function StaffManagement() {
   }
 
   async function remove(member) {
-    if (!window.confirm(`حذف حساب ${member.name}؟`)) return;
+    const ok = await confirm({
+      title: `حذف حساب ${member.name}؟`,
+      description: "لن يتمكن هذا الموظف من تسجيل الدخول بعد الآن. لا يمكن التراجع عن الحذف.",
+      confirmLabel: "حذف الحساب",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       await deleteStaff(member.id);
       setStaff((s) => s.filter((x) => x.id !== member.id));
@@ -76,6 +84,7 @@ export default function StaffManagement() {
 
   return (
     <div dir="rtl" className="space-y-6">
+      {confirmDialog}
       <PageHeader title="فريق المطعم" subtitle="أنشئ حسابات الموظفين وربطها بصلاحيات المطبخ والنادل والكاشير من مكان واحد." />
       {error && <p role="alert" className="rounded-xl bg-brick/10 px-4 py-3 text-sm text-brick">{error.message}</p>}
 
@@ -84,7 +93,7 @@ export default function StaffManagement() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="font-black">تم إنشاء حساب {credentials.name}</h2>
-              <p className="mt-1 text-xs text-ink-soft/60">احفظ بيانات الدخول الآن، لأن كلمة المرور لا تُعرض مرة أخرى.</p>
+              <p className="mt-1 text-xs text-muted">احفظ بيانات الدخول الآن، لأن كلمة المرور لا تُعرض مرة أخرى.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="rounded-xl bg-paper px-3 py-2">{credentials.email}</span>
@@ -104,22 +113,22 @@ export default function StaffManagement() {
 
       <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
         <Card className="p-5">
-          <div className="mb-5 flex items-center gap-2"><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><UserPlus size={19}/></span><div><h2 className="font-black">إضافة حساب</h2><p className="text-xs text-ink-soft/55">الحساب يستطيع تسجيل الدخول مباشرة</p></div></div>
+          <div className="mb-5 flex items-center gap-2"><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><UserPlus size={19}/></span><div><h2 className="font-black">إضافة حساب</h2><p className="text-xs text-muted">الحساب يستطيع تسجيل الدخول مباشرة</p></div></div>
           <form onSubmit={submit} className="space-y-3">
             <input required placeholder="اسم الموظف" value={form.name} onChange={(e)=>setForm({...form,name:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
             <input required type="email" placeholder="البريد الإلكتروني" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
             <select value={form.role} onChange={(e)=>setForm({...form,role:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper">{roles.map(r=><option key={r.value} value={r.value}>{r.label}</option>)}</select>
-            <div className="relative"><KeyRound size={16} className="absolute right-3 top-3.5 text-ink-soft/40"/><input type="password" minLength={6} placeholder="كلمة مرور (اختياري: تُنشأ تلقائيًا)" value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper py-3 pr-9 pl-3 text-sm outline-none focus:border-copper" /></div>
+            <div className="relative"><KeyRound size={16} className="absolute right-3 top-3.5 text-muted"/><input type="password" minLength={6} placeholder="كلمة مرور (اختياري: تُنشأ تلقائيًا)" value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper py-3 pr-9 pl-3 text-sm outline-none focus:border-copper" /></div>
             <Button disabled={saving} className="w-full">{saving ? "جارِ إنشاء الحساب…" : "إنشاء الحساب"}</Button>
           </form>
         </Card>
 
         <Card className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4"><div><h2 className="font-black">حسابات الفريق</h2><p className="text-xs text-ink-soft/55">{staff.length} حسابات مُدارة من المالك</p></div><Shield size={18} className="text-copper"/></div>
+          <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4"><div><h2 className="font-black">حسابات الفريق</h2><p className="text-xs text-muted">{staff.length} حسابات مُدارة من المالك</p></div><Shield size={18} className="text-copper"/></div>
           <div className="divide-y divide-ink/8">
-            {staff.length === 0 && <div className="p-8 text-center text-sm text-ink-soft/55">لم تتم إضافة موظفين بعد.</div>}
+            {staff.length === 0 && <div className="p-8 text-center text-sm text-muted">لم تتم إضافة موظفين بعد.</div>}
             {staff.map((m)=><div key={m.id} className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center">
-              <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><strong>{m.name}</strong><Badge tone={m.active ? "good" : "danger"}>{m.active ? "نشط" : "متوقف"}</Badge></div><p className="mt-1 truncate text-xs text-ink-soft/60">{m.email}</p></div>
+              <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><strong>{m.name}</strong><Badge tone={m.active ? "good" : "danger"}>{m.active ? "نشط" : "متوقف"}</Badge></div><p className="mt-1 truncate text-xs text-muted">{m.email}</p></div>
               <Badge tone="neutral">{labels[m.role] || m.role}</Badge>
               <div className="flex gap-2"><button onClick={()=>toggle(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold">{m.active?"إيقاف":"تفعيل"}</button><button onClick={()=>remove(m)} className="rounded-xl border border-brick/20 p-2 text-brick hover:bg-brick/5" title="حذف الحساب"><Trash2 size={16}/></button></div>
             </div>)}

@@ -198,10 +198,10 @@ export default function MenuManagement() {
 
       {atLimit && (
         <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 border-copper/25 bg-copper/5 p-4 text-sm">
-          <span className="flex items-center gap-2 font-medium text-copper-deep">
+          <span className="flex items-center gap-2 font-medium text-copper-ink">
             <Crown size={16} /> وصلت للحد الأقصى لعدد الأصناف في باقة {plan.name}.
           </span>
-          <Link to="/owner/subscription/pro" className="font-bold text-copper-deep hover:underline">
+          <Link to="/owner/subscription/pro" className="font-bold text-copper-ink hover:underline">
             رقّي باقتك →
           </Link>
         </Card>
@@ -291,7 +291,7 @@ export default function MenuManagement() {
         <div className="space-y-6">
           {groupedByCategory.map(([category, categoryItems]) => (
             <div key={category}>
-              <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-ink-soft/70">
+              <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted">
                 {category}
               </h2>
               <Card className="divide-y divide-ink/10 overflow-hidden">
@@ -401,7 +401,7 @@ export default function MenuManagement() {
                             className="h-11 w-11 shrink-0 rounded-lg border border-ink/10 object-cover"
                           />
                         ) : (
-                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-dashed border-ink/15 text-ink-soft/50">
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-dashed border-ink/15 text-muted">
                             <UtensilsCrossed size={17} aria-hidden="true" />
                           </span>
                         )}
@@ -413,7 +413,7 @@ export default function MenuManagement() {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-4">
-                        <span className="text-sm font-medium text-copper-deep">{item.price}</span>
+                        <span className="text-sm font-medium text-copper-ink">{item.price}</span>
                         <button
                           onClick={() => startEdit(item)}
                           aria-label="تعديل الصنف"

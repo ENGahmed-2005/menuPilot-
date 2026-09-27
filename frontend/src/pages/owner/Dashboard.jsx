@@ -117,7 +117,7 @@ export default function Dashboard() {
 
       {/* TODO (FR-40): sales-trend chart — order volume & revenue over time */}
       <Card className="mt-6 flex items-center gap-3 border-dashed p-4 text-sm text-ink-soft">
-        <TrendingUp size={18} className="shrink-0 text-ink-soft/60" aria-hidden="true" />
+        <TrendingUp size={18} className="shrink-0 text-muted" aria-hidden="true" />
         رسم بياني لاتجاه المبيعات قيد التطوير — راجع صفحة التقارير.
       </Card>
     </div>

@@ -1,31 +1,71 @@
 /* ==========================================================================
-   Modal.jsx — نافذة منبثقة عامة (بديل معمّم عن AuthModal اللي كان جوا
-   landing.jsx القديم — لو احتجت نافذة تسجيل دخول/تسجيل منبثقة بدل صفحة
-   كاملة لاحقًا، ابنيها فوق هذا المكوّن).
+   Modal.jsx — accessible dialog.
+   Esc and backdrop close it, focus moves inside on open and returns to the
+   trigger on close, Tab stays inside, and the page behind doesn't scroll.
+   size: sm | md | lg
    ========================================================================== */
+import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
-export default function Modal({ open, onClose, title, children }) {
+const SIZES = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-2xl" };
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+export default function Modal({ open, onClose, title, description, size = "md", footer, children }) {
+  const panelRef = useRef(null);
+  const titleId = useId();
+  const descId = useId();
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const previouslyFocused = document.activeElement;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    const first = panelRef.current?.querySelector(FOCUSABLE);
+    (first || panelRef.current)?.focus();
+
+    function onKey(event) {
+      if (event.key === "Escape") { event.stopPropagation(); onClose?.(); return; }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const nodes = [...panelRef.current.querySelectorAll(FOCUSABLE)];
+      if (!nodes.length) return;
+      const [firstNode, lastNode] = [nodes[0], nodes[nodes.length - 1]];
+      if (event.shiftKey && document.activeElement === firstNode) { event.preventDefault(); lastNode.focus(); }
+      else if (!event.shiftKey && document.activeElement === lastNode) { event.preventDefault(); firstNode.focus(); }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      previouslyFocused?.focus?.();
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/55 p-0 backdrop-blur-[2px] animate-fade-in sm:items-center sm:p-4" onMouseDown={onClose}>
       <div
-        className="relative w-full max-w-md rounded-2xl bg-paper-2 p-6 text-ink shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-describedby={description ? descId : undefined}
+        tabIndex={-1}
+        dir="rtl"
+        onMouseDown={(event) => event.stopPropagation()}
+        className={`relative flex max-h-[92vh] w-full ${SIZES[size] || SIZES.md} flex-col rounded-t-[var(--radius-panel)] bg-surface text-ink shadow-[var(--shadow-dialog)] outline-none animate-dialog-in sm:rounded-[var(--radius-panel)]`}
       >
-        <button
-          className="absolute right-4 top-4 rounded-full p-1.5 text-ink-soft transition-colors hover:bg-ink/8 hover:text-ink"
-          onClick={onClose}
-          aria-label="إغلاق"
-        >
-          <X size={18} />
-        </button>
-        {title && <h2 className="mb-4 pr-8 font-display text-2xl">{title}</h2>}
-        {children}
+        <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
+          <div>
+            {title && <h2 id={titleId} className="text-lg font-extrabold">{title}</h2>}
+            {description && <p id={descId} className="mt-1 text-sm text-muted">{description}</p>}
+          </div>
+          <button type="button" onClick={onClose} aria-label="إغلاق" className="-m-1.5 rounded-full p-2 text-muted transition-colors hover:bg-ink/[0.06] hover:text-ink">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
+        {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-6 py-4">{footer}</div>}
       </div>
     </div>
   );

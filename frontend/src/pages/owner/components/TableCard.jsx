@@ -19,7 +19,7 @@ export default function TableCard({ table, editing, editLabel, editSeats, saving
       ) : (
         <>
           <div className="flex items-start justify-between gap-2"><div><span className="block font-medium text-ink">{table.label}</span><span className="mt-0.5 flex items-center gap-1 text-xs text-ink-soft"><Users size={13}/> {table.seats} مقاعد</span></div><TableStatusBadge occupied={occupied}/></div>
-          <div className="mt-1 flex items-center justify-between border-t border-ink/8 pt-3 text-sm"><button type="button" onClick={() => onQr(table)} className="flex items-center gap-1.5 font-medium text-copper-deep hover:underline"><QrCode size={14}/> عرض رمز QR</button><div className="flex items-center gap-3"><button type="button" onClick={() => onStartEdit(table)} className="text-ink-soft hover:opacity-75" title="تعديل الطاولة"><Pencil size={16}/></button><button type="button" onClick={() => onDelete(table.id)} className="text-brick hover:opacity-75" title="حذف الطاولة"><Trash2 size={16}/></button></div></div>
+          <div className="mt-1 flex items-center justify-between border-t border-ink/8 pt-3 text-sm"><button type="button" onClick={() => onQr(table)} className="flex items-center gap-1.5 font-medium text-copper-ink hover:underline"><QrCode size={14}/> عرض رمز QR</button><div className="flex items-center gap-3"><button type="button" onClick={() => onStartEdit(table)} className="text-ink-soft hover:opacity-75" title="تعديل الطاولة"><Pencil size={16}/></button><button type="button" onClick={() => onDelete(table.id)} className="text-brick hover:opacity-75" title="حذف الطاولة"><Trash2 size={16}/></button></div></div>
         </>
       )}
     </Card>

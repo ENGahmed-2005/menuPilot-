@@ -1,43 +1,58 @@
+import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import FeatureProtectedRoute from "./FeatureProtectedRoute";
 import DashboardShell from "../components/layout/DashboardShell";
 import Landing from "../pages/landing/LandingPage";
 import Login from "../pages/auth/Login";
-import Register from "../pages/auth/Register";
-import ForgotPassword from "../pages/auth/ForgotPassword";
-import ResetPassword from "../pages/auth/ResetPassword";
-import ScanEntry from "../pages/customer/ScanEntry";
-import Menu from "../pages/customer/Menu";
-import RestaurantMenu from "../pages/customer/RestaurantMenu";
-import Cart from "../pages/customer/Cart";
-import PaymentFlow from "../pages/customer/PaymentFlow";
-import OrderTracking from "../pages/customer/OrderTracking";
-import BillRequest from "../pages/customer/BillRequest";
-import SubscriptionDashboard from "../pages/owner/SubscriptionDashboard";
-import SubscriptionPlanPage from "../pages/owner/SubscriptionPlanPage";
-import ThemeCustomization from "../pages/owner/ThemeCustomization";
-import BrandingCustomization from "../pages/owner/BrandingCustomization";
-import RestaurantSettings from "../pages/owner/RestaurantSettings";
-import Tables from "../pages/owner/Tables";
-import MenuManagement from "../pages/owner/MenuManagement";
-import Reports from "../pages/owner/Reports";
-import StaffManagement from "../pages/owner/StaffManagement";
-import KitchenDashboard from "../pages/kitchen/KitchenDashboard";
-import Billing from "../pages/cashier/Billing";
-import TableStatus from "../pages/cashier/TableStatus";
-import SalesReports from "../pages/cashier/SalesReports";
-import TableSessions from "../pages/waiter/TableSessions";
-import AdminDashboard from "../pages/admin/AdminDashboard";
-import AdminReports from "../pages/admin/AdminReports";
-import RestaurantsManagement from "../pages/admin/RestaurantsManagement";
-import OwnersManagement from "../pages/admin/OwnersManagement";
-import AdminSubscriptions from "../pages/admin/AdminSubscriptions";
-import AdminSettings from "../pages/admin/AdminSettings";
-import AdminNotifications from "../pages/admin/AdminNotifications";
+const Register = lazy(() => import("../pages/auth/Register"));
+const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
+const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
+const ScanEntry = lazy(() => import("../pages/customer/ScanEntry"));
+const Menu = lazy(() => import("../pages/customer/Menu"));
+const RestaurantMenu = lazy(() => import("../pages/customer/RestaurantMenu"));
+const Cart = lazy(() => import("../pages/customer/Cart"));
+const PaymentFlow = lazy(() => import("../pages/customer/PaymentFlow"));
+const OrderTracking = lazy(() => import("../pages/customer/OrderTracking"));
+const BillRequest = lazy(() => import("../pages/customer/BillRequest"));
+const SubscriptionDashboard = lazy(() => import("../pages/owner/SubscriptionDashboard"));
+const SubscriptionPlanPage = lazy(() => import("../pages/owner/SubscriptionPlanPage"));
+const ThemeCustomization = lazy(() => import("../pages/owner/ThemeCustomization"));
+const BrandingCustomization = lazy(() => import("../pages/owner/BrandingCustomization"));
+const RestaurantSettings = lazy(() => import("../pages/owner/RestaurantSettings"));
+const Tables = lazy(() => import("../pages/owner/Tables"));
+const MenuManagement = lazy(() => import("../pages/owner/MenuManagement"));
+const Reports = lazy(() => import("../pages/owner/Reports"));
+const StaffManagement = lazy(() => import("../pages/owner/StaffManagement"));
+const KitchenDashboard = lazy(() => import("../pages/kitchen/KitchenDashboard"));
+const Billing = lazy(() => import("../pages/cashier/Billing"));
+const TableStatus = lazy(() => import("../pages/cashier/TableStatus"));
+const SalesReports = lazy(() => import("../pages/cashier/SalesReports"));
+const TableSessions = lazy(() => import("../pages/waiter/TableSessions"));
+const AdminDashboard = lazy(() => import("../pages/admin/AdminDashboard"));
+const AdminReports = lazy(() => import("../pages/admin/AdminReports"));
+const RestaurantsManagement = lazy(() => import("../pages/admin/RestaurantsManagement"));
+const OwnersManagement = lazy(() => import("../pages/admin/OwnersManagement"));
+const AdminSubscriptions = lazy(() => import("../pages/admin/AdminSubscriptions"));
+const AdminSettings = lazy(() => import("../pages/admin/AdminSettings"));
+const AdminNotifications = lazy(() => import("../pages/admin/AdminNotifications"));
+
+// Each role only downloads its own screens: a customer scanning a QR code
+// never loads the admin or cashier bundles.
+function RouteFallback() {
+  return (
+    <div role="status" aria-live="polite" className="grid min-h-[60vh] place-items-center bg-paper-2 text-sm font-bold text-muted">
+      <span className="flex items-center gap-3">
+        <span aria-hidden="true" className="h-5 w-5 animate-spin rounded-full border-2 border-ink/15 border-t-copper" />
+        جارِ فتح الصفحة…
+      </span>
+    </div>
+  );
+}
 
 export default function AppRoutes() {
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
@@ -88,5 +103,6 @@ export default function AppRoutes() {
         <Route path="/admin/notifications" element={<AdminNotifications />} />
       </Route>
     </Routes>
+    </Suspense>
   );
 }

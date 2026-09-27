@@ -117,7 +117,7 @@ export default function Register() {
                   <div key={label} className="flex items-center">
                     <div className="flex flex-col items-center gap-2">
                       <span className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs font-black transition ${active ? "border-[#EEA122] bg-[#EEA122] text-[#1F2420]" : "border-[#4B5147]/20 bg-white text-[#4B5147]/45"}`}>{active && step > number ? <Check size={15} /> : number}</span>
-                      <span className={`hidden text-[10px] font-bold sm:block ${active ? "text-[#1F2420]" : "text-[#4B5147]/40"}`}>{label}</span>
+                      <span className={`hidden text-xs font-bold sm:block ${active ? "text-[#1F2420]" : "text-[#4B5147]/40"}`}>{label}</span>
                     </div>
                     {number < 4 && <span className={`mx-1 h-px w-8 sm:w-12 ${step > number ? "bg-[#EEA122]" : "bg-[#4B5147]/15"}`} />}
                   </div>
@@ -133,7 +133,7 @@ export default function Register() {
                   {plans.map((plan) => {
                     const selected = selectedPlan === plan.id;
                     return <button key={plan.id} type="button" onClick={() => setSelectedPlan(plan.id)} className={`relative rounded-2xl border p-5 text-right transition duration-200 hover:-translate-y-1 ${selected ? "border-[#EEA122] bg-[#EEA122]/5 shadow-[0_12px_30px_rgba(238,161,34,.12)]" : "border-[#4B5147]/10 bg-[#F3EFE5]/45 hover:border-[#EEA122]/40"}`}>
-                      {plan.featured && <span className="absolute -top-3 right-4 rounded-full bg-[#1F2420] px-3 py-1 text-[10px] font-bold text-[#EEA122]">الأكثر اختيارًا</span>}
+                      {plan.featured && <span className="absolute -top-3 right-4 rounded-full bg-[#1F2420] px-3 py-1 text-xs font-bold text-[#EEA122]">الأكثر اختيارًا</span>}
                       <span className="text-lg font-black">{plan.name}</span>
                       <div className="mt-3 text-2xl font-black">{plan.price}<span className="text-xs font-normal text-[#4B5147]/50"> / شهريًا</span></div>
                       <p className="mt-3 text-xs leading-6 text-[#4B5147]/65">{plan.description}</p>
