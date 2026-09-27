@@ -17,8 +17,8 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
-        $email = (string) env('ADMIN_EMAIL', '');
-        $password = (string) env('ADMIN_PASSWORD', '');
+        $email = (string) config('app.admin.email');
+        $password = (string) config('app.admin.password');
 
         if ($email === '' || $password === '') {
             $this->command?->warn('AdminSeeder skipped: ADMIN_EMAIL / ADMIN_PASSWORD are not set.');
@@ -29,8 +29,8 @@ class AdminSeeder extends Seeder
         $result = AdminAccount::ensure(
             $email,
             $password,
-            (string) env('ADMIN_NAME', 'menuPilot Admin'),
-            filter_var(env('ADMIN_RESET_PASSWORD', false), FILTER_VALIDATE_BOOLEAN),
+            (string) config('app.admin.name', 'menuPilot Admin'),
+            (bool) config('app.admin.reset_password'),
         );
 
         // Messages never include the password.

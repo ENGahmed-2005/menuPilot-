@@ -213,9 +213,7 @@ it('lets the admin manage owners, and disabling an owner locks out their staff',
 });
 
 it('AdminSeeder creates one admin from env, never duplicates, never promotes an owner', function () {
-    putenv('ADMIN_EMAIL=root@menupilot.test');
-    putenv('ADMIN_PASSWORD=Very-Long-Pass-123');
-    putenv('ADMIN_NAME=Root');
+    config(['app.admin' => ['name' => 'Root', 'email' => 'root@menupilot.test', 'password' => 'Very-Long-Pass-123', 'reset_password' => false]]);
 
     $this->artisan('db:seed', ['--class' => 'AdminSeeder', '--force' => true])->assertSuccessful();
     $this->artisan('db:seed', ['--class' => 'AdminSeeder', '--force' => true])->assertSuccessful();
@@ -228,7 +226,7 @@ it('AdminSeeder creates one admin from env, never duplicates, never promotes an 
     expect($login->json('data.user.role'))->toBe('admin')->and($login->json('data.user.permissions'))->toContain('manage_admin');
 
     // A different email while an admin exists: no second admin.
-    putenv('ADMIN_EMAIL=second@menupilot.test');
+    config(['app.admin.email' => 'second@menupilot.test']);
     $this->artisan('db:seed', ['--class' => 'AdminSeeder', '--force' => true])->assertSuccessful();
     expect(User::where('role', 'admin')->count())->toBe(1);
 
@@ -238,7 +236,4 @@ it('AdminSeeder creates one admin from env, never duplicates, never promotes an 
     $this->artisan('menupilot:create-admin', ['--email' => $ownerEmail, '--additional' => true])->assertFailed();
     expect(DB::table('users')->where('id', $owner['id'])->value('role'))->toBe('owner');
 
-    putenv('ADMIN_EMAIL');
-    putenv('ADMIN_PASSWORD');
-    putenv('ADMIN_NAME');
 });
