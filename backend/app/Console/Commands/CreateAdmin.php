@@ -26,9 +26,9 @@ class CreateAdmin extends Command
 
     public function handle(): int
     {
-        $email = $this->option('email') ?: env('ADMIN_EMAIL') ?: $this->ask('Admin email');
-        $name = $this->option('name') ?: env('ADMIN_NAME', 'menuPilot Admin');
-        $password = env('ADMIN_PASSWORD') ?: $this->secret('Admin password (min 12 characters)');
+        $email = $this->option('email') ?: config('app.admin.email') ?: $this->ask('Admin email');
+        $name = $this->option('name') ?: config('app.admin.name', 'menuPilot Admin');
+        $password = config('app.admin.password') ?: $this->secret('Admin password (min 12 characters)');
 
         $result = AdminAccount::ensure((string) $email, (string) $password, (string) $name, (bool) $this->option('reset-password'), (bool) $this->option('additional'));
 

@@ -58,6 +58,16 @@ return [
     // (the customer menu /t/{code} is a frontend route, not a backend one).
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
 
+    // Platform admin created by AdminSeeder / menupilot:create-admin.
+    // Read through config (not env() at runtime) so it works with config
+    // caching and can't be shadowed by an empty value in .env.
+    'admin' => [
+        'name' => env('ADMIN_NAME', 'menuPilot Admin'),
+        'email' => env('ADMIN_EMAIL', ''),
+        'password' => env('ADMIN_PASSWORD', ''),
+        'reset_password' => filter_var(env('ADMIN_RESET_PASSWORD', false), FILTER_VALIDATE_BOOLEAN),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
