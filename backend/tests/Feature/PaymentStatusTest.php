@@ -284,3 +284,43 @@ it('blocks second customer payment submission when one is already pending', func
         'items' => json_encode([['menuItemId' => $item, 'quantity' => 1]]),
     ], customer($session))->assertStatus(409);
 });
+
+/*
+| Adding another order from the tracking page
+*/
+
+it('gives the tracking page the table code and payment state of its own session', function () {
+    $owner = psOwner();
+    $table = psTable($owner['id']);
+    $session = psSession($this, $table);
+
+    $data = $this->getJson("/api/public/sessions/{$session['id']}", customer($session))->assertOk()->json('data');
+    expect($data['table_code'])->toBe($table->table_code)
+        ->and($data['can_add_order'])->toBeTrue()
+        ->and($data['has_pending_payment'])->toBeFalse();
+});
+
+it('holds a second order with PAYMENT_PENDING until the first payment is verified, then accepts it', function () {
+    $owner = psOwner();
+    $cashier = psStaff($owner['id'], 'cashier');
+    $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 15);
+    $session = psSession($this, $table);
+    $pay = fn () => $this->postJson("/api/public/sessions/{$session['id']}/payment", [
+        'method' => 'cash', 'payer_name' => 'Ali', 'payer_phone' => '0599111222',
+        'items' => json_encode([['menuItemId' => $item, 'quantity' => 1]]),
+    ], customer($session));
+
+    $pay()->assertSuccessful();
+
+    $held = $pay()->assertStatus(409)->assertJsonPath('code', 'PAYMENT_PENDING');
+    expect($held->json('message'))->toContain('سلتك محفوظة');
+    expect($this->getJson("/api/public/sessions/{$session['id']}", customer($session))->json('data.has_pending_payment'))->toBeTrue();
+
+    $paymentId = DB::table('payments')->where('dining_session_id', $session['id'])->value('id');
+    $this->postJson("/api/payments/{$paymentId}/verify", [], ['Authorization' => 'Bearer '.$cashier['token'], 'Accept' => 'application/json'])->assertOk();
+
+    $pay()->assertSuccessful();
+    $orders = $this->getJson("/api/public/sessions/{$session['id']}/orders", customer($session))->json('data');
+    expect($orders)->toHaveCount(2);
+});

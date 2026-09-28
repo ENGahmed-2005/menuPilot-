@@ -70,7 +70,10 @@ class PaymentController extends Controller
             ->where('status', PaymentStatus::Pending->value)
             ->exists();
         if ($alreadyPending) {
-            return response()->json(['message' => 'يوجد بالفعل طلب دفع قيد المراجعة لهذه الجلسة.'], 409);
+            return response()->json([
+                'message' => 'دفعتك السابقة بانتظار تأكيد الكاشير. سلتك محفوظة، ويمكنك إرسال الطلب الجديد فور التأكيد.',
+                'code' => 'PAYMENT_PENDING',
+            ], 409);
         }
 
         $configured = is_array($session->payment_methods) ? $session->payment_methods : (json_decode($session->payment_methods ?? '[]', true) ?: []);

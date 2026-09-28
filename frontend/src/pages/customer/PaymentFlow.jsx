@@ -16,6 +16,7 @@ export default function PaymentFlow() {
   const { tableCode } = useParams();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
+  const [pendingHold, setPendingHold] = useState(false);
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
   const [step, setStep] = useState(1);
@@ -61,7 +62,12 @@ export default function PaymentFlow() {
       await submitPayment(sessionId, { items: items.map((item) => ({ menuItemId: item.menuItemId, quantity: item.quantity, note: item.note || "" })), method, provider: selectedOption?.name || "", payer_name: form.payerName.trim(), payer_phone: form.payerPhone.trim(), proof });
       clearCart();
       navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`, { replace: true });
-    } catch (err) { setError(err.message || "تعذر إرسال الطلب للتحقق."); }
+    } catch (err) {
+      // A previous payment is still being checked by the cashier: keep the
+      // cart and offer the way back to tracking instead of a dead end.
+      setPendingHold(err.code === "PAYMENT_PENDING");
+      setError(err.message || "تعذر إرسال الطلب للتحقق.");
+    }
     finally { setSaving(false); }
   }
 
@@ -71,7 +77,12 @@ export default function PaymentFlow() {
   return <main dir="rtl" className="min-h-screen bg-paper-2 pb-10 text-ink">
     <header className="bg-ink text-paper"><div className="mx-auto max-w-2xl px-5 py-5 sm:px-8"><div className="flex items-center gap-3"><button onClick={goBack} aria-label="رجوع" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-paper/10 bg-paper/5 hover:bg-paper/10"><ArrowRight size={19}/></button><div><p className="text-xs text-paper/45">إتمام الطلب</p><h1 className="text-2xl font-black">الدفع وإرسال الطلب</h1></div></div><div className="mt-5 grid grid-cols-3 gap-2">{["بياناتك","طريقة الدفع","التأكيد"].map((label,index) => <div key={label} className={`rounded-full px-3 py-2 text-center text-xs font-bold ${step === index + 1 ? "bg-copper text-ink" : step > index + 1 ? "bg-herb text-paper" : "bg-paper/10 text-paper/45"}`}>{step > index + 1 ? <Check className="mx-auto" size={14}/> : label}</div>)}</div></div></header>
     <div className="mx-auto max-w-2xl px-5 py-6 sm:px-8">
-      {error && <div role="alert" className="mb-5 rounded-2xl border border-brick/15 bg-brick/10 px-4 py-3 text-sm font-bold leading-6 text-brick">{error}</div>}
+      {error && (pendingHold ? (
+        <div role="status" className="mb-5 rounded-2xl border border-copper/25 bg-copper/10 px-4 py-3 text-sm leading-6 text-ink">
+          <p className="font-bold">{error}</p>
+          <button onClick={() => navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`)} className="mt-2 min-h-10 rounded-xl bg-ink px-4 text-xs font-bold text-paper">العودة لتتبع الطلب</button>
+        </div>
+      ) : <div role="alert" className="mb-5 rounded-2xl border border-brick/15 bg-brick/10 px-4 py-3 text-sm font-bold leading-6 text-brick">{error}</div>)}
       <div className="mb-5 flex items-center justify-between rounded-2xl border border-ink/10 bg-paper px-4 py-3"><span className="text-sm text-ink-soft">إجمالي الطلب</span><strong className="text-xl text-copper-ink">{total.toFixed(2)} ₪</strong></div>
       {step === 1 && <section className="rounded-[2rem] border border-ink/10 bg-paper p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">بيانات العميل</h2><p className="mt-2 text-sm leading-6 text-ink-soft">نتأكد من بياناتك قبل إرسال الطلب للمطعم.</p><div className="mt-6 space-y-4"><div><label className="mb-2 block text-sm font-bold">الاسم الكامل</label><input className="w-full rounded-2xl border border-ink/10 bg-paper-2 px-4 py-3.5 outline-none focus:border-copper" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: أحمد محمد" /></div><div><label className="mb-2 block text-sm font-bold">رقم الجوال</label><input className="w-full rounded-2xl border border-ink/10 bg-paper-2 px-4 py-3.5 outline-none focus:border-copper" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} inputMode="tel" placeholder="059…" /></div></div><button onClick={saveCustomer} disabled={saving} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-ink py-4 text-sm font-black text-paper disabled:opacity-50">{saving ? <Loader2 className="animate-spin" size={18}/> : <ArrowLeft size={18}/>}متابعة إلى الدفع</button></section>}
       {step === 2 && <section className="rounded-[2rem] border border-ink/10 bg-paper p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">اختر طريقة الدفع</h2><p className="mt-2 text-sm leading-6 text-ink-soft">سيتم تأكيد الطلب وإرساله للمطبخ بعد التحقق من الدفع.</p><div className="mt-6 space-y-3">{enabledMethods.map(({ id, icon: Icon, title, text }) => <button key={id} onClick={() => chooseMethod(id)} className="flex w-full items-center gap-4 rounded-2xl border border-ink/10 bg-paper-2 p-4 text-right transition hover:border-copper hover:shadow-md"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-copper/10 text-copper"><Icon size={21}/></span><span className="min-w-0 flex-1"><b className="block">{title}</b><span className="mt-1 block text-xs leading-5 text-ink-soft">{text}</span></span><ArrowLeft size={18} className="text-muted"/></button>)}{enabledMethods.length === 1 && <p className="rounded-xl bg-copper/10 p-3 text-xs text-ink-soft">المطعم لم يفعّل طرق دفع إلكترونية بعد، لذلك الدفع النقدي هو المتاح حاليًا.</p>}</div></section>}

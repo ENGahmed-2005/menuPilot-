@@ -29,6 +29,7 @@ export async function submitPayment(sessionId, payload) {
   if (!response.ok) {
     const error = new Error(data?.message || `Request failed: ${response.status}`);
     error.status = response.status;
+    error.code = data?.code || null; // e.g. PAYMENT_PENDING
     error.errors = data?.errors || null;
     throw error;
   }
