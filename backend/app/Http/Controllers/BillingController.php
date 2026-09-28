@@ -162,7 +162,7 @@ class BillingController extends Controller
 
             Audit::log($r, 'payment.recorded', 'payment', $paymentId, ['session_id' => $session->id, 'method' => $v['method'], 'amount' => $outstanding], $restaurantId);
             if ($v['close'] ?? true) {
-                $this->closeSession($session, $restaurantId);
+                $this->closeSession($session, $restaurantId, $r->user()->id);
                 Audit::log($r, 'session.closed', 'dining_session', $session->id, ['table' => $session->table_label, 'via' => 'payment'], $restaurantId);
             }
 
@@ -200,7 +200,7 @@ class BillingController extends Controller
                 ], $blocker['status']);
             }
 
-            $this->closeSession($session, $restaurantId);
+            $this->closeSession($session, $restaurantId, $r->user()->id);
             Audit::log($r, 'session.closed', 'dining_session', (int) $sid, [
                 'table' => $session->table_label,
                 'total' => $money['total'],
@@ -294,8 +294,8 @@ class BillingController extends Controller
         return ['lifecycle' => $fields['lifecycle'], 'can_close' => $fields['canClose'], 'close_blocker' => $fields['closeBlocker'], 'has_pending_payment' => $fields['hasPendingPayment']];
     }
 
-    private function closeSession(object $session, int $restaurantId): void
+    private function closeSession(object $session, int $restaurantId, ?int $closedBy = null): void
     {
-        SessionLifecycle::closeNow($session, $restaurantId);
+        SessionLifecycle::closeNow($session, $restaurantId, $closedBy);
     }
 }

@@ -112,10 +112,12 @@ class SessionLifecycle
      * Close a session: closed_at, resolve open waiter calls, free the table.
      * Callers handle permission, blockers, locking and audit.
      */
-    public static function closeNow(object $session, int $restaurantId): void
+    public static function closeNow(object $session, int $restaurantId, ?int $closedBy = null): void
     {
         $now = now();
-        DB::table('dining_sessions')->where('id', $session->id)->update(['status' => 'closed', 'closed_at' => $now, 'updated_at' => $now]);
+        DB::table('dining_sessions')->where('id', $session->id)->update(array_filter([
+            'status' => 'closed', 'closed_at' => $now, 'updated_at' => $now, 'closed_by' => $closedBy,
+        ], fn ($v) => $v !== null));
         DB::table('assistance_requests')->where('dining_session_id', $session->id)->where('status', 'open')
             ->update(['status' => 'resolved', 'resolved_at' => $now, 'updated_at' => $now]);
         DB::table('restaurant_tables')->where('id', $session->restaurant_table_id)->where('user_id', $restaurantId)

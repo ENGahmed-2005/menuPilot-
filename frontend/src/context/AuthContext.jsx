@@ -57,7 +57,8 @@ export function AuthProvider({ children }) {
   // Permissions come from the API (GET /auth/me, login). They only drive what
   // the UI shows; Laravel enforces every one of them on the server.
   const permissions = user?.permissions || ROLE_DEFAULTS[user?.role] || [];
-  const can = (permission) => user?.role === "admin" || permissions.includes(permission);
+  // No role shortcuts: the platform admin only holds platform permissions.
+  const can = (permission) => permissions.includes(permission);
 
   const value = {
     user,

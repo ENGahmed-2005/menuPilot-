@@ -14,6 +14,12 @@ use Illuminate\Support\Str;
 
 class TableController extends Controller
 {
+    /** Audit a restaurant_table change for this restaurant (secrets never included). */
+    private function auditChange(Request $request, string $action, $id, array $metadata = []): void
+    {
+        Audit::log($request, $action, 'restaurant_table', $id === null ? null : (int) $id, $metadata, $this->restaurantId($request));
+    }
+
     /** Statuses an owner can set by hand (besides available). */
     public const MANUAL_STATUSES = ['reserved', 'out_of_service'];
 
@@ -123,11 +129,16 @@ class TableController extends Controller
             }
         }
 
+        $this->auditChange($request, 'restaurant_table.created', $id ?? null, array_intersect_key($request->all(), array_flip(['label', 'seats', 'status'])));
+
         return $this->out($this->withQr(DB::table('restaurant_tables')->find($id)), 201);
     }
 
     public function update(Request $request, $id)
     {
+        // Before-values for the audit trail.
+        $auditBefore = (array) ($this->query($request)->where('id', $id)->first() ?? []);
+
         $restaurantId = $this->restaurantId($request);
         $table = $this->query($request)->where('id', $id)->first();
         if (! $table) {
@@ -149,6 +160,9 @@ class TableController extends Controller
 
         $this->query($request)->where('id', $id)->update(array_merge($v, ['updated_at' => now()]));
 
+        $auditKeys = array_intersect(array_keys($request->all()), ['label', 'seats', 'status']);
+        $this->auditChange($request, 'restaurant_table.updated', $id, ['before' => array_intersect_key($auditBefore, array_flip($auditKeys)), 'after' => array_intersect_key($request->all(), array_flip($auditKeys))]);
+
         return $this->out($this->withQr(DB::table('restaurant_tables')->find($id)));
     }
 
@@ -160,7 +174,11 @@ class TableController extends Controller
         if (DB::table('dining_sessions')->where('restaurant_table_id', $id)->whereNull('closed_at')->exists()) {
             return response()->json(['message' => 'Cannot delete a table with an active dining session.'], 409);
         }
+        $label = $this->query($request)->where('id', $id)->value('label');
         $deleted = $this->query($request)->where('id', $id)->delete();
+        if ($deleted) {
+            $this->auditChange($request, 'restaurant_table.deleted', $id, ['label' => $label]);
+        }
 
         return $deleted ? $this->out(['message' => 'Deleted']) : response()->json(['message' => 'Table not found'], 404);
     }
@@ -234,7 +252,7 @@ class TableController extends Controller
                     return response()->json(['message' => 'يوجد مبلغ متبقٍ. اكتب سبب إنهاء الجلسة دون دفع.', 'code' => 'REASON_REQUIRED', 'session' => $summary], 422);
                 }
 
-                SessionLifecycle::closeNow($session, $restaurantId);
+                SessionLifecycle::closeNow($session, $restaurantId, $request->user()->id);
                 Audit::log($request, $forced ? 'session.force_closed' : 'session.closed', 'dining_session', (int) $session->id, [
                     'table' => $table->label,
                     'via' => 'table_status',
