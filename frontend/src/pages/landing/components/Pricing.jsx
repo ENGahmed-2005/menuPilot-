@@ -59,15 +59,15 @@ function PlanCard({ id, plan, popular, delay }) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="text-base font-black">{plan.name}</h3>
-            <p className="mt-1 text-xs leading-5 text-[#F3EFE5]/50">{plan.description}</p>
+            <p className="mt-1 text-xs leading-5 text-[#F3EFE5]/70">{plan.description}</p>
           </div>
           <div className="shrink-0 text-right">
             <span className="text-2xl font-black">${plan.price}</span>
-            <span className="block text-[11px] text-[#F3EFE5]/40">/ شهريًا</span>
+            <span className="block text-[11px] text-[#F3EFE5]/70">/ شهريًا</span>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-1.5 text-[11px] text-[#F3EFE5]/55">
+        <div className="mt-4 flex flex-wrap gap-1.5 text-[11px] text-[#F3EFE5]/70">
           <span className="rounded-full bg-[#F3EFE5]/[.06] px-2.5 py-0.5">
             حتى {formatLimit(plan.limits.tables)} طاولة
           </span>
@@ -121,7 +121,7 @@ export default function Pricing() {
       <Reveal className="mx-auto max-w-2xl text-center">
         <span className="text-[11px] font-black tracking-[.18em] text-[#EEA122] uppercase">الأسعار</span>
         <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">باقة تناسب حجم مطعمك.</h2>
-        <p className="mt-4 text-base leading-7 text-[#F3EFE5]/55">
+        <p className="mt-4 text-base leading-7 text-[#F3EFE5]/70">
           ابدأ بالباقة المناسبة، وارتقِ في أي وقت مع نمو مطعمك.
         </p>
 

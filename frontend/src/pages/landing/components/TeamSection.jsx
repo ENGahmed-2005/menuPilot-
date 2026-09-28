@@ -56,7 +56,7 @@ export default function TeamSection() {
                 <Icon size={21} strokeWidth={1.8} />
               </div>
               <h3 className="text-lg font-bold text-[#F3EFE5]">{name}</h3>
-              <p className="mt-2 text-sm leading-6 text-[#F3EFE5]/55">{role}</p>
+              <p className="mt-2 text-sm leading-6 text-[#F3EFE5]/70">{role}</p>
             </article>
           ))}
         </div>

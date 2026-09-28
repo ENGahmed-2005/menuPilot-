@@ -14,7 +14,7 @@ export default function Features() {
             في مكان واحد.
           </span>
         </h2>
-        <p className="mt-5 text-base leading-8 text-[#F3EFE5]/55">
+        <p className="mt-5 text-base leading-8 text-[#F3EFE5]/70">
           بدل أن تتوزع عمليات مطعمك بين الورق والرسائل والأنظمة المنفصلة، اجمعها في workflow واحد واضح.
         </p>
       </Reveal>
@@ -35,7 +35,7 @@ export default function Features() {
                 <Icon size={21} />
               </span>
               <h3 className="mt-5 text-lg font-black">{title}</h3>
-              <p className="mt-3 text-sm leading-7 text-[#F3EFE5]/50">{text}</p>
+              <p className="mt-3 text-sm leading-7 text-[#F3EFE5]/70">{text}</p>
             </div>
           </Reveal>
         ))}

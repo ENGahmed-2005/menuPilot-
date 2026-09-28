@@ -156,7 +156,7 @@ export default function Menu() {
           <AlertCircle className="mx-auto text-brick" aria-hidden="true" />
           <h1 className="mt-5 text-2xl font-bold">تعذّر تحميل القائمة</h1>
           <p className="mt-2 text-sm leading-7 text-ink-soft">{error.message || "حدث خطأ غير متوقع."}</p>
-          <button onClick={() => window.location.reload()} className="mt-6 h-12 w-full rounded-2xl bg-ink text-sm font-bold text-paper">حاول مرة أخرى</button>
+          <button onClick={() => window.location.reload()} className="mt-6 h-12 w-full rounded-2xl bg-forest text-sm font-bold text-paper">حاول مرة أخرى</button>
         </div>
       </div>
     );

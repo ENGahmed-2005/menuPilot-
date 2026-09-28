@@ -39,7 +39,7 @@ export default function Hero({ onNavigate }) {
       <div className="pointer-events-auto absolute inset-0 -z-10">
         <Suspense fallback={null}>
           <ShapeMosaic
-            ink="#4B5147"
+            ink="#3A6654" /* subtle lighter-green mosaic on forest */
             lit="#EEA122"
             cell={34}
             size={8}
@@ -87,7 +87,7 @@ export default function Hero({ onNavigate }) {
               <ArrowLeft size={18} />
             </a>
           </div>
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#F3EFE5]/50">
+          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#F3EFE5]/70">
             <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> طلبات QR</span>
             <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> إدارة المطبخ</span>
             <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> فواتير ومدفوعات</span>
@@ -109,7 +109,7 @@ export default function Hero({ onNavigate }) {
               {PREVIEW_STATS.map(([value, label]) => (
                 <div key={label} className="rounded-2xl bg-[#1F2420] p-4 text-[#F3EFE5] transition hover:bg-[#2A3129]">
                   <div className="text-2xl font-black text-[#EEA122]">{value}</div>
-                  <div className="mt-1 text-[11px] text-[#F3EFE5]/55">{label}</div>
+                  <div className="mt-1 text-[11px] text-[#F3EFE5]/70">{label}</div>
                 </div>
               ))}
             </div>

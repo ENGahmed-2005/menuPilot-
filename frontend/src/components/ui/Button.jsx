@@ -11,7 +11,7 @@ const VARIANTS = {
   primary: "bg-copper text-ink hover:brightness-[0.93] active:brightness-90",
   secondary: "border border-line bg-surface text-ink hover:border-ink/25 hover:bg-surface-2",
   ghost: "text-ink-soft hover:bg-ink/[0.06] hover:text-ink",
-  dark: "bg-ink text-paper hover:bg-ink-soft",
+  dark: "bg-forest text-paper hover:bg-forest-deep",
   danger: "bg-brick text-paper hover:bg-brick/90",
 };
 

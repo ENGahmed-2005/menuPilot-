@@ -14,7 +14,7 @@ export default function Roles() {
         <h2 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl">
           كل دور له مساحة عمله.
         </h2>
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#F3EFE5]/55">
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#F3EFE5]/70">
           من الإدارة إلى المطبخ والكاشير والويتر — menuPilot يربط الفريق بنفس دورة الطلب.
         </p>
       </Reveal>
@@ -46,7 +46,7 @@ export default function Roles() {
                   <Icon size={22} />
                 </span>
                 <h3 className="mt-6 text-lg font-black">{title}</h3>
-                <p className="mt-2 text-sm leading-7 text-[#F3EFE5]/50">{text}</p>
+                <p className="mt-2 text-sm leading-7 text-[#F3EFE5]/70">{text}</p>
               </div>
 
               {/* bottom border accent on hover */}

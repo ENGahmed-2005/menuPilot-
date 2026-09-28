@@ -152,7 +152,7 @@ export default function KitchenDashboard() {
                 <ul className="flex-1 space-y-2 px-4 py-3">
                   {(o.items || []).map((item, index) => (
                     <li key={item.id || index} className="text-[0.95rem] leading-6">
-                      <span className="num ml-1.5 inline-grid min-w-7 place-items-center rounded-md bg-ink px-1.5 text-sm font-extrabold text-paper">{item.quantity}×</span>
+                      <span className="num ml-1.5 inline-grid min-w-7 place-items-center rounded-md bg-forest px-1.5 text-sm font-extrabold text-paper">{item.quantity}×</span>
                       <span className="font-bold text-ink">{item.name}</span>
                       {item.note && (
                         <span className="mt-1 flex items-start gap-1.5 rounded-lg bg-copper/10 px-2 py-1 text-sm font-bold text-copper-ink">

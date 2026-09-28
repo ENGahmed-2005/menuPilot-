@@ -20,7 +20,7 @@ export default function ValueStrip() {
               <Icon size={18} />
             </span>
             <span className="text-sm font-black text-[#F3EFE5]/90">{title}</span>
-            <span className="text-[11px] text-[#F3EFE5]/40">{sub}</span>
+            <span className="text-[11px] text-[#F3EFE5]/70">{sub}</span>
           </div>
         ))}
       </div>

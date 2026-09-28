@@ -2,7 +2,12 @@
 
 @theme {
   /* ── Brand (unchanged identity) ─────────────────────────────────────── */
-  --color-ink: #182920;          /* primary dark green: sidebar, headings */
+  --color-ink: #182920;          /* dark green TEXT on light surfaces (7.4:1+) */
+  /* Dark SURFACES (sidebar, headers, dark buttons, landing sections): a
+     lighter forest green than the text colour, so large areas don't feel
+     heavy. Cream text stays AAA (8.5:1); faint text needs ≥ 70% opacity. */
+  --color-forest: #264b3d;
+  --color-forest-deep: #1e3d31;  /* hover / pressed on forest */
   --color-ink-soft: #405047;     /* body text on light surfaces (7.4:1) */
   --color-paper: #f4efe6;        /* cream background */
   --color-paper-2: #f4efe6;
@@ -50,7 +55,7 @@
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { min-height: 100%; }
-body { margin: 0; background: var(--color-ink); color: var(--color-paper); font-family: var(--font-body); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { margin: 0; background: var(--color-forest); color: var(--color-paper); font-family: var(--font-body); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
 img, svg { display: block; max-width: 100%; }
 [dir="rtl"], .lang-ar { font-family: var(--font-arabic); }
@@ -88,7 +93,11 @@ img, svg { display: block; max-width: 100%; }
 [dir="rtl"] { text-rendering: optimizeLegibility; }
 
 /* Legacy palette aliases */
-.bg-\[\#1F2420\] { background-color: #182920 !important; }
+.bg-\[\#1F2420\] { background-color: var(--color-forest) !important; }
+.bg-\[\#1F2420\]\/98 { background-color: color-mix(in srgb, var(--color-forest) 98%, transparent) !important; }
+/* Landing footer / raised cards on dark: same family, lighter than before. */
+.bg-\[\#1A1E1B\] { background-color: var(--color-forest-deep) !important; }
+.bg-\[\#2A3129\] { background-color: #2b5345 !important; }
 .bg-\[\#EEA122\] { background-color: #E67E22 !important; }
 .bg-\[\#E67E22\] { background-color: #E67E22 !important; }
 .bg-\[\#F3EFE5\] { background-color: #F4EFE6 !important; }
