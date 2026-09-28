@@ -2,7 +2,7 @@ import { ROLES } from "./data";
 import Reveal from "./Reveal";
 
 /* One accent colour per role for visual distinction */
-const ACCENTS = ["#EEA122", "#5B7A52", "#4A7FA5", "#8B6FB5"];
+const ACCENTS = ["#EEA122", "#4B6A8A", "#4A7FA5", "#8B6FB5"];
 
 export default function Roles() {
   return (

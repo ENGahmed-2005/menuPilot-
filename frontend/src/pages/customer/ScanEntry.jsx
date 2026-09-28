@@ -87,7 +87,7 @@ export default function ScanEntry() {
         <div className="grid w-full overflow-hidden rounded-[2rem] border border-[#4B5147]/10 bg-white shadow-[0_30px_100px_rgba(31,36,32,.12)] lg:min-h-[680px] lg:grid-cols-[.92fr_1.08fr]">
           <aside className="relative hidden overflow-hidden bg-[#1F2420] p-10 text-[#F3EFE5] lg:flex lg:flex-col lg:justify-between xl:p-14">
             <div className="absolute -right-28 -top-28 h-80 w-80 rounded-full bg-[#EEA122]/15 blur-3xl" />
-            <div className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-[#5B7A52]/20 blur-3xl" />
+            <div className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-[#4B6A8A]/20 blur-3xl" />
 
             <div className="relative z-10">
               <div dir="ltr"><BrandLogo on="dark" height={40} priority /></div>
@@ -124,8 +124,8 @@ export default function ScanEntry() {
               </div>
 
               <div className="mb-8">
-                <div className="mb-4 flex items-center gap-2 text-xs font-bold text-[#5B7A52]">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5B7A52]/10">
+                <div className="mb-4 flex items-center gap-2 text-xs font-bold text-[#4B6A8A]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#4B6A8A]/10">
                     <Check size={14} />
                   </span>
                   الخطوة 1 من 1

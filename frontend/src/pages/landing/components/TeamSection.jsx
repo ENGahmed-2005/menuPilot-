@@ -52,7 +52,7 @@ export default function TeamSection() {
               key={name}
               className={`group rounded-2xl border border-[#F3EFE5]/10 bg-[#F3EFE5]/[0.035] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#EEA122]/40 hover:bg-[#F3EFE5]/[0.06] ${index === 0 ? "lg:col-span-2" : ""}`}
             >
-              <div className="mb-8 flex h-11 w-11 items-center justify-center rounded-xl bg-[#EEA122]/15 text-[#EEA122] transition group-hover:bg-[#EEA122] group-hover:text-[#1F2420]">
+              <div className="mb-8 flex h-11 w-11 items-center justify-center rounded-xl bg-[#EEA122]/15 text-[#EEA122] transition group-hover:bg-[#EEA122] group-hover:text-[#172331]">
                 <Icon size={21} strokeWidth={1.8} />
               </div>
               <h3 className="text-lg font-bold text-[#F3EFE5]">{name}</h3>

@@ -10,9 +10,9 @@ import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
 const ToastContext = createContext(null);
 const TONES = {
-  success: { icon: CheckCircle2, box: "bg-forest text-paper", iconClass: "text-copper" },
+  success: { icon: CheckCircle2, box: "bg-navy text-paper", iconClass: "text-copper" },
   error: { icon: AlertCircle, box: "bg-brick text-paper", iconClass: "text-paper" },
-  info: { icon: Info, box: "bg-forest text-paper", iconClass: "text-paper/80" },
+  info: { icon: Info, box: "bg-navy text-paper", iconClass: "text-paper/80" },
 };
 
 export function ToastProvider({ children }) {

@@ -11,7 +11,7 @@ const FEATURES = [
 export default function AuthLayout({ eyebrow, title, subtitle, children }) {
   return (
     <div dir="rtl" className="flex min-h-screen flex-col bg-paper-2 font-body lg:flex-row">
-      <aside className="relative flex flex-col justify-between overflow-hidden bg-forest px-8 py-10 text-paper lg:w-[42%] lg:px-14 lg:py-16">
+      <aside className="relative flex flex-col justify-between overflow-hidden bg-navy px-8 py-10 text-paper lg:w-[42%] lg:px-14 lg:py-16">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, #F3EFE5 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
 
         <div className="relative">

@@ -32,7 +32,7 @@ export default function Navbar({ onNavigate }) {
         <header
           style={{
             borderRadius: scrolled ? "16px" : "0px",
-            background: scrolled ? "rgba(38,75,61,0.96)" : "rgba(38,75,61,0)", // forest
+            background: scrolled ? "rgba(31,45,61,0.96)" : "rgba(31,45,61,0)", // forest
             boxShadow: scrolled ? "0 8px 32px rgba(0,0,0,0.28)" : "none",
             borderBottom: scrolled ? "1px solid rgba(243,239,229,0.10)" : "1px solid rgba(243,239,229,0.08)",
             backdropFilter: scrolled ? "blur(20px)" : "blur(12px)",
@@ -84,7 +84,7 @@ export default function Navbar({ onNavigate }) {
               </button>
               <button
                 onClick={() => go("/register")}
-                className="rounded-full bg-[#EEA122] px-5 py-2.5 text-sm font-black text-[#1F2420] transition-all duration-200 hover:bg-[#E67E22] active:scale-95"
+                className="rounded-full bg-[#EEA122] px-5 py-2.5 text-sm font-black text-[#172331] transition-all duration-200 hover:bg-[#E67E22] active:scale-95"
               >
                 جرّب مجانًا 14 يومًا
               </button>
@@ -102,7 +102,7 @@ export default function Navbar({ onNavigate }) {
 
           {/* Mobile drawer */}
           {mobileOpen && (
-            <div className="border-t border-[#F3EFE5]/8 bg-[#1F2420]/98 px-5 py-5 backdrop-blur-xl md:hidden"
+            <div className="border-t border-[#F3EFE5]/8 bg-navy/98 px-5 py-5 backdrop-blur-xl md:hidden"
               style={{ borderBottomLeftRadius: scrolled ? "16px" : "0", borderBottomRightRadius: scrolled ? "16px" : "0" }}
             >
               <nav className="flex flex-col gap-1">
@@ -119,7 +119,7 @@ export default function Navbar({ onNavigate }) {
               </nav>
               <div className="mt-4 flex flex-col gap-2 border-t border-[#F3EFE5]/8 pt-4">
                 <button onClick={() => go("/login")} className="rounded-xl border border-[#F3EFE5]/12 px-4 py-3 text-sm font-semibold text-[#F3EFE5]/80 transition hover:bg-[#F3EFE5]/5">تسجيل الدخول</button>
-                <button onClick={() => go("/register")} className="rounded-xl bg-[#EEA122] px-4 py-3 text-sm font-black text-[#1F2420] transition hover:bg-[#E67E22]">جرّب مجانًا 14 يومًا</button>
+                <button onClick={() => go("/register")} className="rounded-xl bg-[#EEA122] px-4 py-3 text-sm font-black text-[#172331] transition hover:bg-[#E67E22]">جرّب مجانًا 14 يومًا</button>
               </div>
             </div>
           )}
