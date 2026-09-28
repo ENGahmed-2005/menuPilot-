@@ -6,6 +6,7 @@ use App\Mail\ResetPasswordLink;
 use App\Models\Staff;
 use App\Models\User;
 use App\Support\Permissions;
+use App\Support\SubscriptionAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -38,20 +39,26 @@ class AuthController extends Controller
         $v = $v->validate();
 
         $token = Str::random(60);
-        $now = now();
-        $u = User::create([
-            'name' => $v['restaurant_name'],
-            'restaurant_name' => $v['restaurant_name'],
-            'email' => $email,
-            'password' => Hash::make($v['password']),
-            'plan' => 'trial',
-            'trial_started_at' => $now,
-            'trial_ends_at' => $now->copy()->addDays(14),
-            'role' => 'owner',
-            'api_token' => hash('sha256', $token),
-            'login_failed_attempts' => 0,
-            'login_locked_until' => null,
-        ]);
+        // Owner, restaurant and free trial are created together or not at all.
+        // Trial dates come from config/subscriptions.php; request values
+        // (plan, trial_ends_at, status…) are ignored.
+        $u = DB::transaction(function () use ($v, $email, $token) {
+            $u = User::create([
+                'name' => $v['restaurant_name'],
+                'restaurant_name' => $v['restaurant_name'],
+                'email' => $email,
+                'password' => Hash::make($v['password']),
+                'role' => 'owner',
+                'api_token' => hash('sha256', $token),
+                'login_failed_attempts' => 0,
+                'login_locked_until' => null,
+            ]);
+            SubscriptionAccess::startTrial($u);
+
+            return $u->fresh();
+        });
+        $u->setAttribute('permissions', Permissions::for($u));
+        $u->setAttribute('subscription', SubscriptionAccess::for($u)->toArray());
 
         return $this->out(['token' => $token, 'user' => $u], 201);
     }
@@ -107,6 +114,7 @@ class AuthController extends Controller
         ]);
 
         $u->setAttribute('permissions', Permissions::for($u));
+        $u->setAttribute('subscription', SubscriptionAccess::for($u)->sync()->toArray());
 
         return $this->out(['token' => $token, 'user' => $u]);
     }
@@ -126,6 +134,8 @@ class AuthController extends Controller
         $u->load('restaurantSetting');
         // The frontend mirrors these to hide actions; the API enforces them.
         $u->setAttribute('permissions', Permissions::for($u));
+        // Server-computed trial/subscription state (the UI never computes it).
+        $u->setAttribute('subscription', SubscriptionAccess::for($u)->sync()->toArray());
 
         return $this->out($u);
     }

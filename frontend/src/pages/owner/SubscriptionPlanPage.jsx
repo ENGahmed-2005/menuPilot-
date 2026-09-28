@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "../../components/ui/Toast";
 import { Check, Crown, Loader2, Lock, Palette, ArrowUpRight, ShieldAlert, X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getSubscriptionPlan, hasPlanFeature, SUBSCRIPTION_PLANS } from "../../config/subscriptions";
@@ -48,6 +49,7 @@ function ConfirmPlanModal({ plan, isUpgrade, onConfirm, onCancel, loading }) {
 }
 
 export default function SubscriptionPlanPage() {
+  const toast = useToast();
   const { planId = "pro" } = useParams();
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
@@ -61,9 +63,11 @@ export default function SubscriptionPlanPage() {
   async function handleConfirmSwitch() {
     setSwitching(true);
     try {
+      // The server records the request; the plan is activated once payment is confirmed.
       const updated = await changePlan(planId);
       updateUser(updated);
       setConfirmOpen(false);
+      toast.success("سجّلنا اختيارك للخطة، وستُفعَّل فور تأكيد الدفع.");
       navigate("/owner/dashboard");
     } finally {
       setSwitching(false);

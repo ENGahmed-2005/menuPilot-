@@ -12,6 +12,7 @@ import Input from "../../components/ui/Input";
 import Alert from "../../components/ui/Alert";
 import { SkeletonCards } from "../../components/ui/Skeleton";
 import { useConfirm } from "../../components/ui/ConfirmDialog";
+import { useSubscription } from "../../hooks/useSubscription";
 import { errorText } from "../../utils/errors";
 import { money } from "../../utils/format";
 import Button from "../../components/ui/Button";
@@ -40,6 +41,7 @@ const MAX_IMAGE_MB = 3;
 export default function MenuManagement() {
   const [confirm, confirmDialog] = useConfirm();
   const [adding, setAdding] = useState(false);
+  const { canOperate } = useSubscription();
   const [notice, setNotice] = useState("");
   const { user } = useAuth();
   const plan = getSubscriptionPlan(user?.plan);
@@ -274,7 +276,7 @@ export default function MenuManagement() {
 
           {imageError && <span className="text-xs text-brick">{imageError}</span>}
 
-          <Button type="submit" disabled={atLimit} loading={adding} className="mr-auto">
+          <Button type="submit" disabled={atLimit || !canOperate} loading={adding} className="mr-auto">
             {!adding && <Plus size={16} aria-hidden="true" />}
             إضافة الصنف
           </Button>

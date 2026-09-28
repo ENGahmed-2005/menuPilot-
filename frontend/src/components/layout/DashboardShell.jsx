@@ -8,6 +8,7 @@
 import { useAuth } from "../../context/AuthContext";
 import { resolveThemeVars } from "../../config/themes";
 import Sidebar from "./Sidebar";
+import TrialBanner from "../subscription/TrialBanner";
 
 export default function DashboardShell({ children }) {
   const { user } = useAuth();
@@ -20,7 +21,7 @@ export default function DashboardShell({ children }) {
       </a>
       <Sidebar />
       <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-8">
-        <div className="mx-auto max-w-7xl">{children}</div>
+        <div className="mx-auto max-w-7xl"><TrialBanner />{children}</div>
       </main>
     </div>
   );
