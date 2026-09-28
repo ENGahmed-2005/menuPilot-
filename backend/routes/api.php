@@ -16,6 +16,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\SubscriptionPaymentController;
 use App\Http\Controllers\TableController;
 use Illuminate\Support\Facades\Route;
 
@@ -144,6 +145,9 @@ Route::middleware('api.auth')->group(function () {
         Route::get('me/restaurant', [AccountController::class, 'show'])->middleware('permission:manage_restaurant');
         Route::patch('me/restaurant', [AccountController::class, 'updateRestaurant'])->middleware('permission:manage_restaurant');
         Route::patch('me/plan', [AccountController::class, 'plan'])->middleware('permission:manage_subscription');
+        // Paying for a plan by bank transfer (never gated by the subscription itself).
+        Route::get('subscription', [SubscriptionPaymentController::class, 'show'])->middleware('permission:manage_subscription');
+        Route::post('subscription/payments', [SubscriptionPaymentController::class, 'store'])->middleware(['permission:manage_subscription', 'throttle:10,1']);
         Route::patch('me/theme', [AccountController::class, 'theme'])->middleware('permission:manage_branding');
         Route::get('me/branding', [BrandingController::class, 'show'])->middleware('permission:manage_branding');
         Route::post('me/branding', [BrandingController::class, 'update'])->middleware('permission:manage_branding');
@@ -162,6 +166,9 @@ Route::middleware('api.auth')->group(function () {
         Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
         Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);
         Route::post('admin/restaurants/{id}/subscription/cancel', [AdminController::class, 'cancelSubscription']);
+        Route::get('admin/subscription-payments', [SubscriptionPaymentController::class, 'adminIndex']);
+        Route::post('admin/subscription-payments/{id}/verify', [SubscriptionPaymentController::class, 'verify']);
+        Route::post('admin/subscription-payments/{id}/reject', [SubscriptionPaymentController::class, 'reject']);
         Route::patch('admin/owners/{id}', [AdminController::class, 'updateOwner']);
         Route::patch('admin/owners/{id}/status', [AdminController::class, 'ownerStatus']);
         Route::get('admin/audit-logs', [AuditLogController::class, 'admin']);

@@ -31,7 +31,9 @@ export default function TrialBanner() {
                 {phase === "cancelled" ? "أُوقف اشتراك المطعم." : `انتهت تجربتك المجانية لمدة ${trialDays} يومًا.`} بيانات مطعمك محفوظة، لكن بعض الميزات التشغيلية متوقفة
                 (الطلبات الجديدة، والطاولات، والمنيو، وإضافة الموظفين).
               </p>
-              {s.requested_plan && <p className="mt-1 text-sm font-bold text-herb">طلبت خطة «{s.requested_plan}»، وستُفعَّل فور تأكيد الدفع.</p>}
+              {s.payment_pending
+                ? <p className="mt-1 text-sm font-bold text-herb">استلمنا بيانات تحويلك، ونفعّل الاشتراك فور التحقق من وصوله.</p>
+                : s.requested_plan && <p className="mt-1 text-sm font-bold text-herb">طلبت خطة «{s.requested_plan}». أكمل التحويل وأبلغنا به لتفعيلها.</p>}
               {!owner && <p className="mt-1 text-sm font-bold text-ink">تواصل مع صاحب المطعم لتجديد الاشتراك.</p>}
             </div>
           </div>

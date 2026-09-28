@@ -6,6 +6,7 @@ use App\Events\SubscriptionLifecycleEvent;
 use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The one place that decides a restaurant's subscription state and what it
@@ -189,6 +190,7 @@ class SubscriptionAccess
             'phase' => $this->phase(),
             'plan' => $o?->plan,
             'requested_plan' => $o?->requested_plan,
+            'payment_pending' => $o ? DB::table('subscription_payments')->where('user_id', $o->id)->where('status', 'pending')->exists() : false,
             'trial_started_at' => $o?->trial_started_at?->toIso8601String(),
             'trial_ends_at' => $o?->trial_ends_at?->toIso8601String(),
             'trial_days' => $trialDays,
