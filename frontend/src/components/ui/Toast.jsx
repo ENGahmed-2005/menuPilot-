@@ -2,7 +2,8 @@
    Toast.jsx — short confirmations after an action ("تم إغلاق الجلسة").
    Provider is mounted once in DashboardShell; pages call useToast().
      const toast = useToast(); toast.success("…"); toast.error("…");
-   Announced politely to screen readers, auto-dismiss after 4 s.
+   Top of the screen on phones (never covers a bottom cart/action bar),
+   bottom-left on larger screens. Announced politely, auto-dismiss after 4 s.
    ========================================================================== */
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
@@ -34,7 +35,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-4 z-[70] flex flex-col items-center gap-2 sm:inset-x-auto sm:left-6 sm:items-start">
+      <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-4 top-[calc(1rem+env(safe-area-inset-top,0px))] z-[70] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-6 sm:left-6 sm:top-auto sm:items-start">
         {toasts.map((t) => {
           const { icon: Icon, box, iconClass } = TONES[t.tone] || TONES.info;
           return (
