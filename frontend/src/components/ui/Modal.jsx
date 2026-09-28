@@ -2,15 +2,15 @@
    Modal.jsx — accessible dialog.
    Esc and backdrop close it, focus moves inside on open and returns to the
    trigger on close, Tab stays inside, and the page behind doesn't scroll.
-   size: sm | md | lg
+   size: sm | md | lg | xl
    ========================================================================== */
 import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
-const SIZES = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-2xl" };
+const SIZES = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-2xl", xl: "max-w-5xl" };
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-export default function Modal({ open, onClose, title, description, size = "md", footer, children }) {
+export default function Modal({ open, onClose, title, description, size = "md", footer, bodyClassName = "px-6 py-5", children }) {
   const panelRef = useRef(null);
   const titleId = useId();
   const descId = useId();
@@ -64,7 +64,7 @@ export default function Modal({ open, onClose, title, description, size = "md", 
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <div className="overflow-y-auto px-6 py-5">{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto ${bodyClassName}`}>{children}</div>
         {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-6 py-4">{footer}</div>}
       </div>
     </div>
