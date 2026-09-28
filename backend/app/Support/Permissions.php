@@ -61,6 +61,9 @@ class Permissions
         'kitchen' => ['view_orders', 'manage_orders', 'view_menu'],
     ];
 
+    /** A manager starts read-only; the owner grants management explicitly. */
+    public const MANAGER_DEFAULTS = ['view_dashboard', 'view_tables', 'view_orders', 'view_menu', 'view_payments', 'view_reports'];
+
     public const STAFF_ROLES = ['manager', 'cashier', 'waiter', 'kitchen'];
 
     public static function all(): array
@@ -82,7 +85,7 @@ class Permissions
     public static function defaultsFor(string $role): array
     {
         if ($role === 'manager') {
-            return self::assignable();
+            return self::MANAGER_DEFAULTS;
         }
 
         return self::ROLE_DEFAULTS[$role] ?? [];
@@ -94,8 +97,10 @@ class Permissions
         if (isset($user->is_active) && ! $user->is_active) {
             return [];
         }
+        // The platform admin runs the platform, not restaurants: no implicit
+        // access to any restaurant's tables, orders, payments or staff.
         if ($user->role === 'admin') {
-            return self::all();
+            return self::PLATFORM;
         }
         if ($user->role === 'owner') {
             return self::restaurant();

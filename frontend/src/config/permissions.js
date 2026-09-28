@@ -37,14 +37,16 @@ export const PERMISSION_LABELS = {
   manage_admin: "إدارة المنصة",
 };
 
-const ALL = Object.keys(PERMISSION_LABELS);
-const RESTAURANT = ALL.filter((p) => !["manage_users", "manage_admin"].includes(p));
+const RESTAURANT = Object.keys(PERMISSION_LABELS).filter((p) => !["manage_users", "manage_admin"].includes(p));
 export const ASSIGNABLE = RESTAURANT.filter((p) => p !== "manage_subscription");
 
+// Mirrors App\Support\Permissions: admin = platform only; a manager starts
+// read-only and the owner grants management permissions explicitly.
+export const MANAGER_DEFAULTS = ["view_dashboard", "view_tables", "view_orders", "view_menu", "view_payments", "view_reports"];
 export const ROLE_DEFAULTS = {
-  admin: ALL,
+  admin: ["manage_users", "manage_admin"],
   owner: RESTAURANT,
-  manager: ASSIGNABLE,
+  manager: MANAGER_DEFAULTS,
   cashier: ["view_dashboard", "view_tables", "view_orders", "view_menu", "view_payments", "verify_payments", "record_payment", "adjust_bill", "close_session", "cancel_orders", "reassign_orders", "handle_assistance"],
   waiter: ["view_tables", "view_orders", "view_menu", "cancel_orders", "reassign_orders", "handle_assistance"],
   kitchen: ["view_orders", "manage_orders", "view_menu"],

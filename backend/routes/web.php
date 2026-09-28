@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,9 +21,21 @@ Route::get('/', function () {
     ]);
 });
 
+// Used by Render and scripts/smoke-test.mjs. Checks the database too, so a
+// refused MySQL connection shows up as 503 instead of a false "ok". Never
+// includes connection details or error text in the response.
 Route::get('/health', function () {
+    try {
+        DB::select('select 1');
+        $database = 'ok';
+    } catch (Throwable $e) {
+        Log::error('health: database unavailable', ['error' => $e->getMessage()]);
+        $database = 'unavailable';
+    }
+
     return response()->json([
-        'status' => 'ok',
+        'status' => $database === 'ok' ? 'ok' : 'degraded',
         'service' => 'backend',
-    ]);
+        'database' => $database,
+    ], $database === 'ok' ? 200 : 503);
 });

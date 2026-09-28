@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RestaurantSetting;
 use App\Models\Staff;
+use App\Support\Audit;
 use App\Support\MediaStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,12 @@ use Illuminate\Support\Str;
 
 class MenuController extends Controller
 {
+    /** Audit a menu_item change for this restaurant (secrets never included). */
+    private function auditChange(Request $request, string $action, $id, array $metadata = []): void
+    {
+        Audit::log($request, $action, 'menu_item', $id === null ? null : (int) $id, $metadata, $this->restaurantId($request));
+    }
+
     private function out($d, $s = 200)
     {
         return response()->json(['data' => $d], $s);
@@ -133,11 +140,16 @@ class MenuController extends Controller
             'updated_at' => now(),
         ]);
 
+        $this->auditChange($r, 'menu_item.created', $id, array_intersect_key($r->all(), array_flip(['name', 'price', 'category', 'description', 'is_available', 'prep_time_minutes', 'prepTimeMinutes'])));
+
         return $this->out($this->normalizeItem(DB::table('menu_items')->find($id)), 201);
     }
 
     public function update(Request $r, $id)
     {
+        // Before-values for the audit trail.
+        $auditBefore = (array) ($this->q($r)->where('id', $id)->first() ?? []);
+
         $item = $this->q($r)->find($id);
         if (! $item) {
             return response()->json(['message' => 'Menu item not found'], 404);
@@ -180,11 +192,16 @@ class MenuController extends Controller
         $data['updated_at'] = now();
         $this->q($r)->where('id', $id)->update($data);
 
+        $auditKeys = array_intersect(array_keys($r->all()), ['name', 'price', 'category', 'description', 'is_available', 'prep_time_minutes', 'prepTimeMinutes']);
+        $this->auditChange($r, 'menu_item.updated', $id, ['before' => array_intersect_key($auditBefore, array_flip($auditKeys)), 'after' => array_intersect_key($r->all(), array_flip($auditKeys))]);
+
         return $this->out($this->normalizeItem(DB::table('menu_items')->find($id)));
     }
 
     public function destroy(Request $r, $id)
     {
+        $auditBefore = (array) ($this->q($r)->where('id', $id)->first() ?? []);
+
         $item = $this->q($r)->where('id', $id)->first();
         if (! $item) {
             return response()->json(['message' => 'Menu item not found'], 404);
@@ -197,6 +214,8 @@ class MenuController extends Controller
             'deleted_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $this->auditChange($r, 'menu_item.deleted', $id, array_intersect_key($auditBefore, array_flip(['name', 'price', 'category', 'description', 'is_available', 'prep_time_minutes', 'prepTimeMinutes'])));
 
         return $this->out(['message' => 'Deleted']);
     }

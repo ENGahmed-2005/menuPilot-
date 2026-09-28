@@ -4,10 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\MenuCategory;
 use App\Models\Staff;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 
 class MenuCategoryController extends Controller
 {
+    /** Audit a menu_category change for this restaurant (secrets never included). */
+    private function auditChange(Request $request, string $action, $id, array $metadata = []): void
+    {
+        Audit::log($request, $action, 'menu_category', $id === null ? null : (int) $id, $metadata, $this->restaurantId($request));
+    }
+
     private function restaurantId(Request $request): int
     {
         $user = $request->user();
@@ -46,6 +53,8 @@ class MenuCategoryController extends Controller
             'name' => trim($data['name']),
         ]);
 
+        $this->auditChange($request, 'menu_category.created', $category->id, ['name' => $category->name]);
+
         return response()->json(['data' => $category], 201);
     }
 
@@ -71,6 +80,8 @@ class MenuCategoryController extends Controller
 
         $category->update(['name' => trim($data['name'])]);
 
+        $this->auditChange($request, 'menu_category.updated', $category->id, ['after' => $category->only(['name', 'sort_order', 'is_active'])]);
+
         return response()->json(['data' => $category]);
     }
 
@@ -82,6 +93,8 @@ class MenuCategoryController extends Controller
         }
 
         $category->delete();
+
+        $this->auditChange($request, 'menu_category.deleted', (int) $id);
 
         return response()->json(['data' => ['message' => 'Deleted']]);
     }

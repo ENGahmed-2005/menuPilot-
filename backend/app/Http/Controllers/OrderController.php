@@ -35,7 +35,7 @@ class OrderController extends Controller
             ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
             ->where('order_items.id', $itemId)
             ->where('restaurant_tables.user_id', $restaurantId)
-            ->select('order_items.*', 'orders.dining_session_id', 'orders.status as order_status')
+            ->select('order_items.*', 'orders.dining_session_id', 'orders.status as order_status', 'dining_sessions.closed_at as session_closed_at')
             ->first();
     }
 
@@ -286,6 +286,9 @@ class OrderController extends Controller
         if (! $item) {
             return response()->json(['message' => 'Order item not found'], 404);
         }
+        if ($item->session_closed_at) {
+            return response()->json(['message' => 'هذه الجلسة مغلقة وفاتورتها مسجلة، ولا يمكن تعديل طلباتها.', 'code' => 'SESSION_CLOSED'], 409);
+        }
         if ($item->status === 'cancelled') {
             return response()->json(['message' => 'This item is already cancelled.'], 409);
         }
@@ -323,6 +326,9 @@ class OrderController extends Controller
         }
 
         $order = DB::table('orders')->find($id);
+        if (DB::table('dining_sessions')->where('id', $order->dining_session_id)->value('closed_at')) {
+            return response()->json(['message' => 'هذه الجلسة مغلقة وفاتورتها مسجلة، ولا يمكن تعديل طلباتها.', 'code' => 'SESSION_CLOSED'], 409);
+        }
         if (in_array($order->status, ['served', 'cancelled'], true)) {
             return response()->json(['message' => 'لا يمكن إلغاء طلب تم تقديمه أو إلغاؤه مسبقًا.', 'code' => 'ORDER_NOT_CANCELLABLE'], 409);
         }
