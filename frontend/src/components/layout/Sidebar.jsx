@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import BrandLogo from "../brand/Logo";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  BarChart3, Bell, ChefHat, ClipboardList, Crown, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
+  BarChart3, Bell, ChefHat, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
   QrCode, Receipt, Settings, Sparkles, UtensilsCrossed, Users, X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -33,6 +33,7 @@ const NAV = {
       ["/owner/menu", "المنيو", UtensilsCrossed, "menu", "manage_menu"],
       ["/owner/staff", "الفريق والصلاحيات", Users, null, "manage_staff"],
       ["/owner/reports", "التقارير", BarChart3, "reports", "view_reports"],
+      ["/owner/accounting", "المحاسبة والتصدير", FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
     ] },
     { title: "الهوية والإعدادات", links: [
       ["/owner/theme", "ألوان اللوحة", Sparkles, "theme-presets", "manage_branding"],
@@ -47,12 +48,14 @@ const NAV = {
       ["/owner/tables", "الطاولات ورموز QR", QrCode, "tables", "manage_tables"],
       ["/owner/menu", "المنيو", UtensilsCrossed, "menu", "manage_menu"],
       ["/owner/staff", "الفريق والصلاحيات", Users, null, "manage_staff"],
+      ["/owner/accounting", "المحاسبة والتصدير", FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
     ] },
   ],
   kitchen: [{ links: [["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"]] }],
   cashier: [{ links: [
     ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
     ["/cashier/reports", "تقارير المبيعات", BarChart3, "cashier", "view_reports|view_payments"],
+    ["/owner/accounting", "المحاسبة والتصدير", FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
   ] }],
   waiter: [{ links: [["/waiter", "الطاولات والطلبات", HandPlatter, "waiter", "view_tables"]] }],
   admin: [

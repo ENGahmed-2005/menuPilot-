@@ -119,6 +119,7 @@ class MenuController extends Controller
             'description' => 'nullable|string',
             'imageUrl' => 'nullable|string',
             'prepTimeMinutes' => 'nullable|integer|min:1|max:240',
+            'sku' => 'nullable|string|max:64',
         ], ['price.gt' => 'Price must be greater than zero.']);
 
         try {
@@ -136,6 +137,7 @@ class MenuController extends Controller
             'image_url' => $imageUrl,
             'is_available' => true,
             'prep_time_minutes' => $v['prepTimeMinutes'] ?? 15,
+            'sku' => $v['sku'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -163,10 +165,11 @@ class MenuController extends Controller
             'imageUrl' => 'nullable|string',
             'is_available' => 'sometimes|boolean',
             'prepTimeMinutes' => 'sometimes|nullable|integer|min:1|max:240',
+            'sku' => 'sometimes|nullable|string|max:64',
         ], ['price.gt' => 'Price must be greater than zero.']);
 
         $data = [];
-        foreach (['name', 'price', 'category', 'description', 'is_available'] as $k) {
+        foreach (['name', 'price', 'category', 'description', 'is_available', 'sku'] as $k) {
             if (array_key_exists($k, $v)) {
                 $data[$k] = $v[$k];
             }
