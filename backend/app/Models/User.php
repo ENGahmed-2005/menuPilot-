@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SubscriptionAccess;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -26,6 +27,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'is_active' => 'boolean',
             'last_active_at' => 'datetime',
+            'subscription_cancelled_at' => 'datetime',
+            'plan_requested_at' => 'datetime',
+            'subscription_notices' => 'array',
             'password' => 'hashed',
             'theme' => 'array',
             'payment_methods' => 'array',
@@ -39,20 +43,47 @@ class User extends Authenticatable
         ];
     }
 
-    public function restaurantTables() { return $this->hasMany(RestaurantTable::class); }
-    public function menuItems() { return $this->hasMany(MenuItem::class); }
-    public function staff() { return $this->hasMany(Staff::class); }
-    public function orders() { return $this->hasMany(Order::class); }
-    public function billAdjustments() { return $this->hasMany(BillAdjustment::class, 'cashier_id'); }
-    public function restaurantSetting() { return $this->hasOne(RestaurantSetting::class); }
+    public function restaurantTables()
+    {
+        return $this->hasMany(RestaurantTable::class);
+    }
 
+    public function menuItems()
+    {
+        return $this->hasMany(MenuItem::class);
+    }
+
+    public function staff()
+    {
+        return $this->hasMany(Staff::class);
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function billAdjustments()
+    {
+        return $this->hasMany(BillAdjustment::class, 'cashier_id');
+    }
+
+    public function restaurantSetting()
+    {
+        return $this->hasOne(RestaurantSetting::class);
+    }
+
+    /**
+     * Kept for existing callers. It used to turn an expired trial into a free
+     * 'basic' plan (so trials never expired); the state is now computed by
+     * App\Support\SubscriptionAccess and nothing is converted here.
+     */
     public function refreshSubscriptionStatus(): self
     {
-        if ($this->role === 'admin') return $this;
-        if ($this->plan === 'trial' && $this->trial_ends_at && now()->gte($this->trial_ends_at)) {
-            $this->plan = 'basic';
-            $this->saveQuietly();
+        if ($this->role === 'owner') {
+            SubscriptionAccess::for($this)->sync();
         }
+
         return $this->refresh();
     }
 
@@ -63,23 +94,25 @@ class User extends Authenticatable
 
     public function subscriptionActive(): bool
     {
-        return in_array($this->plan, ['basic','pro','premium'], true)
-            && (!$this->subscription_ends_at || now()->lt($this->subscription_ends_at));
+        return in_array($this->plan, ['basic', 'pro', 'premium'], true)
+            && (! $this->subscription_ends_at || now()->lt($this->subscription_ends_at));
     }
 
     public function hasFeature(string $feature): bool
     {
-        if ($this->role === 'admin' || $this->trialActive()) return true;
+        if ($this->role === 'admin' || $this->trialActive()) {
+            return true;
+        }
 
         return match ($feature) {
-            'branding' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
-            'background' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
-            'full-colors' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
+            'branding' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
+            'background' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
+            'full-colors' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
             'custom-font' => $this->plan === 'premium' && $this->subscriptionActive(),
             'remove-branding' => $this->plan === 'premium' && $this->subscriptionActive(),
-            'theme-presets' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
+            'theme-presets' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
             'custom-theme' => $this->plan === 'premium' && $this->subscriptionActive(),
-            'presets' => in_array($this->plan, ['pro','premium'], true) && $this->subscriptionActive(),
+            'presets' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
             default => false,
         };
     }

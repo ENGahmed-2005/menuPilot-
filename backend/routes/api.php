@@ -33,7 +33,8 @@ Route::prefix('auth')->group(function () {
 Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
 // SRS-compatible public QR menu endpoint. Alias of the table-code menu route.
 Route::get('menu/{table_token}', [MenuController::class, 'publicMenu']);
-Route::post('public/tables/{code}/sessions', [SessionController::class, 'open']);
+// New table sessions stop in restricted mode (trial ended / subscription stopped).
+Route::post('public/tables/{code}/sessions', [SessionController::class, 'open'])->middleware('subscription:table');
 // Customer (no login) session endpoints. They require the session secret
 // issued when the QR session opens (X-Session-Token header, or ?token= for SSE).
 Route::middleware('session.token')->group(function () {
@@ -41,11 +42,11 @@ Route::middleware('session.token')->group(function () {
     Route::patch('public/sessions/{id}/customer', [SessionController::class, 'updateCustomer']);
     Route::get('public/sessions/{id}/orders', [OrderController::class, 'session']);
     // US-10: submit an order for an open dining session. SRS alias below.
-    Route::post('public/sessions/{id}/orders', [OrderController::class, 'submit'])->middleware('throttle:30,1');
-    Route::post('sessions/{id}/orders', [OrderController::class, 'submit'])->middleware('throttle:30,1');
+    Route::post('public/sessions/{id}/orders', [OrderController::class, 'submit'])->middleware(['throttle:30,1', 'subscription:session']);
+    Route::post('sessions/{id}/orders', [OrderController::class, 'submit'])->middleware(['throttle:30,1', 'subscription:session']);
     Route::get('public/sessions/{id}/orders/stream', [OrderController::class, 'stream']);
     Route::get('public/sessions/{id}/payment-options', [PaymentController::class, 'options']);
-    Route::post('public/sessions/{id}/payment', [PaymentController::class, 'submit'])->middleware('throttle:20,1');
+    Route::post('public/sessions/{id}/payment', [PaymentController::class, 'submit'])->middleware(['throttle:20,1', 'subscription:session']); // creates an order
     Route::post('public/sessions/{id}/assistance-requests', [SessionController::class, 'assistance'])->middleware('throttle:10,1');
     Route::post('public/sessions/{id}/bill-request', [BillingController::class, 'request'])->middleware('throttle:10,1');
     // The guest's own itemised bill (read-only).
@@ -68,16 +69,25 @@ Route::middleware('api.auth')->group(function () {
     Route::get('permissions', [PermissionController::class, 'catalog']);
 
     Route::middleware('permission:manage_menu')->group(function () {
-        Route::apiResource('menu-items', MenuController::class)->except(['show', 'create']);
-        Route::apiResource('menu-categories', MenuCategoryController::class)->except(['show', 'create']);
+        // Reading the menu stays open; changing it is operational.
+        Route::get('menu-items', [MenuController::class, 'index']);
+        Route::get('menu-categories', [MenuCategoryController::class, 'index']);
+        Route::middleware('subscription')->group(function () {
+            Route::apiResource('menu-items', MenuController::class)->except(['show', 'create', 'index']);
+            Route::apiResource('menu-categories', MenuCategoryController::class)->except(['show', 'create', 'index']);
+        });
     });
     Route::middleware('permission:manage_tables')->group(function () {
-        Route::apiResource('tables', TableController::class)->except(['show', 'create', 'index']);
-        Route::get('tables/{id}/qr', [TableController::class, 'qr']);
-        Route::patch('tables/{id}/status', [TableController::class, 'updateStatus']);
+        Route::middleware('subscription')->group(function () {
+            Route::apiResource('tables', TableController::class)->except(['show', 'create', 'index']);
+            Route::get('tables/{id}/qr', [TableController::class, 'qr']);
+            Route::patch('tables/{id}/status', [TableController::class, 'updateStatus']);
+        });
     });
     Route::middleware('permission:manage_staff')->group(function () {
-        Route::apiResource('staff', StaffController::class)->except(['show', 'create']);
+        // Adding staff is operational; editing / disabling existing staff stays open.
+        Route::post('staff', [StaffController::class, 'store'])->middleware('subscription');
+        Route::apiResource('staff', StaffController::class)->except(['show', 'create', 'store']);
         Route::patch('staff/{id}/status', [StaffController::class, 'status']);
     });
     Route::middleware('permission:view_tables')->group(function () {
@@ -151,6 +161,7 @@ Route::middleware('api.auth')->group(function () {
         Route::get('admin/reports', [AdminController::class, 'reports']);
         Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
         Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);
+        Route::post('admin/restaurants/{id}/subscription/cancel', [AdminController::class, 'cancelSubscription']);
         Route::patch('admin/owners/{id}', [AdminController::class, 'updateOwner']);
         Route::patch('admin/owners/{id}/status', [AdminController::class, 'ownerStatus']);
         Route::get('admin/audit-logs', [AuditLogController::class, 'admin']);

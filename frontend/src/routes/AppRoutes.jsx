@@ -4,6 +4,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import FeatureProtectedRoute from "./FeatureProtectedRoute";
 import DashboardShell from "../components/layout/DashboardShell";
 import { PageLoader } from "../components/loading/LoadingScreen";
+import SubscriptionGuard from "../components/subscription/SubscriptionGuard";
 import Landing from "../pages/landing/LandingPage";
 import Login from "../pages/auth/Login";
 const Register = lazy(() => import("../pages/auth/Register"));
@@ -23,6 +24,7 @@ const BrandingCustomization = lazy(() => import("../pages/owner/BrandingCustomiz
 const RestaurantSettings = lazy(() => import("../pages/owner/RestaurantSettings"));
 const Tables = lazy(() => import("../pages/owner/Tables"));
 const Orders = lazy(() => import("../pages/owner/Orders"));
+const Welcome = lazy(() => import("../pages/auth/Welcome"));
 const AccountingExports = lazy(() => import("../pages/owner/AccountingExports"));
 const MenuManagement = lazy(() => import("../pages/owner/MenuManagement"));
 const Reports = lazy(() => import("../pages/owner/Reports"));
@@ -71,6 +73,11 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="view_dashboard|view_orders" />}>
         <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} />
       </Route>
+      {/* Shown once after registration: the 14-day trial is already running (no checkout). */}
+      <Route element={<ProtectedRoute allow={["owner"]} />}>
+        <Route path="/welcome" element={<Welcome />} />
+      </Route>
+
       {/* Accounting & Excel export: owner, or staff explicitly granted an export permission. */}
       <Route element={<ProtectedRoute allow={["owner", "manager", "cashier"]} permission="export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings" />}>
         <Route path="/owner/accounting" element={<DashboardShell><AccountingExports /></DashboardShell>} />
@@ -89,7 +96,7 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allow={["kitchen", "owner", "manager"]} permission="manage_orders" />}>
-        <Route element={<FeatureProtectedRoute feature="kitchen" />}><Route path="/kitchen" element={<DashboardShell><KitchenDashboard /></DashboardShell>} /></Route>
+        <Route element={<FeatureProtectedRoute feature="kitchen" />}><Route path="/kitchen" element={<DashboardShell><SubscriptionGuard><KitchenDashboard /></SubscriptionGuard></DashboardShell>} /></Route>
       </Route>
       <Route element={<ProtectedRoute allow={["cashier", "owner", "manager"]} permission="view_payments" />}>
         <Route element={<FeatureProtectedRoute feature="cashier" />}>
@@ -99,7 +106,7 @@ export default function AppRoutes() {
         </Route>
       </Route>
       <Route element={<ProtectedRoute allow={["waiter", "owner", "manager"]} permission="view_tables" />}>
-        <Route element={<FeatureProtectedRoute feature="waiter" />}><Route path="/waiter" element={<DashboardShell><TableSessions /></DashboardShell>} /></Route>
+        <Route element={<FeatureProtectedRoute feature="waiter" />}><Route path="/waiter" element={<DashboardShell><SubscriptionGuard><TableSessions /></SubscriptionGuard></DashboardShell>} /></Route>
       </Route>
 
       <Route element={<ProtectedRoute allow={["admin"]} />}>

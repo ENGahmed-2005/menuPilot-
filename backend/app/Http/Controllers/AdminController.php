@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Support\Audit;
+use App\Support\SubscriptionAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -23,13 +24,18 @@ class AdminController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        User::where('role', 'owner')->get()->each->refreshSubscriptionStatus();
-
-        return response()->json(['data' => User::where('role', 'owner')->with('restaurantSetting')->get([
+        $owners = User::where('role', 'owner')->with('restaurantSetting')->get([
             'id', 'name', 'restaurant_name', 'restaurant_phone', 'email', 'plan',
             'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at', 'created_at',
-            'is_active', 'last_active_at',
-        ])]);
+            'is_active', 'last_active_at', 'role', 'subscription_status', 'subscription_cancelled_at',
+            'requested_plan', 'plan_requested_at', 'subscription_notices',
+        ]);
+
+        return response()->json(['data' => $owners->map(function ($u) {
+            $u->setAttribute('subscription', SubscriptionAccess::forOwner($u)->sync()->toArray());
+
+            return $u;
+        })]);
     }
 
     public function plan(Request $r, $id)
@@ -41,8 +47,14 @@ class AdminController extends Controller
         $v = $r->validate(['plan' => 'required|in:basic,pro,premium']);
         $u = User::where('role', 'owner')->findOrFail($id);
         $before = $u->plan;
-        $u->update(['plan' => $v['plan'], 'subscription_started_at' => now(), 'subscription_ends_at' => null]);
+        // Manual activation after payment: full access is restored immediately.
+        $u->forceFill([
+            'plan' => $v['plan'], 'subscription_started_at' => now(), 'subscription_ends_at' => null,
+            'subscription_cancelled_at' => null, 'requested_plan' => null, 'plan_requested_at' => null,
+            'subscription_status' => SubscriptionAccess::ACTIVE,
+        ])->save();
         Audit::log($r, 'admin.plan_changed', 'restaurant', $u->id, ['from' => $before, 'to' => $v['plan']], $u->id);
+        SubscriptionAccess::event('subscription_activated', $u->id, ['plan' => $v['plan'], 'by' => $r->user()->id]);
 
         return response()->json(['data' => $u->fresh()]);
     }
@@ -61,7 +73,9 @@ class AdminController extends Controller
             'trial_started_at' => $u->trial_started_at ?: now(),
             'trial_ends_at' => $base->copy()->addDays($v['days']),
         ]);
+        $u->forceFill(['subscription_cancelled_at' => null, 'subscription_notices' => null])->save(); // milestones restart for the new end date
         Audit::log($r, 'admin.trial_extended', 'restaurant', $u->id, ['days' => $v['days'], 'trial_ends_at' => (string) $u->trial_ends_at], $u->id);
+        SubscriptionAccess::for($u->fresh())->sync();
 
         return response()->json(['data' => $u->fresh()]);
     }
@@ -174,6 +188,21 @@ class AdminController extends Controller
         Audit::log($r, 'admin.restaurant_deleted', 'restaurant', (int) $id, $snapshot, null);
 
         return response()->json(['data' => ['message' => 'Deleted']]);
+    }
+
+    /** POST admin/restaurants/{id}/subscription/cancel — stops the plan now (data kept). */
+    public function cancelSubscription(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $u = User::where('role', 'owner')->findOrFail($id);
+        $u->forceFill(['subscription_cancelled_at' => now(), 'subscription_ends_at' => now(), 'subscription_status' => SubscriptionAccess::CANCELLED])->save();
+        SubscriptionAccess::event('subscription_cancelled', $u->id, ['by' => $r->user()->id, 'plan' => $u->plan]);
+        $u->setAttribute('subscription', SubscriptionAccess::forOwner($u->fresh())->toArray());
+
+        return response()->json(['data' => $u]);
     }
 
     /**

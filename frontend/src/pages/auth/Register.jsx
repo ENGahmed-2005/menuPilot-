@@ -68,7 +68,8 @@ export default function Register() {
         passwordConfirmation: formData.confirmPassword,
         plan: selectedPlan,
       });
-      navigate(`/checkout?plan=${selectedPlan}`, { replace: true });
+      // No checkout at registration: the free trial starts right away.
+      navigate("/welcome", { replace: true });
     } catch (error) {
       setErrors({ form: error?.message || "تعذر إنشاء الحساب. حاول مرة أخرى." });
     } finally {

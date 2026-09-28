@@ -194,7 +194,11 @@ class MosaicScene {
         el.style.inset = "0"
         el.style.width = "100%"
         el.style.height = "100%"
-        el.style.touchAction = "none"
+        // menuPilot: "none" swallowed every touch on the hero, so the page could
+        // not scroll on phones. pan-y/pinch-zoom lets the browser scroll and
+        // zoom; taps and horizontal moves still reach the effect, and mouse
+        // interaction on desktop is unchanged.
+        el.style.touchAction = "pan-y pinch-zoom"
         container.appendChild(el)
 
         this.material = new THREE.ShaderMaterial({

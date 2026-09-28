@@ -83,7 +83,20 @@ function PlanCard({ user }) {
   const planId = user?.plan || "basic";
   const plan = getSubscriptionPlan(planId);
   const trial = user?.plan === "trial" && user?.trial_ends_at && new Date(user.trial_ends_at) > new Date();
-  const trialDays = trial ? Math.max(0, Math.ceil((new Date(user.trial_ends_at) - Date.now()) / 86400000)) : 0;
+  // Days and status come from the server (user.subscription), not the browser clock.
+  const sub = user?.subscription;
+  const trialDays = sub ? sub.remaining_days : trial ? Math.max(0, Math.ceil((new Date(user.trial_ends_at) - Date.now()) / 86400000)) : 0;
+  if (sub && (sub.status === "EXPIRED" || sub.status === "CANCELLED")) {
+    return (
+      <div className="mt-4 rounded-2xl border border-copper/30 bg-copper/10 p-3.5">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="flex items-center gap-1.5 text-paper/80"><Crown size={14} aria-hidden="true" />{sub.status === "CANCELLED" ? "الاشتراك متوقف" : "انتهت التجربة المجانية"}</span>
+          <b className="rounded-full bg-copper px-2 py-0.5 text-ink">{sub.in_grace ? "مهلة" : "مقيّد"}</b>
+        </div>
+        <p className="mt-2 text-sm font-bold">{sub.requested_plan ? "بانتظار تأكيد الدفع" : "اختر خطة لإعادة التفعيل"}</p>
+      </div>
+    );
+  }
   return (
     <div className="mt-4 rounded-2xl border border-paper/10 bg-paper/[0.06] p-3.5">
       <div className="flex items-center justify-between gap-2 text-xs">

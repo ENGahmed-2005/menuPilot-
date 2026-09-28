@@ -3,6 +3,7 @@
 use App\Http\Middleware\ApiAuth;
 use App\Http\Middleware\Cors;
 use App\Http\Middleware\EnsureSessionToken;
+use App\Http\Middleware\EnsureSubscriptionAccess;
 use App\Http\Middleware\PermissionAccess;
 use App\Http\Middleware\RoleAccess;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleAccess::class,
             'permission' => PermissionAccess::class,
             'session.token' => EnsureSessionToken::class,
+            'subscription' => EnsureSubscriptionAccess::class,
         ]);
         $middleware->append(Cors::class);
     })

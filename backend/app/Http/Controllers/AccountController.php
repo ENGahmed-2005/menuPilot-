@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SubscriptionAccess;
 use Illuminate\Http\Request;
 
 class AccountController extends Controller
@@ -47,12 +48,21 @@ class AccountController extends Controller
     public function plan(Request $request)
     {
         $v = $request->validate(['plan' => 'required|in:basic,pro,premium']);
-        $request->user()->update([
-            'plan' => $v['plan'],
-            'subscription_started_at' => now(),
-        ]);
+        $user = $request->user();
 
-        return response()->json(['data' => $request->user()->fresh()]);
+        // The owner can't switch plans by themselves (that used to activate a
+        // paid plan without payment). The choice is recorded; the platform
+        // activates it once the payment is confirmed (admin → plan).
+        $user->forceFill(['requested_plan' => $v['plan'], 'plan_requested_at' => now()])->save();
+        SubscriptionAccess::event('subscription_requested', $user->id, ['plan' => $v['plan']]);
+
+        $fresh = $user->fresh();
+        $fresh->setAttribute('subscription', SubscriptionAccess::for($fresh)->toArray());
+
+        return response()->json(['data' => $fresh, 'meta' => [
+            'status' => 'pending_payment',
+            'message' => 'سجّلنا اختيارك للخطة. تُفعَّل فور تأكيد الدفع من فريق menuPilot، وبياناتك محفوظة حتى ذلك الحين.',
+        ]], 202);
     }
 
     public function theme(Request $request)
@@ -65,6 +75,7 @@ class AccountController extends Controller
         // Reset is always allowed and restores the default dashboard theme.
         if ($theme === null) {
             $user->update(['theme' => null]);
+
             return response()->json(['data' => $user->fresh()]);
         }
 
@@ -80,7 +91,7 @@ class AccountController extends Controller
         $preset = $validated['theme']['preset'];
         $requiredFeature = $preset === 'custom' ? 'custom-theme' : 'theme-presets';
 
-        if (!$user->hasFeature($requiredFeature)) {
+        if (! $user->hasFeature($requiredFeature)) {
             return response()->json([
                 'message' => $preset === 'custom'
                     ? 'Custom themes require Premium or an active Trial.'
