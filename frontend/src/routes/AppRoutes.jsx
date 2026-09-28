@@ -23,6 +23,7 @@ const BrandingCustomization = lazy(() => import("../pages/owner/BrandingCustomiz
 const RestaurantSettings = lazy(() => import("../pages/owner/RestaurantSettings"));
 const Tables = lazy(() => import("../pages/owner/Tables"));
 const Orders = lazy(() => import("../pages/owner/Orders"));
+const AccountingExports = lazy(() => import("../pages/owner/AccountingExports"));
 const MenuManagement = lazy(() => import("../pages/owner/MenuManagement"));
 const Reports = lazy(() => import("../pages/owner/Reports"));
 const StaffManagement = lazy(() => import("../pages/owner/StaffManagement"));
@@ -69,6 +70,10 @@ export default function AppRoutes() {
       {/* Restaurant operations: owner, or a manager whose permissions allow it. */}
       <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="view_dashboard|view_orders" />}>
         <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} />
+      </Route>
+      {/* Accounting & Excel export: owner, or staff explicitly granted an export permission. */}
+      <Route element={<ProtectedRoute allow={["owner", "manager", "cashier"]} permission="export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings" />}>
+        <Route path="/owner/accounting" element={<DashboardShell><AccountingExports /></DashboardShell>} />
       </Route>
       <Route element={<ProtectedRoute allow={["owner", "manager"]} permission="view_orders" />}>
         <Route path="/owner/orders" element={<DashboardShell><Orders /></DashboardShell>} />

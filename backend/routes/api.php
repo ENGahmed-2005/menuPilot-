@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
@@ -117,6 +118,15 @@ Route::middleware('api.auth')->group(function () {
     Route::get('sessions/{id}/bill', [BillingController::class, 'bill'])->middleware('permission:view_payments|view_tables');
     // Closing a dining session is its own permission (owner, manager, cashier by default).
     Route::post('sessions/{id}/close', [BillingController::class, 'close'])->middleware(['permission:close_session', 'throttle:20,1']);
+
+    // Accounting & Excel export (docs/ACCOUNTING_EXPORT.md).
+    Route::get('accounting/settings', [AccountingController::class, 'settings'])->middleware('permission:export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings');
+    Route::put('accounting/settings', [AccountingController::class, 'updateSettings'])->middleware('permission:manage_accounting_settings');
+    Route::get('reports/export/invoices', [AccountingController::class, 'export'])->defaults('type', 'invoices')->middleware(['permission:export_invoices|export_reports', 'throttle:20,1']);
+    Route::get('reports/export/sales', [AccountingController::class, 'export'])->defaults('type', 'sales')->middleware(['permission:export_sales|export_invoices|export_reports', 'throttle:20,1']);
+    Route::get('reports/export/payments', [AccountingController::class, 'export'])->defaults('type', 'payments')->middleware(['permission:export_payments|export_reports', 'throttle:20,1']);
+    Route::get('reports/export/products', [AccountingController::class, 'export'])->defaults('type', 'products')->middleware(['permission:export_sales|export_reports', 'throttle:20,1']);
+    Route::get('reports/export/daily', [AccountingController::class, 'export'])->defaults('type', 'daily')->middleware(['permission:export_sales|export_reports', 'throttle:20,1']);
 
     // Owner account: these endpoints act on the owner's own user row, so they
     // stay owner-only on top of the permission check.

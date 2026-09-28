@@ -42,6 +42,11 @@ class Permissions
         'manage_branding' => 'الهوية والألوان',
         'manage_subscription' => 'إدارة الاشتراك',
         'manage_settings' => 'إعدادات المطعم',
+        'export_reports' => 'تصدير التقارير المحاسبية',
+        'export_invoices' => 'تصدير الفواتير',
+        'export_payments' => 'تصدير المدفوعات',
+        'export_sales' => 'تصدير المبيعات والأصناف',
+        'manage_accounting_settings' => 'إعدادات المحاسبة والحسابات',
         'manage_users' => 'إدارة مستخدمي المنصة',
         'manage_admin' => 'إدارة المنصة',
     ];

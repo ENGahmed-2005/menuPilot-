@@ -118,10 +118,33 @@ class SessionLifecycle
         DB::table('dining_sessions')->where('id', $session->id)->update(array_filter([
             'status' => 'closed', 'closed_at' => $now, 'updated_at' => $now, 'closed_by' => $closedBy,
         ], fn ($v) => $v !== null));
+        self::issueInvoiceNumber((int) $session->id, $restaurantId, $now);
         DB::table('assistance_requests')->where('dining_session_id', $session->id)->where('status', 'open')
             ->update(['status' => 'resolved', 'resolved_at' => $now, 'updated_at' => $now]);
         DB::table('restaurant_tables')->where('id', $session->restaurant_table_id)->where('user_id', $restaurantId)
             ->update(['status' => 'available', 'updated_at' => $now]);
+    }
+
+    /**
+     * Stable accounting invoice number: sequential per restaurant, assigned
+     * once when the invoice becomes final (session closed), never changed.
+     * The restaurant row is locked so concurrent closings can't collide;
+     * a unique index (restaurant_id, invoice_number) backs it up.
+     */
+    public static function issueInvoiceNumber(int $sessionId, int $restaurantId, $at = null): ?int
+    {
+        if (DB::table('dining_sessions')->where('id', $sessionId)->value('invoice_number')) {
+            return null; // already issued
+        }
+        DB::table('users')->where('id', $restaurantId)->lockForUpdate()->first();
+        $number = ((int) DB::table('dining_sessions')->where('restaurant_id', $restaurantId)->max('invoice_number')) + 1;
+        DB::table('dining_sessions')->where('id', $sessionId)->update([
+            'restaurant_id' => $restaurantId,
+            'invoice_number' => $number,
+            'invoiced_at' => $at ?? now(),
+        ]);
+
+        return $number;
     }
 
     /** Fields added to session payloads for staff screens. */
