@@ -10,7 +10,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <BrandLogo on="dark" height={32} />
-            <p className="mt-4 max-w-xs text-sm leading-7 text-[#F3EFE5]/40">
+            <p className="mt-4 max-w-xs text-sm leading-7 text-[#F3EFE5]/70">
               نظام إدارة مطاعم مبني ليجعل التشغيل أبسط، الطلبات أسرع، وفريقك أكثر تنسيقًا.
             </p>
           </div>
@@ -23,7 +23,7 @@ export default function Footer() {
                 <a
                   key={link.href}
                   href={link.href}
-                  className="text-sm text-[#F3EFE5]/50 transition hover:text-[#EEA122]"
+                  className="text-sm text-[#F3EFE5]/70 transition hover:text-[#EEA122]"
                 >
                   {link.label}
                 </a>

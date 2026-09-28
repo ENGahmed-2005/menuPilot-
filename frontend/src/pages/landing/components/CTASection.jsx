@@ -42,7 +42,7 @@ export default function CTASection({ onNavigate }) {
         <div ref={bgRef} className="absolute inset-0 -z-10">
           {bgSize.width > 0 && bgSize.height > 0 && (
             <LightCurtain
-              background="#1F2420"
+              background="#264B3D"
               baseColor="#8A5A2A"
               accentColor="#EEA122"
               highlight="#FFD9A0"

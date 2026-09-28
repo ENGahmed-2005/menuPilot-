@@ -109,7 +109,7 @@ function PlanCard({ user }) {
       </div>
       {trial
         ? <p className="mt-1 text-xs font-bold">متبقٍ {trialDays} يوم، وكل الميزات مفعّلة</p>
-        : <p className="mt-1 text-sm font-extrabold">${plan.price}<span className="text-xs font-medium text-paper/60"> / شهريًا</span></p>}
+        : <p className="mt-1 text-sm font-extrabold">${plan.price}<span className="text-xs font-medium text-paper/70"> / شهريًا</span></p>}
     </div>
   );
 }
@@ -145,7 +145,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-paper/10 bg-ink px-4 py-2.5 text-paper lg:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-paper/10 bg-forest px-4 py-2.5 text-paper lg:hidden">
         <Logo compact />
         <span className="min-w-0 flex-1 truncate text-center text-sm font-bold text-paper/85">{current?.[1]}</span>
         <button type="button" onClick={() => setOpen(true)} aria-label="فتح القائمة" aria-expanded={open} aria-controls="app-sidebar" className="grid h-10 w-10 place-items-center rounded-xl hover:bg-paper/10">
@@ -158,7 +158,7 @@ export default function Sidebar() {
       <aside
         id="app-sidebar"
         aria-label="القائمة الرئيسية"
-        className={`fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-ink text-paper shadow-2xl transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-forest text-paper shadow-2xl transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="border-b border-paper/10 px-4 py-4">
           <div className="flex items-center justify-between">
@@ -180,7 +180,7 @@ export default function Sidebar() {
                 {collapsible && (
                   <button type="button" onClick={() => setOpenGroup(expanded ? null : group.id)} aria-expanded={expanded} aria-controls={`nav-${group.id}`}
                     className={`flex min-h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-extrabold transition-colors ${expanded ? "text-paper" : "text-paper/70 hover:bg-paper/[0.06] hover:text-paper"}`}>
-                    {GroupIcon && <GroupIcon size={18} aria-hidden="true" className="shrink-0 text-paper/60" />}
+                    {GroupIcon && <GroupIcon size={18} aria-hidden="true" className="shrink-0 text-paper/70" />}
                     <span className="flex-1 text-right">{group.title}</span>
                     {activeGroup === group.id && !expanded && <span className="h-2 w-2 rounded-full bg-copper" aria-label="الصفحة الحالية هنا" />}
                     <ChevronDown size={16} aria-hidden="true" className={`shrink-0 transition-transform duration-200 motion-reduce:transition-none ${expanded ? "rotate-180" : ""}`} />
@@ -215,7 +215,7 @@ export default function Sidebar() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold">{user?.name || user?.email}</p>
-              <p className="truncate text-xs text-paper/55">{ROLE_LABEL[role] || user?.email}</p>
+              <p className="truncate text-xs text-paper/70">{ROLE_LABEL[role] || user?.email}</p>
             </div>
             {settingsItems.length > 0 && (
               <button type="button" onClick={() => setSettingsOpen(true)} aria-label="الإعدادات" title="الإعدادات" aria-haspopup="dialog"

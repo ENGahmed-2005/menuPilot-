@@ -32,7 +32,7 @@ export default function Navbar({ onNavigate }) {
         <header
           style={{
             borderRadius: scrolled ? "16px" : "0px",
-            background: scrolled ? "rgba(31,36,32,0.96)" : "rgba(31,36,32,0)",
+            background: scrolled ? "rgba(38,75,61,0.96)" : "rgba(38,75,61,0)", // forest
             boxShadow: scrolled ? "0 8px 32px rgba(0,0,0,0.28)" : "none",
             borderBottom: scrolled ? "1px solid rgba(243,239,229,0.10)" : "1px solid rgba(243,239,229,0.08)",
             backdropFilter: scrolled ? "blur(20px)" : "blur(12px)",

@@ -45,9 +45,9 @@ export default function BillRequest() {
 
   return (
     <main dir="rtl" className="min-h-screen bg-paper-2 pb-10 text-ink print:bg-white">
-      <header className="bg-ink text-paper print:hidden">
+      <header className="bg-forest text-paper print:hidden">
         <div className="mx-auto flex max-w-lg items-center justify-between px-5 py-5">
-          <div><BrandLogo on="dark" height={22} /><p className="mt-1 text-xs text-paper/60">فاتورة الطاولة</p></div>
+          <div><BrandLogo on="dark" height={22} /><p className="mt-1 text-xs text-paper/70">فاتورة الطاولة</p></div>
           <button onClick={load} aria-label="تحديث الفاتورة" className="grid h-10 w-10 place-items-center rounded-full bg-paper/10"><RefreshCw size={17} aria-hidden="true" /></button>
         </div>
       </header>
@@ -58,7 +58,7 @@ export default function BillRequest() {
         ) : error && !bill ? (
           <div role="alert" className="rounded-2xl border border-brick/15 bg-white p-6 text-center">
             <p className="font-bold text-brick">{errorText(error, "تعذّر تحميل الفاتورة.")}</p>
-            <button onClick={load} className="mt-4 h-11 rounded-xl bg-ink px-5 text-sm font-bold text-paper">حاول مرة أخرى</button>
+            <button onClick={load} className="mt-4 h-11 rounded-xl bg-forest px-5 text-sm font-bold text-paper">حاول مرة أخرى</button>
           </div>
         ) : !bill ? (
           <div className="space-y-3" role="status" aria-live="polite"><span className="sr-only">جارِ تحميل الفاتورة…</span>
@@ -111,7 +111,7 @@ export default function BillRequest() {
                 <Printer size={17} aria-hidden="true" /> حفظ أو طباعة الفاتورة
               </button>
               {!closed && (
-                <button onClick={() => navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`)} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-ink text-sm font-bold text-paper">
+                <button onClick={() => navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`)} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-forest text-sm font-bold text-paper">
                   <ArrowRight size={17} aria-hidden="true" /> العودة لتتبع الطلب
                 </button>
               )}
