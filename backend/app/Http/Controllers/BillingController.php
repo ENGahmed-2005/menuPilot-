@@ -100,6 +100,54 @@ class BillingController extends Controller
         return $this->out(['message' => 'Bill requested', 'status' => 'bill_requested']);
     }
 
+    /**
+     * GET /public/sessions/{id}/bill — the customer's own bill (session token
+     * required by the route). Same numbers as the cashier sees, without staff
+     * data (payer details, proofs, adjustment authors).
+     */
+    public function customerBill($sid)
+    {
+        $session = DB::table('dining_sessions')
+            ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
+            ->where('dining_sessions.id', $sid)
+            ->select('dining_sessions.*', 'restaurant_tables.label as table_label', 'restaurant_tables.user_id as restaurant_id')
+            ->first();
+        if (! $session) {
+            return response()->json(['message' => 'Session not found'], 404);
+        }
+
+        $bill = $this->summary($session);
+
+        return $this->out([
+            'restaurant' => DB::table('users')->where('id', $session->restaurant_id)->value('restaurant_name'),
+            'session' => [
+                'id' => $session->id,
+                'table_label' => $session->table_label,
+                'opened_at' => $session->opened_at,
+                'closed_at' => $session->closed_at,
+                'bill_requested' => $session->status === 'bill_requested',
+            ],
+            'items' => collect($bill['items'])->map(fn ($i) => [
+                'id' => $i->id,
+                'order_number' => $i->order_number,
+                'name' => $i->name,
+                'quantity' => (int) $i->quantity,
+                'unit_price' => (float) $i->unit_price,
+                'total' => round((float) $i->total, 2),
+                'note' => $i->note,
+            ])->values(),
+            'payments' => collect($bill['payments'])->map(fn ($p) => [
+                'method' => $p->method,
+                'status' => $p->status,
+                'amount' => (float) $p->amount,
+            ])->values(),
+            'total' => $bill['total'],
+            'paid' => $bill['paid'],
+            'outstanding' => $bill['outstanding'],
+            'lifecycle' => $bill['lifecycle'],
+        ]);
+    }
+
     /** US-17 / FR-29: combined bill for all session orders. */
     public function bill(Request $request, $sid)
     {

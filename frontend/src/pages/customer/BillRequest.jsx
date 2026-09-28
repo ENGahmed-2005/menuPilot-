@@ -1,39 +1,124 @@
-import { CheckCircle2, Clock3, ReceiptText, Utensils, ArrowRight } from "lucide-react";
-import BrandLogo from "../../components/brand/Logo";
+/* ==========================================================================
+   BillRequest.jsx — the customer's bill (route /bill-request?session=ID).
+   Shows the real itemised bill from GET /public/sessions/{id}/bill and keeps
+   it current (every 5 s): requested → payment being checked → paid → closed.
+   Printable / savable as a receipt.
+   ========================================================================== */
+import { useCallback, useEffect, useState } from "react";
+import { ArrowRight, CheckCircle2, Clock3, Printer, ReceiptText, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import BrandLogo from "../../components/brand/Logo";
+import { getCustomerBill } from "../../api/billing";
+import { errorText } from "../../utils/errors";
+import { money } from "../../utils/format";
+
+const STATE = {
+  closed: { icon: CheckCircle2, tone: "bg-herb/10 text-herb", title: "تم الدفع، شكرًا لزيارتك", note: "أُغلقت جلسة الطاولة. نتمنى أن تكون وجبتك قد أعجبتك." },
+  paid: { icon: CheckCircle2, tone: "bg-herb/10 text-herb", title: "تم دفع الفاتورة بالكامل", note: "شكرًا لك! سيُغلق الكاشير الجلسة قريبًا." },
+  payment_pending: { icon: Clock3, tone: "bg-copper/10 text-copper-ink", title: "دفعتك قيد التأكيد", note: "يراجع الكاشير دفعتك الآن، وتتحدث هذه الصفحة تلقائيًا." },
+  bill_requested: { icon: Clock3, tone: "bg-copper/10 text-copper-ink", title: "تم طلب الفاتورة", note: "أُبلغ الكاشير، وسيأتيك أحد الطاقم لإتمام الدفع." },
+  active: { icon: ReceiptText, tone: "bg-ink/5 text-ink", title: "فاتورتك حتى الآن", note: "يمكنك طلب الفاتورة من صفحة تتبع الطلب عندما تنتهي." },
+};
 
 export default function BillRequest() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const sessionId = searchParams.get("session");
+  const [bill, setBill] = useState(null);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(() => {
+    if (!sessionId) return;
+    getCustomerBill(sessionId).then((data) => { setBill(data); setError(null); }).catch(setError);
+  }, [sessionId]);
+
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 5000);
+    return () => clearInterval(timer);
+  }, [load]);
+
+  const closed = Boolean(bill?.session?.closed_at);
+  const stateKey = closed ? "closed" : bill?.lifecycle === "paid" ? "paid" : bill?.lifecycle === "payment_pending" ? "payment_pending" : bill?.session?.bill_requested ? "bill_requested" : "active";
+  const state = STATE[stateKey];
+  const StateIcon = state.icon;
 
   return (
-    <main dir="rtl" className="min-h-screen bg-ink px-5 py-8 text-paper sm:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-lg items-center justify-center">
-        <section className="w-full overflow-hidden rounded-[2rem] bg-paper-2 text-ink shadow-2xl">
-          <div className="relative overflow-hidden bg-ink px-6 pb-8 pt-7 text-paper sm:px-8">
-            <div className="absolute -left-10 -top-12 h-36 w-36 rounded-full bg-copper/20 blur-2xl" />
-            <div className="relative flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div>
-              <div><BrandLogo on="dark" height={22} /><p className="text-xs text-paper/50">إدارة جلسة الطعام</p></div>
-            </div>
+    <main dir="rtl" className="min-h-screen bg-paper-2 pb-10 text-ink print:bg-white">
+      <header className="bg-ink text-paper print:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between px-5 py-5">
+          <div><BrandLogo on="dark" height={22} /><p className="mt-1 text-xs text-paper/60">فاتورة الطاولة</p></div>
+          <button onClick={load} aria-label="تحديث الفاتورة" className="grid h-10 w-10 place-items-center rounded-full bg-paper/10"><RefreshCw size={17} aria-hidden="true" /></button>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-lg px-5 pt-5">
+        {!sessionId ? (
+          <p className="rounded-2xl bg-white p-6 text-center text-sm">رابط الفاتورة غير مكتمل. افتحها من صفحة تتبع الطلب.</p>
+        ) : error && !bill ? (
+          <div role="alert" className="rounded-2xl border border-brick/15 bg-white p-6 text-center">
+            <p className="font-bold text-brick">{errorText(error, "تعذّر تحميل الفاتورة.")}</p>
+            <button onClick={load} className="mt-4 h-11 rounded-xl bg-ink px-5 text-sm font-bold text-paper">حاول مرة أخرى</button>
           </div>
-
-          <div className="px-6 py-8 text-center sm:px-8 sm:py-10">
-            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-herb/10 text-herb"><CheckCircle2 size={42} strokeWidth={1.8} /></div>
-            <h1 className="mt-6 font-display text-4xl">تم طلب الفاتورة</h1>
-            <p className="mx-auto mt-3 max-w-sm text-sm leading-7 text-ink-soft">تم إرسال طلب الفاتورة إلى الكاشير بنجاح. سيقوم الفريق بمراجعة الحساب ومتابعة الدفع معك.</p>
-
-            <div className="mt-7 rounded-2xl border border-ink/10 bg-white p-4 text-right">
-              <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><ReceiptText size={18} /></div><div><p className="text-xs text-muted">رقم جلسة الطعام</p><p className="mt-0.5 font-bold">#{sessionId || "—"}</p></div></div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-copper/10 px-4 py-3 text-xs font-semibold text-copper-ink"><Clock3 size={16} /> بانتظار تأكيد الكاشير للدفع</div>
-            <p className="mt-6 text-xs leading-5 text-muted">لا تحتاج إلى تحديث الصفحة. سيهتم فريق المطعم بالخطوات التالية.</p>
-
-            {sessionId && <button onClick={() => navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`)} className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-bold text-paper transition hover:bg-ink-soft"><ArrowRight size={17} /> العودة لتتبع الطلب</button>}
+        ) : !bill ? (
+          <div className="space-y-3" role="status" aria-live="polite"><span className="sr-only">جارِ تحميل الفاتورة…</span>
+            <div className="h-20 animate-pulse rounded-2xl bg-black/[0.06]" /><div className="h-72 animate-pulse rounded-2xl bg-black/[0.06]" />
           </div>
-        </section>
+        ) : (
+          <>
+            {/* Where the bill is now */}
+            <section role="status" aria-live="polite" className={`flex items-start gap-3 rounded-2xl p-4 print:hidden ${state.tone}`}>
+              <StateIcon size={22} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <div><p className="font-extrabold">{state.title}</p><p className="mt-0.5 text-sm leading-6 text-ink-soft">{state.note}</p></div>
+            </section>
+
+            {/* The receipt */}
+            <section className="mt-4 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 print:shadow-none print:ring-0">
+              <div className="border-b border-dashed border-line px-5 py-4 text-center">
+                <p className="text-lg font-black">{bill.restaurant || "المطعم"}</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {bill.session.table_label ? `طاولة ${bill.session.table_label}` : "طاولتك"} · جلسة #{bill.session.id}
+                  {bill.session.opened_at && ` · ${new Date(bill.session.opened_at).toLocaleDateString("ar-PS-u-nu-latn", { day: "numeric", month: "short", year: "numeric" })}`}
+                </p>
+              </div>
+
+              {bill.items.length === 0 ? (
+                <p className="px-5 py-8 text-center text-sm text-muted">لا توجد أصناف في الفاتورة بعد.</p>
+              ) : (
+                <ul className="divide-y divide-line px-5">
+                  {bill.items.map((item) => (
+                    <li key={item.id} className="flex items-start justify-between gap-3 py-3 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-bold"><span className="tabular-nums text-muted">{item.quantity}×</span> {item.name}</p>
+                        {item.note && <p className="mt-0.5 text-xs text-copper-ink">{item.note}</p>}
+                        <p className="mt-0.5 text-xs text-muted tabular-nums">{money(item.unit_price)} للواحد</p>
+                      </div>
+                      <span className="shrink-0 font-bold tabular-nums">{money(item.total)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <dl className="space-y-2 border-t border-dashed border-line bg-surface-2 px-5 py-4 text-sm">
+                <div className="flex justify-between text-base"><dt className="font-extrabold">الإجمالي</dt><dd className="font-black tabular-nums">{money(bill.total)}</dd></div>
+                {bill.paid > 0 && <div className="flex justify-between text-herb"><dt>المدفوع</dt><dd className="font-bold tabular-nums">{money(bill.paid)}</dd></div>}
+                <div className="flex justify-between"><dt className="font-bold">المتبقي</dt><dd className="font-extrabold tabular-nums">{money(bill.outstanding)}</dd></div>
+              </dl>
+            </section>
+
+            <div className="mt-5 grid gap-3 print:hidden">
+              <button onClick={() => window.print()} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-white text-sm font-bold ring-1 ring-black/10">
+                <Printer size={17} aria-hidden="true" /> حفظ أو طباعة الفاتورة
+              </button>
+              {!closed && (
+                <button onClick={() => navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`)} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-ink text-sm font-bold text-paper">
+                  <ArrowRight size={17} aria-hidden="true" /> العودة لتتبع الطلب
+                </button>
+              )}
+            </div>
+            <p className="mt-4 text-center text-xs text-muted print:hidden">تتحدث الفاتورة تلقائيًا، ولا تحتاج إلى تحديث الصفحة.</p>
+          </>
+        )}
       </div>
     </main>
   );
