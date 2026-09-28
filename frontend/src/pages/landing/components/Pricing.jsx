@@ -51,7 +51,7 @@ function PlanCard({ id, plan, popular, delay }) {
         }`}
       >
         {popular && (
-          <span className="absolute -top-3 right-5 rounded-full bg-[#EEA122] px-3 py-0.5 text-[10px] font-black text-[#1F2420]">
+          <span className="absolute -top-3 right-5 rounded-full bg-[#EEA122] px-3 py-0.5 text-[10px] font-black text-[#172331]">
             الأكثر اختيارًا
           </span>
         )}
@@ -104,7 +104,7 @@ function PlanCard({ id, plan, popular, delay }) {
           href={`/register?plan=${id}`}
           className={`mt-6 block rounded-full px-4 py-2.5 text-center text-xs font-black transition ${
             popular
-              ? "bg-[#EEA122] text-[#1F2420] hover:bg-[#E67E22]"
+              ? "bg-[#EEA122] text-[#172331] hover:bg-[#E67E22]"
               : "border border-[#F3EFE5]/15 text-[#F3EFE5] hover:border-[#EEA122]/35 hover:bg-[#EEA122]/10"
           }`}
         >
@@ -126,8 +126,8 @@ export default function Pricing() {
         </p>
 
         {/* 14-day trial badge */}
-        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#5B7A52]/40 bg-[#5B7A52]/10 px-4 py-2 text-sm font-bold text-[#5B7A52]">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5B7A52]" />
+        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#4B6A8A]/40 bg-[#4B6A8A]/10 px-4 py-2 text-sm font-bold text-[#4B6A8A]">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4B6A8A]" />
           تجربة مجانية لمدة 14 يومًا — بدون بطاقة ائتمانية
         </div>
       </Reveal>

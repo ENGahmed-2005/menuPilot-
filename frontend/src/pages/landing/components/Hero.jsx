@@ -27,7 +27,7 @@ export default function Hero({ onNavigate }) {
   return (
     <section className="relative isolate overflow-hidden">
       <div className="pointer-events-none absolute -right-40 top-0 -z-10 h-96 w-96 animate-[pulse_9s_ease-in-out_infinite] rounded-full bg-[#EEA122]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -left-40 bottom-0 -z-10 h-96 w-96 animate-[pulse_11s_ease-in-out_infinite] rounded-full bg-[#5B7A52]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-40 bottom-0 -z-10 h-96 w-96 animate-[pulse_11s_ease-in-out_infinite] rounded-full bg-[#4B6A8A]/10 blur-3xl" />
 
       {/* خلفية Shape Mosaic التفاعلية (WebGL/Three.js) — أشكال بتلف وتضيء
           قرب الماوس. ألوان مربوطة بهوية الموقع: ink-soft للحالة العادية
@@ -39,7 +39,7 @@ export default function Hero({ onNavigate }) {
       <div className="pointer-events-auto absolute inset-0 -z-10">
         <Suspense fallback={null}>
           <ShapeMosaic
-            ink="#3A6654" /* subtle lighter-green mosaic on forest */
+            ink="#2E4259" /* subtle lighter-green mosaic on forest */
             lit="#EEA122"
             cell={34}
             size={8}
@@ -77,7 +77,7 @@ export default function Hero({ onNavigate }) {
           <div className="mt-9 flex flex-wrap gap-3">
             <button
               onClick={() => onNavigate("/register")}
-              className="group pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#1F2420] shadow-lg shadow-[#EEA122]/20 transition hover:-translate-y-0.5 hover:bg-[#E67E22] hover:shadow-xl hover:shadow-[#EEA122]/25"
+              className="group pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#172331] shadow-lg shadow-[#EEA122]/20 transition hover:-translate-y-0.5 hover:bg-[#E67E22] hover:shadow-xl hover:shadow-[#EEA122]/25"
             >
               ابدأ مع menuPilot
               <ArrowLeft size={18} className="transition group-hover:-translate-x-1" />
@@ -88,49 +88,49 @@ export default function Hero({ onNavigate }) {
             </a>
           </div>
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#F3EFE5]/70">
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> طلبات QR</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> إدارة المطبخ</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> فواتير ومدفوعات</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#5B7A52]" /> تجربة مجانية 14 يومًا</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> طلبات QR</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> إدارة المطبخ</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> فواتير ومدفوعات</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> تجربة مجانية 14 يومًا</span>
           </div>
         </Reveal>
 
         <Reveal delay={150} className="relative mx-auto w-full max-w-xl">
           <div className="absolute -inset-5 rounded-[2rem] bg-[#EEA122]/10 blur-2xl" />
-          <div className="relative animate-[float_6s_ease-in-out_infinite] overflow-hidden rounded-[2rem] border border-[#F3EFE5]/10 bg-[#F3EFE5] p-5 text-[#1F2420] shadow-2xl sm:p-7">
-            <div className="flex items-center justify-between border-b border-[#1F2420]/10 pb-5">
+          <div className="relative animate-[float_6s_ease-in-out_infinite] overflow-hidden rounded-[2rem] border border-[#F3EFE5]/10 bg-[#F3EFE5] p-5 text-[#172331] shadow-2xl sm:p-7">
+            <div className="flex items-center justify-between border-b border-[#172331]/10 pb-5">
               <div>
-                <p className="text-xs font-bold text-[#4B5147]">لوحة المطعم</p>
+                <p className="text-xs font-bold text-[#5A6574]">لوحة المطعم</p>
                 <h2 className="mt-1 text-2xl font-black">Your Restaurant</h2>
               </div>
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#EEA122]"><QrCode size={25} /></span>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {PREVIEW_STATS.map(([value, label]) => (
-                <div key={label} className="rounded-2xl bg-[#1F2420] p-4 text-[#F3EFE5] transition hover:bg-[#2A3129]">
+                <div key={label} className="rounded-2xl bg-navy p-4 text-[#F3EFE5] transition hover:bg-[#2a3b50]">
                   <div className="text-2xl font-black text-[#EEA122]">{value}</div>
                   <div className="mt-1 text-[11px] text-[#F3EFE5]/70">{label}</div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 rounded-2xl border border-[#1F2420]/10 bg-white/70 p-4">
+            <div className="mt-4 rounded-2xl border border-[#172331]/10 bg-white/70 p-4">
               <div className="mb-3 flex items-center justify-between text-xs font-bold">
                 <span>الطلبات الحالية</span>
-                <span className="flex items-center gap-1.5 text-[#5B7A52]">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5B7A52]" />
+                <span className="flex items-center gap-1.5 text-[#4B6A8A]">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4B6A8A]" />
                   مباشر
                 </span>
               </div>
               {PREVIEW_ORDERS.map(([table, order, status], index) => (
-                <div key={table} className="flex items-center gap-3 border-t border-[#1F2420]/8 py-3 first:border-0 first:pt-0 last:pb-0">
-                  <span className={`grid h-9 w-9 place-items-center rounded-xl ${index === 0 ? "bg-[#EEA122]/15 text-[#E67E22]" : "bg-[#5B7A52]/10 text-[#5B7A52]"}`}>
+                <div key={table} className="flex items-center gap-3 border-t border-[#172331]/8 py-3 first:border-0 first:pt-0 last:pb-0">
+                  <span className={`grid h-9 w-9 place-items-center rounded-xl ${index === 0 ? "bg-[#EEA122]/15 text-[#E67E22]" : "bg-[#4B6A8A]/10 text-[#4B6A8A]"}`}>
                     <UtensilsCrossed size={17} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-black">{table}</p>
-                    <p className="truncate text-[11px] text-[#4B5147]">{order}</p>
+                    <p className="truncate text-[11px] text-[#5A6574]">{order}</p>
                   </div>
-                  <span className="text-[10px] font-bold text-[#4B5147]">{status}</span>
+                  <span className="text-[10px] font-bold text-[#5A6574]">{status}</span>
                 </div>
               ))}
             </div>

@@ -145,7 +145,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-paper/10 bg-forest px-4 py-2.5 text-paper lg:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-paper/10 bg-navy px-4 py-2.5 text-paper lg:hidden">
         <Logo compact />
         <span className="min-w-0 flex-1 truncate text-center text-sm font-bold text-paper/85">{current?.[1]}</span>
         <button type="button" onClick={() => setOpen(true)} aria-label="فتح القائمة" aria-expanded={open} aria-controls="app-sidebar" className="grid h-10 w-10 place-items-center rounded-xl hover:bg-paper/10">
@@ -158,7 +158,7 @@ export default function Sidebar() {
       <aside
         id="app-sidebar"
         aria-label="القائمة الرئيسية"
-        className={`fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-forest text-paper shadow-2xl transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-navy text-paper shadow-2xl transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="border-b border-paper/10 px-4 py-4">
           <div className="flex items-center justify-between">

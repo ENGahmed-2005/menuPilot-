@@ -42,7 +42,7 @@ export default function CTASection({ onNavigate }) {
         <div ref={bgRef} className="absolute inset-0 -z-10">
           {bgSize.width > 0 && bgSize.height > 0 && (
             <LightCurtain
-              background="#264B3D"
+              background="#1F2D3D"
               baseColor="#8A5A2A"
               accentColor="#EEA122"
               highlight="#FFD9A0"
@@ -62,7 +62,7 @@ export default function CTASection({ onNavigate }) {
           </h2>
           <button
             onClick={() => onNavigate("/register")}
-            className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#1F2420] transition hover:-translate-y-0.5 hover:bg-[#E67E22]"
+            className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#172331] transition hover:-translate-y-0.5 hover:bg-[#E67E22]"
           >
             ابدأ الآن
             <ArrowLeft size={18} />

@@ -18,7 +18,7 @@ function Bar({ tone = "dark" }) {
 
 export default function LoadingScreen({ label = "جارِ تجهيز لوحتك…" }) {
   return (
-    <div role="status" aria-live="polite" dir="rtl" className="loader-delay fixed inset-0 z-[999] grid place-items-center bg-forest text-paper">
+    <div role="status" aria-live="polite" dir="rtl" className="loader-delay fixed inset-0 z-[999] grid place-items-center bg-navy text-paper">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, #f4efe6 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
       <div className="relative flex flex-col items-center gap-7">
         <span className="loader-mark"><Logo layout="stacked" on="dark" height={132} priority alt="" /></span>

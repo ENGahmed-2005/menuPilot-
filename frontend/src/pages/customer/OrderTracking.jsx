@@ -144,7 +144,7 @@ export default function OrderTracking() {
 
   return (
     <main dir="rtl" className="min-h-screen bg-paper-2 pb-40 text-ink">
-      <header className="bg-forest text-paper">
+      <header className="bg-navy text-paper">
         <div className="mx-auto max-w-3xl px-5 pb-8 pt-6 sm:px-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div><div><BrandLogo on="dark" height={22} /><p className="mt-0.5 text-xs text-paper/70">تتبع طلبك</p></div></div>
@@ -170,7 +170,7 @@ export default function OrderTracking() {
         )}
 
         <section className="mt-6 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex items-start gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest text-paper"><FileText size={18} /></div><div><h2 className="font-bold">تحتاج شيئًا آخر؟</h2><p className="mt-1 text-xs leading-5 text-ink-soft">يمكنك طلب مساعدة النادل أو إرسال طلب الفاتورة من هنا.</p></div></div>
+          <div className="flex items-start gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-navy text-paper"><FileText size={18} /></div><div><h2 className="font-bold">تحتاج شيئًا آخر؟</h2><p className="mt-1 text-xs leading-5 text-ink-soft">يمكنك طلب مساعدة النادل أو إرسال طلب الفاتورة من هنا.</p></div></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <button onClick={handleAskForHelp} disabled={Boolean(busy) || !sessionId} className="flex items-center justify-center gap-2 rounded-2xl border border-ink/10 bg-paper px-4 py-3.5 text-sm font-bold transition hover:border-ink/20 hover:bg-paper-2 disabled:cursor-not-allowed disabled:opacity-50">{busy === "help" ? <Loader2 size={18} className="animate-spin" /> : <BellRing size={18} />}طلب مساعدة النادل</button>
             <button onClick={handleRequestBill} disabled={Boolean(busy) || !sessionId} className="flex items-center justify-center gap-2 rounded-2xl bg-copper px-4 py-3.5 text-sm font-bold text-ink transition hover:bg-copper-deep disabled:cursor-not-allowed disabled:opacity-50">{busy === "bill" ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}طلب الفاتورة</button>
@@ -188,7 +188,7 @@ export default function OrderTracking() {
               <p className="py-2 text-center text-sm font-bold text-muted">أُغلقت جلسة هذه الطاولة. شكرًا لزيارتك!</p>
             ) : (
               <>
-                <button onClick={addAnotherOrder} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-forest text-base font-bold text-paper shadow-lg transition active:scale-[0.99]">
+                <button onClick={addAnotherOrder} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-navy text-base font-bold text-paper shadow-lg transition active:scale-[0.99]">
                   <Plus size={20} aria-hidden="true" /> إضافة طلب جديد
                 </button>
                 <p className="mt-2 text-center text-xs leading-5 text-muted">

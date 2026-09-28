@@ -8,7 +8,7 @@
    ========================================================================== */
 
 export const THEME_PRESETS = [
-  { id: "menuPilot", name: "هوية menuPilot", primary: "#B8793E", secondary: "#5B7A52", background: "#F7F3E9" },
+  { id: "menuPilot", name: "هوية menuPilot", primary: "#E67E22", secondary: "#1C714B", background: "#F4EFE6" }, // logo orange; secondary = success status colour
   { id: "forest", name: "Forest", primary: "#789262", secondary: "#C58B62", background: "#F5F1E7" },
   { id: "terracotta", name: "Terracotta", primary: "#C86B43", secondary: "#465A45", background: "#FAF3E7" },
   { id: "plum", name: "Plum", primary: "#9A6485", secondary: "#596B53", background: "#F7F0EA" },

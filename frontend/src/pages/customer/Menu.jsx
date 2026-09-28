@@ -24,9 +24,9 @@ import { money } from "../../utils/format";
 const ALL = "الكل";
 const FALLBACK = {
   primary_color: "#B8793E",
-  secondary_color: "#5B7A52",
-  text_color: "#171717",
-  button_color: "#171717",
+  secondary_color: "#4B6A8A",
+  text_color: "#172331",
+  button_color: "#1F2D3D",
   background_color: "#F7F3E9",
   card_style: "rounded",
   show_menupilot_branding: true,
@@ -156,7 +156,7 @@ export default function Menu() {
           <AlertCircle className="mx-auto text-brick" aria-hidden="true" />
           <h1 className="mt-5 text-2xl font-bold">تعذّر تحميل القائمة</h1>
           <p className="mt-2 text-sm leading-7 text-ink-soft">{error.message || "حدث خطأ غير متوقع."}</p>
-          <button onClick={() => window.location.reload()} className="mt-6 h-12 w-full rounded-2xl bg-forest text-sm font-bold text-paper">حاول مرة أخرى</button>
+          <button onClick={() => window.location.reload()} className="mt-6 h-12 w-full rounded-2xl bg-navy text-sm font-bold text-paper">حاول مرة أخرى</button>
         </div>
       </div>
     );

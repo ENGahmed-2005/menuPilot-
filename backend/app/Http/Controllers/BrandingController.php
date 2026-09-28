@@ -82,9 +82,9 @@ class BrandingController extends Controller
 
         $settings->update([
             'primary_color' => '#B8793E',
-            'secondary_color' => '#5B7A52',
-            'text_color' => '#171717',
-            'button_color' => '#171717',
+            'secondary_color' => '#4B6A8A', // slate blue (brand: navy + orange, no green)
+            'text_color' => '#172331',
+            'button_color' => '#1F2D3D',
             'card_style' => 'rounded',
             'font_family' => 'system',
             'show_menupilot_branding' => true,

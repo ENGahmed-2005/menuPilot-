@@ -28,7 +28,7 @@ export default function LandingPage() {
   return (
     <main
       dir="rtl"
-      className="min-h-screen scroll-smooth overflow-x-hidden bg-[#1F2420] text-[#F3EFE5] [cursor:url('/cursor_eat.cur'),_auto]"
+      className="min-h-screen scroll-smooth overflow-x-hidden bg-navy text-[#F3EFE5] [cursor:url('/cursor_eat.cur'),_auto]"
     >
       <Navbar onNavigate={navigate} />
       {/* Spacer to compensate for the fixed navbar height (4.25rem ≈ 68px) */}

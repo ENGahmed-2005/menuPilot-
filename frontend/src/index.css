@@ -2,20 +2,27 @@
 
 @theme {
   /* ── Brand (unchanged identity) ─────────────────────────────────────── */
-  --color-ink: #182920;          /* dark green TEXT on light surfaces (7.4:1+) */
+  --color-ink: #172331;          /* deep navy TEXT on light surfaces (13.9:1) */
   /* Dark SURFACES (sidebar, headers, dark buttons, landing sections): a
      lighter forest green than the text colour, so large areas don't feel
      heavy. Cream text stays AAA (8.5:1); faint text needs ≥ 70% opacity. */
-  --color-forest: #264b3d;
-  --color-forest-deep: #1e3d31;  /* hover / pressed on forest */
-  --color-ink-soft: #405047;     /* body text on light surfaces (7.4:1) */
+  /* Brand navy — the colour of the "menu" wordmark in the logo; complementary
+     to the brand orange. Cream text 12.2:1, faint (70%) cream 6.8:1, and
+     orange text 4.9:1 on it. */
+  --color-navy: #1f2d3d;
+  --color-navy-deep: #172331;    /* hover / pressed / footer */
+  --color-navy-raised: #2a3b50;  /* cards on navy */
+  /* Legacy names kept so nothing styled with them breaks. */
+  --color-forest: var(--color-navy);
+  --color-forest-deep: var(--color-navy-deep);
+  --color-ink-soft: #3e4b5b;     /* body text on light surfaces (7.4:1) */
   --color-paper: #f4efe6;        /* cream background */
   --color-paper-2: #f4efe6;
   --color-copper: #e67e22;       /* brand orange: primary actions, accents */
   --color-copper-deep: #cf6410;  /* hover / pressed orange */
-  --color-herb: #3f6650;         /* success */
+  --color-herb: #1c714b;         /* success STATUS only (not brand) */
   --color-brick: #b94736;        /* danger */
-  --color-brand-green: #182920;
+  --color-brand-green: #1f2d3d;  /* legacy alias → navy */
   --color-brand-orange: #e67e22;
   --color-brand-cream: #f4efe6;
 
@@ -23,7 +30,7 @@
   --color-surface: #fffdf9;      /* cards, inputs, dialogs */
   --color-surface-2: #faf6ef;    /* subtle fills: table headers, wells */
   --color-line: #e3dccf;         /* borders and dividers */
-  --color-muted: #5a6860;        /* secondary text, AA on cream (5.1:1) */
+  --color-muted: #5a6574;        /* secondary text, AA on cream (5.1:1) */
   /* Orange for TEXT on light surfaces. Derived from --color-copper so an
      owner's custom theme still applies, but dark enough for AA contrast. */
   --color-copper-ink: color-mix(in srgb, var(--color-copper) 70%, #000);
@@ -38,9 +45,9 @@
   --radius-panel: 1.5rem;
 
   /* ── Elevation ─────────────────────────────────────────────────────── */
-  --shadow-card: 0 1px 2px rgb(24 41 32 / 0.05), 0 1px 1px rgb(24 41 32 / 0.03);
-  --shadow-raised: 0 8px 24px -8px rgb(24 41 32 / 0.18);
-  --shadow-dialog: 0 24px 60px -12px rgb(24 41 32 / 0.35);
+  --shadow-card: 0 1px 2px rgb(23 35 49 / 0.05), 0 1px 1px rgb(23 35 49 / 0.03);
+  --shadow-raised: 0 8px 24px -8px rgb(23 35 49 / 0.18);
+  --shadow-dialog: 0 24px 60px -12px rgb(23 35 49 / 0.35);
 
   /* ── Type ──────────────────────────────────────────────────────────── */
   --font-display: "Instrument Serif", serif;
@@ -81,7 +88,7 @@ img, svg { display: block; max-width: 100%; }
 /* ── Design-system primitives ─────────────────────────────────────────── */
 @layer components {
   /* Loading placeholder. RTL-aware shimmer that stops under reduced motion. */
-  .skeleton { position: relative; overflow: hidden; border-radius: var(--radius-control); background: rgb(24 41 32 / 0.07); }
+  .skeleton { position: relative; overflow: hidden; border-radius: var(--radius-control); background: rgb(23 35 49 / 0.07); }
   .skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(100%); background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent); animation: shimmer 1.4s infinite; }
   /* Tabular figures keep prices, timers and counters from jittering. */
   .num { font-variant-numeric: tabular-nums; }
@@ -93,15 +100,15 @@ img, svg { display: block; max-width: 100%; }
 [dir="rtl"] { text-rendering: optimizeLegibility; }
 
 /* Legacy palette aliases */
-.bg-\[\#1F2420\] { background-color: var(--color-forest) !important; }
+.bg-\[\#1F2420\] { background-color: var(--color-navy) !important; }
 .bg-\[\#1F2420\]\/98 { background-color: color-mix(in srgb, var(--color-forest) 98%, transparent) !important; }
 /* Landing footer / raised cards on dark: same family, lighter than before. */
 .bg-\[\#1A1E1B\] { background-color: var(--color-forest-deep) !important; }
-.bg-\[\#2A3129\] { background-color: #2b5345 !important; }
+.bg-\[\#2A3129\] { background-color: var(--color-navy-raised) !important; }
 .bg-\[\#EEA122\] { background-color: #E67E22 !important; }
 .bg-\[\#E67E22\] { background-color: #E67E22 !important; }
 .bg-\[\#F3EFE5\] { background-color: #F4EFE6 !important; }
-.text-\[\#1F2420\] { color: #182920 !important; }
+.text-\[\#1F2420\] { color: var(--color-ink) !important; }
 .text-\[\#F3EFE5\] { color: #F4EFE6 !important; }
 .text-\[\#EEA122\] { color: #E67E22 !important; }
 .text-\[\#E67E22\] { color: #E67E22 !important; }

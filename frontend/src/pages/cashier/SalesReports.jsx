@@ -123,7 +123,7 @@ export default function SalesReports() {
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
         {[{ value: "today", label: "اليوم" }, { value: "all", label: "كل الفواتير" }].map((item) => (
-          <button key={item.value} onClick={() => setPeriod(item.value)} className={`rounded-xl px-4 py-2 text-sm font-bold ${period === item.value ? "bg-forest text-paper" : "border border-ink/10 bg-paper text-ink-soft"}`}>
+          <button key={item.value} onClick={() => setPeriod(item.value)} className={`rounded-xl px-4 py-2 text-sm font-bold ${period === item.value ? "bg-navy text-paper" : "border border-ink/10 bg-paper text-ink-soft"}`}>
             {item.label}
           </button>
         ))}
