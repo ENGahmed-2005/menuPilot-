@@ -35,3 +35,6 @@ export const verifyPayment = (paymentId) => api.post(`/payments/${paymentId}/ver
 
 /** Cashier rejects a customer-submitted pending payment with a reason. */
 export const rejectPayment = (paymentId, reason) => api.post(`/payments/${paymentId}/reject`, { reason });
+
+/** Customer: their own itemised bill (session token sent automatically). */
+export const getCustomerBill = (sessionId) => api.get(`/public/sessions/${sessionId}/bill`);
