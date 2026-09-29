@@ -120,6 +120,7 @@ class BillingController extends Controller
 
         return $this->out([
             'restaurant' => DB::table('users')->where('id', $session->restaurant_id)->value('restaurant_name'),
+            'restaurant_whatsapp' => DB::table('online_ordering_settings')->where('user_id', $session->restaurant_id)->value('whatsapp'),
             'session' => [
                 'id' => $session->id,
                 'table_label' => $session->table_label,
