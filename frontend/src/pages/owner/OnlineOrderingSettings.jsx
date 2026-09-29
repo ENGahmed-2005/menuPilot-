@@ -41,6 +41,10 @@ export default function OnlineOrderingSettings() {
 
   if (!s) return <div className="h-40 animate-pulse rounded-2xl bg-black/[0.05]" />;
   const set = (k) => (v) => setS((x) => ({ ...x, [k]: v }));
+  // Built from the address this dashboard is served from (e.g. the Vercel
+  // domain), so the link and QR are always the real public URL, even if the
+  // backend's FRONTEND_URL isn't configured.
+  const publicUrl = `${window.location.origin}/r/${s.slug}`;
   return (
     <form onSubmit={save} className="space-y-5">
       <div><h2 className="text-xl font-extrabold">الطلب أونلاين (استلام وتوصيل)</h2><p className="mt-1 text-sm text-muted">شارك رابط مطعمك ليطلب الزبائن من البيت، بلا أي عمولة.</p></div>
@@ -49,9 +53,9 @@ export default function OnlineOrderingSettings() {
       <div className="rounded-xl bg-surface-2 p-4">
         <p className="text-xs font-bold text-muted">رابط الطلب</p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <span dir="ltr" className="num break-all text-sm font-bold">{data.public_url}</span>
-          <button type="button" onClick={() => navigator.clipboard?.writeText(data.public_url).then(() => toast.success("نُسخ الرابط."))} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-ink/[0.06]" aria-label="نسخ الرابط"><Copy size={15} /></button>
-          <a href={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=16&data=${encodeURIComponent(data.public_url)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-copper-ink underline-offset-4 hover:underline">رمز QR للطباعة</a>
+          <span dir="ltr" className="num break-all text-sm font-bold">{publicUrl}</span>
+          <button type="button" onClick={() => navigator.clipboard?.writeText(publicUrl).then(() => toast.success("نُسخ الرابط."))} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-ink/[0.06]" aria-label="نسخ الرابط"><Copy size={15} /></button>
+          <a href={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=16&data=${encodeURIComponent(publicUrl)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-copper-ink underline-offset-4 hover:underline">رمز QR للطباعة</a>
         </div>
       </div>
 
