@@ -13,6 +13,8 @@ import Badge from "./Badge";
 export const STATUS = {
   order: {
     payment_pending: { label: "بانتظار تأكيد الدفع", tone: "info", icon: Hourglass },
+    // Outside (pickup/delivery) order not yet accepted by the restaurant.
+    on_hold: { label: "بانتظار موافقة المطعم", tone: "warning", icon: Hourglass },
     pending: { label: "جديد", tone: "warning", icon: CircleDot },
     preparing: { label: "قيد التحضير", tone: "info", icon: CookingPot },
     ready: { label: "جاهز للتقديم", tone: "success", icon: BellRing },
