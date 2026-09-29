@@ -1,0 +1,117 @@
+<?php
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+
+uses(RefreshDatabase::class);
+
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+/** Premium restaurant with online ordering on (pickup + delivery, one zone). */
+function onlineRestaurant($test, string $plan = 'premium'): array
+{
+    $owner = makeOwner('Zaytoona');
+    DB::table('users')->where('id', $owner['id'])->update(['plan' => $plan, 'subscription_started_at' => now()]);
+    $item = makeItem($owner['id'], 20);
+    $s = $test->putJson('/api/online-ordering/settings', ['enabled' => true, 'pickup_enabled' => true, 'delivery_enabled' => true, 'slug' => 'zaytoona-'.$owner['id'],
+        'zones' => [['name' => 'الرمال', 'fee' => 5, 'min_order' => 30]]], authAs($owner))->assertOk()->json('data');
+
+    return $owner + ['item' => $item, 'slug' => $s['settings']['slug'], 'zone' => $s['zones'][0]['id']];
+}
+
+function placeOrder($test, array $r, array $extra = [])
+{
+    return $test->postJson("/api/public/restaurants/{$r['slug']}/orders", array_merge([
+        'type' => 'pickup', 'name' => 'سارة', 'phone' => '0599 123 456', 'payment_method' => 'cash',
+        'items' => [['menuItemId' => $r['item'], 'quantity' => 2, 'price' => 1]], // client price ignored
+    ], $extra));
+}
+
+it('runs a pickup order: awaiting → accepted → kitchen → completed (cash)', function () {
+    $r = onlineRestaurant($this);
+    $kitchen = makeStaff($r['id'], 'kitchen');
+    $cashier = makeStaff($r['id'], 'cashier');
+
+    $this->getJson("/api/public/restaurants/{$r['slug']}")->assertOk()->assertJsonPath('data.open', true)->assertJsonPath('data.items.0.id', $r['item']);
+    $o = placeOrder($this, $r)->assertCreated()->json('data');
+    expect($o['fulfillment_status'])->toBe('awaiting_acceptance')->and((float) $o['total'])->toBe(40.0)->and($o['tracking_url'])->toContain("/o/{$o['id']}?token=");
+
+    // Not in the kitchen until accepted.
+    expect(collect($this->getJson('/api/kitchen/orders', authAs($kitchen))->json('data'))->pluck('id'))->not->toContain($o['id']);
+    expect($this->getJson('/api/outside-orders?status=awaiting', authAs($cashier))->json('data.0.customer.phone'))->toBe('0599123456');
+
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", ['prep_minutes' => 15], authAs($cashier))->assertOk()->assertJsonPath('data.fulfillment_status', 'accepted');
+    $k = collect($this->getJson('/api/kitchen/orders', authAs($kitchen))->json('data'))->firstWhere('id', $o['id']);
+    expect($k['tableLabel'] ?? $k['table_label'])->toBe('استلام')->and($k['customerName'] ?? $k['customer_name'])->toBe('سارة');
+    foreach (['preparing', 'ready'] as $st) {
+        $this->patchJson("/api/kitchen/orders/{$o['id']}/status", ['status' => $st], authAs($kitchen))->assertOk();
+    }
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($cashier))->assertStatus(409); // no double handling
+    $this->postJson("/api/outside-orders/{$o['id']}/complete", [], authAs($cashier))->assertOk()->assertJsonPath('data.payment_status', 'paid');
+
+    $track = $this->getJson("/api/public/outside-orders/{$o['id']}?token={$o['token']}")->assertOk()->json('data');
+    expect($track['fulfillment_status'])->toBe('completed');
+    $this->getJson("/api/public/outside-orders/{$o['id']}?token=wrong")->assertForbidden();
+    expect(DB::table('audit_logs')->where('action', 'like', 'outside_order.%')->count())->toBe(2);
+});
+
+it('prices delivery with the zone fee, enforces the minimum and dispatches', function () {
+    $r = onlineRestaurant($this);
+    $cashier = makeStaff($r['id'], 'cashier');
+    placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'شارع عمر المختار', 'items' => [['menuItemId' => $r['item'], 'quantity' => 1]]])
+        ->assertStatus(422)->assertJsonPath('code', 'BELOW_MIN_ORDER');
+    placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone']])->assertStatus(422); // address required
+
+    $o = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'شارع عمر المختار'])->assertCreated()->json('data');
+    expect((float) $o['delivery_fee'])->toBe(5.0)->and((float) $o['total'])->toBe(45.0);
+    $this->postJson("/api/outside-orders/{$o['id']}/dispatch", [], authAs($cashier))->assertStatus(409); // not accepted yet
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($cashier))->assertOk();
+    $this->postJson("/api/outside-orders/{$o['id']}/dispatch", [], authAs($cashier))->assertOk()->assertJsonPath('data.fulfillment_status', 'out_for_delivery');
+    $this->postJson("/api/outside-orders/{$o['id']}/complete", [], authAs($cashier))->assertOk()->assertJsonPath('data.fulfillment_status', 'completed');
+});
+
+it('requires a receipt for transfers and verification before handover', function () {
+    $r = onlineRestaurant($this);
+    $cashier = makeStaff($r['id'], 'cashier');
+    placeOrder($this, $r, ['payment_method' => 'transfer'])->assertStatus(422);
+    $o = placeOrder($this, $r, ['payment_method' => 'transfer', 'proof' => PNG])->assertCreated()->json('data');
+    expect($o['payment_status'])->toBe('pending_verification');
+
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($cashier))->assertOk();
+    $this->postJson("/api/outside-orders/{$o['id']}/complete", [], authAs($cashier))->assertStatus(409)->assertJsonPath('code', 'PAYMENT_NOT_VERIFIED');
+    $this->postJson("/api/outside-orders/{$o['id']}/verify-payment", [], authAs($cashier))->assertOk()->assertJsonPath('data.payment_status', 'paid');
+    $this->postJson("/api/outside-orders/{$o['id']}/complete", [], authAs($cashier))->assertOk();
+});
+
+it('lets the restaurant reject with a reason the customer sees', function () {
+    $r = onlineRestaurant($this);
+    $o = placeOrder($this, $r)->json('data');
+    $this->postJson("/api/outside-orders/{$o['id']}/reject", ['reason' => 'نفد الصنف'], authAs($r))->assertOk();
+    $track = $this->getJson("/api/public/outside-orders/{$o['id']}?token={$o['token']}")->json('data');
+    expect($track['fulfillment_status'])->toBe('rejected')->and($track['rejection_reason'])->toBe('نفد الصنف');
+});
+
+it('only accepts orders when enabled, open, not paused and on Premium', function () {
+    $r = onlineRestaurant($this);
+    $this->putJson('/api/online-ordering/settings', ['paused' => true], authAs($r))->assertOk();
+    placeOrder($this, $r)->assertStatus(409)->assertJsonPath('code', 'ONLINE_ORDERING_CLOSED');
+    $this->putJson('/api/online-ordering/settings', ['paused' => false], authAs($r))->assertOk();
+    placeOrder($this, $r)->assertCreated();
+
+    $pro = onlineRestaurant($this, 'pro');
+    placeOrder($this, $pro)->assertStatus(409);
+    expect($this->getJson('/api/online-ordering/settings', authAs($pro))->json('data.plan_allows'))->toBeFalse();
+});
+
+it('isolates restaurants and limits pending orders per phone', function () {
+    $a = onlineRestaurant($this);
+    $b = onlineRestaurant($this);
+    $o = placeOrder($this, $a)->json('data');
+
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($b))->assertNotFound();
+    expect($this->getJson('/api/outside-orders?status=awaiting', authAs($b))->json('data'))->toBe([]);
+
+    placeOrder($this, $a)->assertCreated();
+    placeOrder($this, $a)->assertCreated();
+    placeOrder($this, $a)->assertStatus(429)->assertJsonPath('code', 'TOO_MANY_PENDING');
+});

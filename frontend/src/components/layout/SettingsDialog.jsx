@@ -11,6 +11,7 @@ import Skeleton from "../ui/Skeleton";
 
 const PAGES = {
   "/owner/settings": lazy(() => import("../../pages/owner/RestaurantSettings")),
+  "/owner/online-ordering": lazy(() => import("../../pages/owner/OnlineOrderingSettings")),
   "/owner/branding": lazy(() => import("../../pages/owner/BrandingCustomization")),
   "/owner/theme": lazy(() => import("../../pages/owner/ThemeCustomization")),
   "/owner/subscription/current": lazy(() => import("../../pages/owner/SubscriptionPlanPage")),

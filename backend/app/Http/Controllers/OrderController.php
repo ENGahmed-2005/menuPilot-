@@ -19,12 +19,8 @@ class OrderController extends Controller
 
     private function orderBelongsToRestaurant($orderId, $restaurantId): bool
     {
-        return DB::table('orders')
-            ->join('dining_sessions', 'dining_sessions.id', '=', 'orders.dining_session_id')
-            ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
-            ->where('orders.id', $orderId)
-            ->where('restaurant_tables.user_id', $restaurantId)
-            ->exists();
+        // orders.user_id is the restaurant for every order (dine-in and outside).
+        return DB::table('orders')->where('id', $orderId)->where('user_id', $restaurantId)->exists();
     }
 
     private function orderItemForRestaurant($itemId, $restaurantId): ?object
@@ -170,9 +166,10 @@ class OrderController extends Controller
     {
         $restaurantId = $this->restaurantId($r);
         $orders = DB::table('orders')
-            ->join('dining_sessions', 'dining_sessions.id', '=', 'orders.dining_session_id')
-            ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
-            ->where('restaurant_tables.user_id', $restaurantId)
+            ->leftJoin('dining_sessions', 'dining_sessions.id', '=', 'orders.dining_session_id')
+            ->leftJoin('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
+            ->leftJoin('outside_order_contacts', 'outside_order_contacts.order_id', '=', 'orders.id')
+            ->where('orders.user_id', $restaurantId)
             ->where(function ($q) {
                 $q->whereIn('orders.status', ['pending', 'preparing', 'ready'])
                     ->orWhere(function ($q) {
@@ -180,7 +177,7 @@ class OrderController extends Controller
                         $q->where('orders.status', 'served')->where('orders.served_at', '>=', now()->subHours(2));
                     });
             })
-            ->select('orders.*', 'restaurant_tables.label as table_label', 'dining_sessions.customer_name')
+            ->select('orders.*', DB::raw("COALESCE(restaurant_tables.label, CASE orders.channel WHEN 'pickup' THEN 'استلام' WHEN 'delivery' THEN 'توصيل' END) as table_label"), DB::raw('COALESCE(dining_sessions.customer_name, outside_order_contacts.name) as customer_name'))
             ->orderBy('orders.submitted_at')
             ->get();
 
@@ -239,13 +236,14 @@ class OrderController extends Controller
     {
         $restaurantId = $this->restaurantId($r);
         $q = DB::table('orders')
-            ->join('dining_sessions', 'dining_sessions.id', '=', 'orders.dining_session_id')
-            ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
-            ->where('restaurant_tables.user_id', $restaurantId)
+            ->leftJoin('dining_sessions', 'dining_sessions.id', '=', 'orders.dining_session_id')
+            ->leftJoin('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
+            ->leftJoin('outside_order_contacts', 'outside_order_contacts.order_id', '=', 'orders.id')
+            ->where('orders.user_id', $restaurantId)
             ->select(
                 'orders.*',
-                'restaurant_tables.label as table_label',
-                'dining_sessions.customer_name',
+                DB::raw("COALESCE(restaurant_tables.label, CASE orders.channel WHEN 'pickup' THEN 'استلام' WHEN 'delivery' THEN 'توصيل' END) as table_label"),
+                DB::raw('COALESCE(dining_sessions.customer_name, outside_order_contacts.name) as customer_name'),
                 DB::raw("(SELECT COALESCE(SUM(oi.quantity * oi.unit_price), 0) FROM order_items oi WHERE oi.order_id = orders.id AND oi.status = 'active') as total")
             )
             ->latest('orders.id');

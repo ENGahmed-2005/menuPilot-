@@ -11,6 +11,7 @@ use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OutsideOrderController;
 use App\Http\Controllers\OwnerReportsController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
@@ -57,6 +58,11 @@ Route::middleware('session.token')->group(function () {
     Route::post('sessions/{id}/call-waiter', [SessionController::class, 'assistance'])->middleware('throttle:10,1');
     Route::post('sessions/{id}/request-bill', [BillingController::class, 'request'])->middleware('throttle:10,1');
 });
+
+// Ordering from outside the restaurant (pickup / delivery) — Premium.
+Route::get('public/restaurants/{slug}', [OutsideOrderController::class, 'restaurant'])->where('slug', '[a-z0-9-]+');
+Route::post('public/restaurants/{slug}/orders', [OutsideOrderController::class, 'place'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1');
+Route::get('public/outside-orders/{id}', [OutsideOrderController::class, 'track'])->middleware('throttle:60,1');
 
 // Uploaded images (stored in the database so they survive redeploys).
 Route::get('media/{uuid}', [MediaController::class, 'show'])->where('uuid', '[0-9a-fA-F-]{36}');
@@ -118,6 +124,18 @@ Route::middleware('api.auth')->group(function () {
     Route::post('orders/{id}/cancel', [OrderController::class, 'cancelOrder'])->middleware('permission:cancel_orders');
     // US-19 / US-20: waiters and cashiers cancel/reassign without approval.
     Route::post('order-items/{id}/cancel', [OrderController::class, 'cancel'])->middleware('permission:cancel_orders');
+
+    // Outside orders inbox (pickup / delivery).
+    Route::get('outside-orders', [OutsideOrderController::class, 'index'])->middleware('permission:view_orders');
+    Route::middleware(['permission:manage_orders|view_payments', 'subscription'])->group(function () {
+        Route::post('outside-orders/{id}/accept', [OutsideOrderController::class, 'accept']);
+        Route::post('outside-orders/{id}/reject', [OutsideOrderController::class, 'reject']);
+        Route::post('outside-orders/{id}/dispatch', [OutsideOrderController::class, 'dispatch']);
+        Route::post('outside-orders/{id}/complete', [OutsideOrderController::class, 'complete']);
+        Route::post('outside-orders/{id}/verify-payment', [OutsideOrderController::class, 'verifyPayment']);
+    });
+    Route::get('online-ordering/settings', [OutsideOrderController::class, 'settings'])->middleware('permission:manage_settings');
+    Route::put('online-ordering/settings', [OutsideOrderController::class, 'updateSettings'])->middleware('permission:manage_settings');
     Route::post('order-items/{id}/reassign', [OrderController::class, 'reassign'])->middleware('permission:reassign_orders');
 
     // Billing and payments (US-16..18).

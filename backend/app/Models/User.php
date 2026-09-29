@@ -106,6 +106,7 @@ class User extends Authenticatable
 
         return match ($feature) {
             'branding' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
+            'online_orders' => $this->plan === 'premium' && $this->subscriptionActive(),
             'background' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
             'full-colors' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
             'custom-font' => $this->plan === 'premium' && $this->subscriptionActive(),
