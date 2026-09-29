@@ -86,6 +86,8 @@ class TableController extends Controller
 
     public function index(Request $request)
     {
+        SessionLifecycle::expireIdle($this->restaurantId($request));
+
         return $this->out($this->listWithQr($this->query($request)->orderBy('id')->get()));
     }
 

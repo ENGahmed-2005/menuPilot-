@@ -16,6 +16,7 @@ import StatusBadge from "../../components/ui/StatusBadge";
 import { SkeletonCards, SkeletonStats } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
 import CloseSessionButton from "../../components/billing/CloseSessionButton";
+import IdleHint from "../../components/billing/IdleHint";
 import { money, tableName } from "../../utils/format";
 
 // The API returns "available" / "occupied"; older mocks used "Available".
@@ -199,6 +200,8 @@ export default function TableStatus() {
                     <span>المتبقي <b className="num text-ink">{money(session.outstanding)}</b></span>
                   </p>
                 )}
+
+                <IdleHint session={session} />
 
                 {session?.assistanceRequested && (
                   <div className="mt-3">

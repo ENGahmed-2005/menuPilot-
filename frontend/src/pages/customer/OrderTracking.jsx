@@ -3,7 +3,7 @@ import BrandLogo from "../../components/brand/Logo";
 import { BellRing, Check, ChevronRight, Clock3, FileText, Loader2, Plus, Utensils, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOrderTracking } from "../../hooks/useOrderTracking";
-import { getSession, requestWaiterAssistance } from "../../api/sessions";
+import { getSession, leaveSession, requestWaiterAssistance } from "../../api/sessions";
 import { requestBill } from "../../api/billing";
 import Spinner from "../../components/ui/Spinner";
 
@@ -77,6 +77,20 @@ export default function OrderTracking() {
   const tableCode = session?.table_code || session?.tableCode;
   const sessionClosed = Boolean(session?.is_closed || session?.closed_at);
   const canAddOrder = Boolean(tableCode) && !sessionClosed;
+
+  const [leaving, setLeaving] = useState(false);
+  async function leaveTable() {
+    if (!window.confirm("إنهاء جلستك ومغادرة الطاولة؟ لن تستطيع إضافة طلبات لهذه الجلسة بعد ذلك.")) return;
+    setLeaving(true);
+    try {
+      await leaveSession(sessionId);
+      setSession((s) => ({ ...s, is_closed: true, closed_at: new Date().toISOString(), can_leave: false }));
+    } catch (err) {
+      window.alert(err.message || "تعذّر إنهاء الجلسة.");
+    } finally {
+      setLeaving(false);
+    }
+  }
 
   function addAnotherOrder() {
     navigate(`/t/${encodeURIComponent(tableCode)}/menu?session=${encodeURIComponent(sessionId)}&more=1`);
@@ -191,6 +205,11 @@ export default function OrderTracking() {
                 <button onClick={addAnotherOrder} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-navy text-base font-bold text-paper shadow-lg transition active:scale-[0.99]">
                   <Plus size={20} aria-hidden="true" /> إضافة طلب جديد
                 </button>
+                {session?.can_leave && (
+                  <button onClick={leaveTable} disabled={leaving} className="mt-2 flex h-11 w-full items-center justify-center rounded-2xl border border-ink/15 bg-white text-sm font-bold text-ink disabled:opacity-60">
+                    {leaving ? "جارٍ إنهاء الجلسة…" : "إنهاء الجلسة ومغادرة الطاولة"}
+                  </button>
+                )}
                 <p className="mt-2 text-center text-xs leading-5 text-muted">
                   {session?.has_pending_payment
                     ? "دفعتك السابقة بانتظار تأكيد الكاشير. جهّز طلبك الجديد الآن، ويُرسَل بعد التأكيد مباشرة."
