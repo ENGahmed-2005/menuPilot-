@@ -11,6 +11,7 @@ import Alert from "../../components/ui/Alert";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { useToast } from "../../components/ui/Toast";
+import { COUNTRY_CODES, splitE164, toE164, waLink } from "../../utils/whatsapp";
 
 function Toggle({ label, hint, checked, onChange }) {
   return (
@@ -27,15 +28,16 @@ export default function OnlineOrderingSettings() {
   const [s, setS] = useState(null);
   const [zones, setZones] = useState([]);
   const [saving, setSaving] = useState(false);
-  const load = () => getOnlineOrderingSettings().then((d) => { setData(d); setS(d.settings); setZones(d.zones.map((z) => ({ ...z }))); }).catch((e) => toast.error(errorText(e)));
+  const [wa, setWa] = useState({ code: "+970", number: "" });
+  const load = () => getOnlineOrderingSettings().then((d) => { setData(d); setS(d.settings); setZones(d.zones.map((z) => ({ ...z }))); setWa(splitE164(d.settings.whatsapp)); }).catch((e) => toast.error(errorText(e)));
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      const d = await saveOnlineOrderingSettings({ enabled: !!s.enabled, paused: !!s.paused, pickup_enabled: !!s.pickup_enabled, delivery_enabled: !!s.delivery_enabled, prep_minutes: Number(s.prep_minutes) || 20, opens_at: s.opens_at || null, closes_at: s.closes_at || null, slug: s.slug, zones: zones.filter((z) => z.name).map((z) => ({ name: z.name, fee: Number(z.fee) || 0, min_order: Number(z.min_order) || 0, active: z.active !== false })) });
-      setData(d); setS(d.settings); setZones(d.zones); toast.success("حُفظت إعدادات الطلب أونلاين.");
+      const d = await saveOnlineOrderingSettings({ enabled: !!s.enabled, paused: !!s.paused, pickup_enabled: !!s.pickup_enabled, delivery_enabled: !!s.delivery_enabled, prep_minutes: Number(s.prep_minutes) || 20, whatsapp: toE164(wa.code, wa.number) || null, opens_at: s.opens_at || null, closes_at: s.closes_at || null, slug: s.slug, zones: zones.filter((z) => z.name).map((z) => ({ name: z.name, fee: Number(z.fee) || 0, min_order: Number(z.min_order) || 0, active: z.active !== false })) });
+      setData(d); setS(d.settings); setZones(d.zones); setWa(splitE164(d.settings.whatsapp)); toast.success("حُفظت إعدادات الطلب أونلاين.");
     } catch (err) { toast.error(errorText(err, "تعذّر الحفظ.")); } finally { setSaving(false); }
   }
 
@@ -70,6 +72,18 @@ export default function OnlineOrderingSettings() {
         <Input label="يبدأ الطلب" type="time" value={s.opens_at || ""} onChange={(e) => set("opens_at")(e.target.value)} hint="فارغ = طوال الوقت" />
         <Input label="ينتهي الطلب" type="time" value={s.closes_at || ""} onChange={(e) => set("closes_at")(e.target.value)} />
       </div>
+      <fieldset>
+        <legend className="mb-1.5 text-sm font-bold">واتساب المطعم</legend>
+        <div className="flex gap-2" dir="ltr">
+          <select aria-label="مقدمة الدولة" value={wa.code} onChange={(e) => setWa((w) => ({ ...w, code: e.target.value }))} className="h-11 rounded-[var(--radius-control)] border border-line bg-surface px-2 text-sm">
+            {COUNTRY_CODES.map(([c, n]) => <option key={c + n} value={c}>{c} {n}</option>)}
+          </select>
+          <input aria-label="رقم واتساب" type="tel" inputMode="tel" placeholder="599 123 456" value={wa.number} onChange={(e) => setWa((w) => ({ ...w, number: e.target.value }))} className="h-11 min-w-0 flex-1 rounded-[var(--radius-control)] border border-line bg-surface px-3 text-sm" />
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          يتواصل معك الزبائن عليه لتأكيد الطلب والفاتورة. {toE164(wa.code, wa.number) && <a href={waLink(toE164(wa.code, wa.number), "تجربة من إعدادات menuPilot")} target="_blank" rel="noopener noreferrer" className="font-bold text-copper-ink underline-offset-4 hover:underline" dir="ltr">{toE164(wa.code, wa.number)} ↗</a>}
+        </p>
+      </fieldset>
       <Input label="رابط المطعم (بالإنجليزية)" dir="ltr" value={s.slug} onChange={(e) => set("slug")(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} hint="أحرف إنجليزية وأرقام وشرطة" />
 
       {Boolean(s.delivery_enabled) && (

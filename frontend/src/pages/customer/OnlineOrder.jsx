@@ -12,6 +12,7 @@ import { errorText } from "../../utils/errors";
 import { money } from "../../utils/format";
 import Modal from "../../components/ui/Modal";
 import BrandLogo from "../../components/brand/Logo";
+import { waLink } from "../../utils/whatsapp";
 
 export default function OnlineOrder() {
   const { slug } = useParams();
@@ -72,6 +73,7 @@ export default function OnlineOrder() {
               {data.pickup && <span className="rounded-full bg-paper/15 px-2 py-0.5">استلام</span>}
               {data.delivery && <span className="rounded-full bg-paper/15 px-2 py-0.5">توصيل</span>}
               <span className="rounded-full bg-paper/15 px-2 py-0.5">التحضير ≈ {data.prep_minutes} د</span>
+              {data.restaurant.whatsapp && <a href={waLink(data.restaurant.whatsapp, `مرحبًا ${data.restaurant.name}، عندي استفسار عن الطلب أونلاين.`)} target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#1f9d55] px-2 py-0.5 text-white">واتساب</a>}
             </p>
           </div>
         </div>

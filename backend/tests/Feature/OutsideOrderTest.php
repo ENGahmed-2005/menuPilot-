@@ -115,3 +115,19 @@ it('isolates restaurants and limits pending orders per phone', function () {
     placeOrder($this, $a)->assertCreated();
     placeOrder($this, $a)->assertStatus(429)->assertJsonPath('code', 'TOO_MANY_PENDING');
 });
+
+it('stores the restaurant WhatsApp in international format and shares it with tracking and bills', function () {
+    $r = onlineRestaurant($this);
+    $this->putJson('/api/online-ordering/settings', ['whatsapp' => '0599123456'], authAs($r))->assertStatus(422); // country code required
+    $this->putJson('/api/online-ordering/settings', ['whatsapp' => '+970599123456'], authAs($r))->assertOk()->assertJsonPath('data.whatsapp', '+970599123456');
+
+    expect($this->getJson("/api/public/restaurants/{$r['slug']}")->json('data.restaurant.whatsapp'))->toBe('+970599123456');
+    $o = placeOrder($this, $r)->json('data');
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", ['prep_minutes' => 25], authAs($r))->assertOk();
+    $t = $this->getJson("/api/public/outside-orders/{$o['id']}?token={$o['token']}")->json('data');
+    expect($t['restaurant']['whatsapp'])->toBe('+970599123456')->and($t['eta_at'])->not->toBeNull();
+
+    // Dine-in bill exposes it too.
+    $s = openSession($this, makeTable($r['id']));
+    expect($this->getJson("/api/public/sessions/{$s['id']}/bill", customer($s))->json('data.restaurant_whatsapp'))->toBe('+970599123456');
+});

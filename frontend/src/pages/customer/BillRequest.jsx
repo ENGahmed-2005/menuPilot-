@@ -5,12 +5,13 @@
    Printable / savable as a receipt.
    ========================================================================== */
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, CheckCircle2, Clock3, Printer, ReceiptText, RefreshCw } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, MessageCircle, Printer, ReceiptText, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import BrandLogo from "../../components/brand/Logo";
 import { getCustomerBill } from "../../api/billing";
 import { errorText } from "../../utils/errors";
 import { money } from "../../utils/format";
+import { waLink } from "../../utils/whatsapp";
 
 const STATE = {
   closed: { icon: CheckCircle2, tone: "bg-herb/10 text-herb", title: "تم الدفع، شكرًا لزيارتك", note: "أُغلقت جلسة الطاولة. نتمنى أن تكون وجبتك قد أعجبتك." },
@@ -107,6 +108,12 @@ export default function BillRequest() {
             </section>
 
             <div className="mt-5 grid gap-3 print:hidden">
+              {bill.restaurant_whatsapp && (
+                <a href={waLink(bill.restaurant_whatsapp, [`مرحبًا ${bill.restaurant || ""} 👋`, `فاتورة ${bill.session.table_label ? `طاولة ${bill.session.table_label}` : "طاولتي"} · جلسة #${bill.session.id}`, ...bill.items.map((i) => `• ${i.quantity}× ${i.name} — ${money(i.total)}`), `الإجمالي: ${money(bill.total)}`, `المتبقي: ${money(bill.outstanding)}`].join("\n"))}
+                  target="_blank" rel="noopener noreferrer" className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#1f9d55] text-sm font-bold text-white">
+                  <MessageCircle size={17} aria-hidden="true" /> تأكيد الفاتورة على واتساب
+                </a>
+              )}
               <button onClick={() => window.print()} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-white text-sm font-bold ring-1 ring-black/10">
                 <Printer size={17} aria-hidden="true" /> حفظ أو طباعة الفاتورة
               </button>

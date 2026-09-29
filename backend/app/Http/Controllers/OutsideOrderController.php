@@ -9,6 +9,7 @@ use App\Support\OrderWorkflow;
 use App\Support\ResolvesRestaurant;
 use App\Support\SubscriptionAccess;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -118,7 +119,7 @@ class OutsideOrderController extends Controller
         $branding = DB::table('restaurant_settings')->where('user_id', $owner->id)->first();
 
         return response()->json(['data' => [
-            'restaurant' => ['name' => $owner->restaurant_name, 'phone' => $owner->restaurant_phone, 'logo_url' => $branding->logo_url ?? null, 'primary_color' => $branding->primary_color ?? null],
+            'restaurant' => ['name' => $owner->restaurant_name, 'phone' => $owner->restaurant_phone, 'whatsapp' => $s->whatsapp, 'logo_url' => $branding->logo_url ?? null, 'primary_color' => $branding->primary_color ?? null],
             'open' => $available && $this->isOpenNow($s),
             'paused' => (bool) $s->paused,
             'hours' => $s->opens_at && $s->closes_at ? ['opens_at' => $s->opens_at, 'closes_at' => $s->closes_at] : null,
@@ -227,8 +228,14 @@ class OutsideOrderController extends Controller
             return response()->json(['message' => 'رابط التتبع غير صالح.', 'code' => 'ORDER_TOKEN_INVALID'], 403);
         }
         $restaurant = DB::table('users')->where('id', $o->user_id)->select('restaurant_name', 'restaurant_phone')->first();
+        $whatsapp = DB::table('online_ordering_settings')->where('user_id', $o->user_id)->value('whatsapp');
+        // Expected ready time: accepted + prep minutes (server clock).
+        $eta = $o->accepted_at && $o->prep_minutes ? Carbon::parse($o->accepted_at)->addMinutes((int) $o->prep_minutes)->toIso8601String() : null;
 
-        return response()->json(['data' => $this->present($o) + ['restaurant' => ['name' => $restaurant->restaurant_name, 'phone' => $restaurant->restaurant_phone]]]);
+        return response()->json(['data' => $this->present($o) + [
+            'eta_at' => $eta,
+            'restaurant' => ['name' => $restaurant->restaurant_name, 'phone' => $restaurant->restaurant_phone, 'whatsapp' => $whatsapp],
+        ]]);
     }
 
     // ── staff ──────────────────────────────────────────────────────────────
@@ -345,6 +352,7 @@ class OutsideOrderController extends Controller
             'settings' => $s,
             'zones' => DB::table('delivery_zones')->where('user_id', $rid)->orderBy('name')->get(),
             'plan_allows' => $owner ? $this->planAllows($owner) : false,
+            'whatsapp' => $s->whatsapp,
             'public_url' => rtrim(config('app.frontend_url'), '/').'/r/'.$s->slug,
         ]]);
     }
@@ -357,6 +365,8 @@ class OutsideOrderController extends Controller
             'enabled' => 'sometimes|boolean', 'paused' => 'sometimes|boolean',
             'pickup_enabled' => 'sometimes|boolean', 'delivery_enabled' => 'sometimes|boolean',
             'prep_minutes' => 'sometimes|integer|min:5|max:240',
+            // International format with country code, e.g. +970599123456.
+            'whatsapp' => ['sometimes', 'nullable', 'regex:/^\+[1-9]\d{7,14}$/'],
             'opens_at' => ['sometimes', 'nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'closes_at' => ['sometimes', 'nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'slug' => ['sometimes', 'string', 'min:3', 'max:60', 'regex:/^[a-z0-9-]+$/', Rule::unique('online_ordering_settings', 'slug')->ignore($s->id)],
