@@ -19,6 +19,7 @@ import { SkeletonCards, SkeletonStats } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
 import { usePermissions } from "../../hooks/usePermissions";
 import { tableName } from "../../utils/format";
+import IdleHint from "../../components/billing/IdleHint";
 
 const priority = (s) => (s.assistanceRequested ? 0 : s.billRequested ? 1 : 2);
 const sinceLabel = (iso) => {
@@ -119,6 +120,7 @@ export default function TableSessions() {
                   ) : (
                     <p className="mt-auto pt-4 text-sm text-muted">لا توجد طلبات معلّقة</p>
                   )}
+                  <IdleHint session={s} />
                 </Card>
               </li>
             ))}

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\PaymentStatus;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -50,8 +51,9 @@ class SessionLifecycle
             )
             ->get()->keyBy('sid');
 
-        $orders = DB::table('orders')->whereIn('dining_session_id', $sessionIds)->where('status', '!=', 'cancelled')
-            ->groupBy('dining_session_id')->select('dining_session_id as sid', DB::raw('COUNT(*) as n'))->pluck('n', 'sid');
+        $orderStats = DB::table('orders')->whereIn('dining_session_id', $sessionIds)->where('status', '!=', 'cancelled')
+            ->groupBy('dining_session_id')->select('dining_session_id as sid', DB::raw('COUNT(*) as n'), DB::raw('MAX(submitted_at) as last_order_at'))->get()->keyBy('sid');
+        $orders = $orderStats->map(fn ($o) => $o->n);
 
         $out = [];
         foreach ($sessionIds as $id) {
@@ -65,6 +67,7 @@ class SessionLifecycle
                 'has_orders' => (int) ($orders[$id] ?? 0) > 0,
                 'has_settled_payment' => (int) ($p->settled_count ?? 0) > 0,
                 'has_pending_payment' => (int) ($p->pending_count ?? 0) > 0,
+                'last_order_at' => $orderStats[$id]->last_order_at ?? null,
             ];
         }
 
@@ -118,7 +121,10 @@ class SessionLifecycle
         DB::table('dining_sessions')->where('id', $session->id)->update(array_filter([
             'status' => 'closed', 'closed_at' => $now, 'updated_at' => $now, 'closed_by' => $closedBy,
         ], fn ($v) => $v !== null));
-        self::issueInvoiceNumber((int) $session->id, $restaurantId, $now);
+        // Only sessions with something billed become accounting invoices.
+        if (DB::table('orders')->where('dining_session_id', $session->id)->where('status', '!=', 'cancelled')->exists()) {
+            self::issueInvoiceNumber((int) $session->id, $restaurantId, $now);
+        }
         DB::table('assistance_requests')->where('dining_session_id', $session->id)->where('status', 'open')
             ->update(['status' => 'resolved', 'resolved_at' => $now, 'updated_at' => $now]);
         DB::table('restaurant_tables')->where('id', $session->restaurant_table_id)->where('user_id', $restaurantId)
@@ -147,6 +153,33 @@ class SessionLifecycle
         return $number;
     }
 
+    /**
+     * Close sessions that were opened but never ordered from (customer scanned
+     * and left). Runs lazily from staff screens and QR check-in, so no
+     * scheduler is needed. Never touches sessions with orders or payments.
+     */
+    public static function expireIdle(?int $restaurantId = null): int
+    {
+        $cutoff = now()->subMinutes((int) config('dining.idle_minutes_without_order', 30));
+        $q = DB::table('dining_sessions as s')
+            ->join('restaurant_tables as t', 't.id', '=', 's.restaurant_table_id')
+            ->whereNull('s.closed_at')->where('s.opened_at', '<', $cutoff)
+            ->whereNotExists(fn ($o) => $o->select(DB::raw(1))->from('orders')->whereColumn('orders.dining_session_id', 's.id')->where('orders.status', '!=', 'cancelled'))
+            ->whereNotExists(fn ($p) => $p->select(DB::raw(1))->from('payments')->whereColumn('payments.dining_session_id', 's.id'))
+            ->select('s.id', 's.restaurant_table_id', 's.opened_at', 't.user_id', 't.label');
+        if ($restaurantId) {
+            $q->where('t.user_id', $restaurantId);
+        }
+        $closed = 0;
+        foreach ($q->limit(200)->get() as $s) {
+            self::closeNow($s, (int) $s->user_id, null);
+            Audit::log(request(), 'session.auto_closed', 'dining_session', (int) $s->id, ['reason' => 'no_order', 'table' => $s->label, 'opened_at' => (string) $s->opened_at], (int) $s->user_id);
+            $closed++;
+        }
+
+        return $closed;
+    }
+
     /** Fields added to session payloads for staff screens. */
     public static function present(object $session, array $summary): array
     {
@@ -160,6 +193,10 @@ class SessionLifecycle
             'hasPendingPayment' => $summary['has_pending_payment'],
             'canClose' => $blocker === null,
             'closeBlocker' => $blocker['code'] ?? null,
+            // Idle hints for staff (a customer may have left the table).
+            'hasOrders' => $summary['has_orders'],
+            'idleMinutes' => $session->closed_at ? 0 : (int) floor(Carbon::parse($summary['last_order_at'] ?? $session->opened_at)->diffInMinutes(now(), true)),
+            'idle' => ! $session->closed_at && Carbon::parse($summary['last_order_at'] ?? $session->opened_at)->diffInMinutes(now(), true) >= (int) config('dining.idle_flag_minutes', 20),
         ];
     }
 }

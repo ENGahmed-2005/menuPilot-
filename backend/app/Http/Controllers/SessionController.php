@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Audit;
 use App\Support\ResolvesRestaurant;
 use App\Support\SessionLifecycle;
 use Illuminate\Http\Request;
@@ -41,6 +42,10 @@ class SessionController extends Controller
 
         $result = DB::transaction(function () use ($v, $code) {
             $table = DB::table('restaurant_tables')->where('table_code', $code)->lockForUpdate()->first();
+            if (! empty($table)) {
+                // A table left by a customer who never ordered is free again.
+                SessionLifecycle::expireIdle((int) $table->user_id);
+            }
             if (! $table) {
                 return response()->json(['message' => 'رمز الطاولة غير صالح.'], 404);
             }
@@ -119,6 +124,8 @@ class SessionController extends Controller
         // Adding an order is possible while the session is open; the payment
         // step is held only while a previous payment awaits verification.
         $s->can_add_order = ! $s->is_closed;
+        $money = SessionLifecycle::summaries([(int) $id])[(int) $id];
+        $s->can_leave = ! $s->is_closed && ! $money['has_pending_payment'] && $money['outstanding'] <= 0;
 
         return $this->out($s);
     }
@@ -218,8 +225,31 @@ class SessionController extends Controller
         return $this->out(['resolved' => $count]);
     }
 
+    /** POST /public/sessions/{id}/leave — the guest ends their own session when nothing is owed. */
+    public function leave(Request $request, $id)
+    {
+        $session = DB::table('dining_sessions')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
+            ->where('dining_sessions.id', $id)->select('dining_sessions.*', 'restaurant_tables.user_id as restaurant_id', 'restaurant_tables.label as table_label')->first();
+        if (! $session) {
+            return response()->json(['message' => 'Session not found'], 404);
+        }
+        if ($session->closed_at) {
+            return $this->out(['status' => 'closed']);
+        }
+        $money = SessionLifecycle::summaries([(int) $id])[(int) $id];
+        if ($money['has_pending_payment'] || $money['outstanding'] > 0) {
+            return response()->json(['message' => 'لديك مبلغ غير مدفوع. اطلب الفاتورة وسيأتيك الكاشير قبل المغادرة.', 'code' => 'BILL_OUTSTANDING'], 409);
+        }
+        SessionLifecycle::closeNow($session, (int) $session->restaurant_id, null);
+        Audit::log($request, 'session.customer_left', 'dining_session', (int) $id, ['table' => $session->table_label, 'total' => $money['total']], (int) $session->restaurant_id);
+
+        return $this->out(['status' => 'closed']);
+    }
+
     public function active(Request $request)
     {
+        SessionLifecycle::expireIdle($this->restaurantId($request));
+
         return $this->out($this->decoratedSessions($this->restaurantId($request)));
     }
 

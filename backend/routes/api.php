@@ -50,6 +50,7 @@ Route::middleware('session.token')->group(function () {
     Route::post('public/sessions/{id}/payment', [PaymentController::class, 'submit'])->middleware(['throttle:20,1', 'subscription:session']); // creates an order
     Route::post('public/sessions/{id}/assistance-requests', [SessionController::class, 'assistance'])->middleware('throttle:10,1');
     Route::post('public/sessions/{id}/bill-request', [BillingController::class, 'request'])->middleware('throttle:10,1');
+    Route::post('public/sessions/{id}/leave', [SessionController::class, 'leave'])->middleware('throttle:10,1');
     // The guest's own itemised bill (read-only).
     Route::get('public/sessions/{id}/bill', [BillingController::class, 'customerBill']);
     // SRS-compatible aliases (US-11, US-16).

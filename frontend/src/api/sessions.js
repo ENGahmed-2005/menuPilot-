@@ -29,3 +29,6 @@ export const requestWaiterAssistance = (sessionId, note) => api.post(`/public/se
 export const getActiveSessions = () => api.get("/sessions?status=active");
 /** US-11: staff mark every pending waiter call of a session as handled. */
 export const resolveSessionAssistance = (sessionId) => api.post(`/sessions/${sessionId}/assistance/resolve`);
+
+/** Customer ends their own session (only when nothing is owed). */
+export const leaveSession = (sessionId) => api.post(`/public/sessions/${sessionId}/leave`);
