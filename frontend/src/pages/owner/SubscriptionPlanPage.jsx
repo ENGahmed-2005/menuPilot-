@@ -74,7 +74,10 @@ export default function SubscriptionPlanPage() {
   useEffect(() => { load(); }, []);
 
   const selected = data?.plans?.find((p) => p.id === plan);
-  const amount = (selected?.price || 0) * months;
+  // Same rule as the server: 12 months → pay 12 − annual_free_months.
+  const payable = months === 12 ? 12 - (data?.annual_free_months || 0) : months;
+  const amount = (selected?.price || 0) * payable;
+  const ils = (v) => (data?.ils_rate ? `≈ ${Math.round(v * data.ils_rate)} ₪` : "");
   const pending = data?.payments?.find((p) => p.status === "pending");
   const lastRejected = data?.payments?.[0]?.status === "rejected" ? data.payments[0] : null;
   const restaurant = user?.restaurant_name || user?.name || "مطعمي";
@@ -152,13 +155,15 @@ export default function SubscriptionPlanPage() {
                   className={`rounded-2xl border p-4 text-right transition-colors ${plan === p.id ? "border-copper bg-copper/[0.07] ring-2 ring-copper/25" : "border-line bg-surface hover:border-ink/25"}`}>
                   <p className="font-extrabold">{p.name}</p>
                   <p className="num mt-1 text-2xl font-black">{money(p.price, data.currency)}<span className="text-xs font-medium text-muted"> / شهر</span></p>
+                  <p className="num text-xs text-muted">{ils(p.price)} شهريًا</p>
                   {user?.plan === p.id && data.subscription?.status === "ACTIVE" && <Badge tone="success" className="mt-2">خطتك الحالية</Badge>}
                 </button>
               ))}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
               <SegmentedControl label="المدة" value={months} onChange={setMonths} options={data.periods.map((m) => ({ value: m, label: monthsText(m) }))} />
-              <p className="text-sm">المبلغ المطلوب: <b className="num text-lg">{money(amount, data.currency)}</b></p>
+              <p className="text-sm">المبلغ المطلوب: <b className="num text-lg">{money(amount, data.currency)}</b> <span className="num text-xs text-muted">{ils(amount)}</span>
+                {months === 12 && data.annual_free_months > 0 && <span className="mr-2 rounded-full bg-copper/15 px-2 py-0.5 text-xs font-bold text-copper-ink">{data.annual_free_months} شهر مجانًا</span>}</p>
             </div>
           </Card>
 

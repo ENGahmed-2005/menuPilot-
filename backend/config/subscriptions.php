@@ -19,7 +19,11 @@ return [
 
     // Prices are decided here (the client never sends an amount). Monthly.
     'currency' => env('SUBSCRIPTION_CURRENCY', 'USD'),
-    'prices' => ['basic' => 19, 'pro' => 39, 'premium' => 69],
+    'prices' => ['basic' => 15, 'pro' => 29, 'premium' => 49], // approved Sep 2026 (competitor review)
+    // Paying 12 months at once: 2 months free (pay 10).
+    'annual_free_months' => 2,
+    // Display-only shekel equivalent next to USD prices.
+    'display_ils_rate' => (float) env('SUBSCRIPTION_ILS_RATE', 3.65),
     'plan_names' => ['basic' => 'الأساسية', 'pro' => 'الاحترافية', 'premium' => 'المميزة'],
     'periods' => [1, 3, 6, 12], // months the owner can pay for at once
 

@@ -30,7 +30,8 @@ it('shows bank transfer instructions with server prices and the WhatsApp contact
         ->and($data['bank_configured'])->toBeTrue()
         ->and($data['whatsapp'])->toBe('+970597401925')
         ->and($data['reference_code'])->toBe('MP-'.$owner['id'])
-        ->and(collect($data['plans'])->firstWhere('id', 'pro')['price'])->toBe(39);
+        ->and(collect($data['plans'])->firstWhere('id', 'pro')['price'])->toBe(29)
+        ->and($data['annual_free_months'])->toBe(2);
 });
 
 it('records a reported transfer as pending, prices it server-side and prepares the WhatsApp invoice', function () {
@@ -42,12 +43,12 @@ it('records a reported transfer as pending, prices it server-side and prepares t
     ], authAs($owner))->assertCreated()->json('data');
 
     expect($res['status'])->toBe('pending')
-        ->and((float) $res['amount'])->toBe(117.0)
+        ->and((float) $res['amount'])->toBe(87.0)
         ->and($res['invoice_number'])->toStartWith('MPS-'.now()->format('Y').'-')
         ->and($res['proof_url'])->toContain('/api/media/')
         ->and($res['whatsapp_url'])->toStartWith('https://wa.me/970597401925?text=');
     $text = urldecode(explode('text=', $res['whatsapp_url'])[1]);
-    expect($text)->toContain($res['invoice_number'], 'الاحترافية', '117 USD', 'BOP-778899', 'بنك فلسطين', 'MP-'.$owner['id']);
+    expect($text)->toContain($res['invoice_number'], 'الاحترافية', '87 USD', 'BOP-778899', 'بنك فلسطين', 'MP-'.$owner['id']);
 
     // Still a trial: nothing is activated by the owner.
     $sub = $this->getJson('/api/auth/me', authAs($owner))->json('data.subscription');
@@ -107,4 +108,10 @@ it('keeps payments private and admin-only where required', function () {
     $this->postJson("/api/admin/subscription-payments/{$p['id']}/verify", [], authAs($a))->assertForbidden();
     $this->getJson('/api/admin/subscription-payments', authAs($a))->assertForbidden();
     $this->postJson('/api/subscription/payments', ['plan' => 'pro', 'payer_name' => 'A', 'transfer_date' => now()->addDays(3)->toDateString()], authAs($b))->assertStatus(422);
+});
+
+it('prices a 12-month payment at 10 months (2 free)', function () {
+    $owner = trialOwner($this);
+    $p = $this->postJson('/api/subscription/payments', ['plan' => 'pro', 'months' => 12, 'payer_name' => 'A', 'transfer_date' => now()->toDateString()], authAs($owner))->assertCreated()->json('data');
+    expect((float) $p['amount'])->toBe(290.0)->and($p['months'])->toBe(12);
 });

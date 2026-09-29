@@ -42,6 +42,12 @@ class SubscriptionPaymentController extends Controller
         ];
     }
 
+    /** 12 months → pay 10 (annual_free_months); other periods pay every month. */
+    public static function payableMonths(int $months): int
+    {
+        return $months === 12 ? 12 - (int) config('subscriptions.annual_free_months', 0) : $months;
+    }
+
     private static function referenceCode(int $restaurantId): string
     {
         return 'MP-'.$restaurantId;
@@ -81,6 +87,8 @@ class SubscriptionPaymentController extends Controller
             'plans' => collect(config('subscriptions.prices'))->map(fn ($price, $id) => ['id' => $id, 'name' => config("subscriptions.plan_names.$id"), 'price' => $price])->values(),
             'currency' => config('subscriptions.currency'),
             'periods' => config('subscriptions.periods'),
+            'annual_free_months' => (int) config('subscriptions.annual_free_months', 0),
+            'ils_rate' => (float) config('subscriptions.display_ils_rate'),
             'bank' => config('subscriptions.bank'),
             'bank_configured' => (bool) (config('subscriptions.bank.account_number') || config('subscriptions.bank.iban')),
             'reference_code' => self::referenceCode($owner->id),
@@ -124,7 +132,7 @@ class SubscriptionPaymentController extends Controller
                 'user_id' => $owner->id,
                 'plan' => $v['plan'],
                 'months' => $months,
-                'amount' => config("subscriptions.prices.{$v['plan']}") * $months, // server price
+                'amount' => config("subscriptions.prices.{$v['plan']}") * self::payableMonths($months), // server price
                 'currency' => config('subscriptions.currency'),
                 'method' => 'bank_transfer',
                 'bank' => config('subscriptions.bank.name'),
