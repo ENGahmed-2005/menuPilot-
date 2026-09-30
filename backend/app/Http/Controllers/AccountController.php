@@ -38,6 +38,8 @@ class AccountController extends Controller
             'payment_methods.wallet.account_name' => 'nullable|string|max:255',
             'payment_methods.wallet.account_number' => 'nullable|string|max:100',
             'payment_methods.wallet.qr_url' => 'nullable|url|max:1000',
+            // Dine-in: pay before the kitchen prepares, or after eating.
+            'payment_timing' => 'nullable|in:before,after',
         ]);
 
         $user->update([...$validated, 'name' => $validated['restaurant_name']]);

@@ -15,7 +15,7 @@ const emptyPayments = { bank: { enabled: false, name: "", account_name: "", acco
 export default function RestaurantSettings() {
   const { user } = useAuth();
   const plan = getSubscriptionPlan(user?.plan);
-  const [form, setForm] = useState({ restaurant_name: "", restaurant_phone: "", restaurant_description: "", restaurant_address: "", latitude: "", longitude: "", payment_methods: emptyPayments });
+  const [form, setForm] = useState({ restaurant_name: "", restaurant_phone: "", restaurant_description: "", restaurant_address: "", latitude: "", longitude: "", payment_timing: "before", payment_methods: emptyPayments });
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [message, setMessage] = useState(""), [error, setError] = useState("");
 
   useEffect(() => {
@@ -23,6 +23,7 @@ export default function RestaurantSettings() {
       restaurant_name: data?.restaurant_name || data?.restaurantName || "",
       restaurant_phone: data?.restaurant_phone || "", restaurant_description: data?.restaurant_description || "",
       restaurant_address: data?.restaurant_address || "", latitude: data?.latitude ?? "", longitude: data?.longitude ?? "",
+      payment_timing: data?.payment_timing || "before",
       payment_methods: { ...emptyPayments, ...(data?.payment_methods || {}) },
     })).catch(() => setForm((current) => ({ ...current, restaurant_name: user?.restaurantName || user?.name || "" }))).finally(() => setLoading(false));
   }, [user?.restaurantName, user?.name]);
@@ -58,6 +59,17 @@ export default function RestaurantSettings() {
         <div className="mt-7 rounded-2xl border border-copper/20 bg-copper/5 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black">موقع المطعم</h3><p className="mt-1 text-xs leading-5 text-muted">يُستخدم للتحقق من وجود العميل داخل نطاق المطعم عند فتح جلسة QR.</p></div><button type="button" onClick={useCurrentLocation} className="rounded-full border border-copper/30 px-4 py-2 text-xs font-black text-copper-ink hover:bg-copper/10">استخدم موقعي الحالي</button></div><div className="mt-4 grid gap-4 sm:grid-cols-2"><div><label className="mb-2 block text-xs font-bold">Latitude</label><input className={fieldClass} value={form.latitude} onChange={set("latitude")} type="number" step="any" required /></div><div><label className="mb-2 block text-xs font-bold">Longitude</label><input className={fieldClass} value={form.longitude} onChange={set("longitude")} type="number" step="any" required /></div></div></div>
 
         <div className="mt-7"><div className="mb-4 flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><CreditCard size={18}/></span><div><h3 className="font-black">طرق الدفع الإلكتروني</h3><p className="text-xs text-muted">فعّل الطريقة وأدخل بيانات التحويل التي ستظهر للعميل.</p></div></div>
+          <fieldset className="mb-5 rounded-2xl border border-ink/10 p-4">
+            <legend className="px-1 text-sm font-extrabold">توقيت الدفع داخل المطعم</legend>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {[["before", "الدفع قبل التحضير", "لا يصل الطلب للمطبخ إلا بعد أن يؤكد الكاشير الدفع. مناسب للمقاهي والوجبات السريعة."], ["after", "الدفع بعد الأكل", "يصل الطلب للمطبخ فورًا، ويدفع الزبون في النهاية من «طلب الفاتورة». مناسب لمطاعم الجلوس."]].map(([v, t, d]) => (
+                <label key={v} className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${form.payment_timing === v ? "border-copper bg-copper/[0.06]" : "border-ink/10"}`}>
+                  <input type="radio" name="payment_timing" value={v} checked={form.payment_timing === v} onChange={() => setForm((c) => ({ ...c, payment_timing: v }))} className="mt-1 accent-[var(--color-copper)]" />
+                  <span><span className="block text-sm font-bold">{t}</span><span className="block text-xs leading-5 text-muted">{d}</span></span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           {[['bank','التحويل البنكي'],['wallet','المحفظة الإلكترونية']].map(([method,label]) => <div key={method} className="mb-4 rounded-2xl border border-ink/10 p-4"><label className="flex items-center gap-3 font-bold"><input type="checkbox" checked={Boolean(form.payment_methods[method]?.enabled)} onChange={setPayment(method,"enabled")} /> {label}</label>{form.payment_methods[method]?.enabled && <div className="mt-4 grid gap-3 sm:grid-cols-2"><input className={fieldClass} placeholder="اسم البنك / المحفظة" value={form.payment_methods[method]?.name || ""} onChange={setPayment(method,"name")} /><input className={fieldClass} placeholder="اسم صاحب الحساب" value={form.payment_methods[method]?.account_name || ""} onChange={setPayment(method,"account_name")} /><input className={fieldClass} placeholder="رقم الحساب / رقم الجوال" value={form.payment_methods[method]?.account_number || ""} onChange={setPayment(method,"account_number")} /><input className={fieldClass} placeholder="رابط QR Code (اختياري)" value={form.payment_methods[method]?.qr_url || ""} onChange={setPayment(method,"qr_url")} type="url" /></div>}</div>)}
         </div>
         <div className="mt-7 flex justify-end"><Button type="submit" disabled={saving}><Save size={16}/> {saving ? "جارِ الحفظ…" : "حفظ التغييرات"}</Button></div>

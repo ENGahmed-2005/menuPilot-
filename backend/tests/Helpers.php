@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 function makeOwner(string $name = 'Owner'): array
 {
     $token = Str::random(40);
-    $id = DB::table('users')->insertGetId([
+    $id = DB::table('users')->insertGetId(['payment_timing' => 'after',
         'name' => $name,
         'restaurant_name' => $name.' Restaurant',
         'email' => Str::lower(Str::random(8)).'@example.test',

@@ -1,9 +1,13 @@
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, ArrowLeft, AlertCircle } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+import { useEffect, useState } from "react";
+import { getSession } from "../../api/sessions";
+import { submitOrder } from "../../api/orders";
+import { errorText } from "../../utils/errors";
 
 export default function Cart() {
-  const { items, updateQuantity, updateNote, removeItem, total } = useCart();
+  const { items, updateQuantity, updateNote, removeItem, total, clearCart } = useCart();
   const [searchParams] = useSearchParams();
   const { tableCode } = useParams();
   const sessionId = searchParams.get("session");
@@ -11,9 +15,26 @@ export default function Cart() {
   const menuPath = `/t/${tableCode}/menu${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`;
   const paymentPath = `/t/${tableCode}/payment${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`;
 
-  function continueToPayment() {
+  // Restaurant choice: pay before the kitchen prepares (default) or after eating.
+  const [timing, setTiming] = useState("before");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  useEffect(() => { if (sessionId) getSession(sessionId).then((s) => setTiming(s?.payment_timing || "before")).catch(() => {}); }, [sessionId]);
+  const payAfter = timing === "after";
+
+  async function continueToPayment() {
     if (!sessionId) return;
-    navigate(paymentPath);
+    if (!payAfter) { navigate(paymentPath); return; }
+    setSending(true); setSendError("");
+    try {
+      await submitOrder(sessionId, items.map((item) => ({ menuItemId: item.menuItemId, quantity: item.quantity, note: item.note || "" })));
+      clearCart();
+      navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`, { replace: true });
+    } catch (err) {
+      setSendError(errorText(err, "تعذّر إرسال الطلب."));
+    } finally {
+      setSending(false);
+    }
   }
 
   if (items.length === 0) return <div dir="rtl" className="grid min-h-screen place-items-center bg-paper-2 px-6 text-center text-ink"><div className="max-w-sm"><div className="mx-auto grid h-20 w-20 place-items-center rounded-3xl bg-copper/15 text-copper-ink"><ShoppingBag size={34}/></div><h1 className="mt-6 text-3xl">سلتك فارغة</h1><p className="mt-2 text-sm leading-6 text-muted">لم تضف أي أطباق بعد.</p><button onClick={() => navigate(menuPath)} className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-navy px-5 py-3 text-sm font-bold text-paper"><ArrowRight size={17}/> العودة للقائمة</button></div></div>;
@@ -26,6 +47,6 @@ export default function Cart() {
       <ul className="space-y-3">{items.map((it, i) => <li key={it.menuItemId ?? i} className="rounded-3xl border border-ink/10 bg-paper p-4 shadow-sm"><div className="flex gap-4">{it.imageUrl ? <img src={it.imageUrl} alt="" className="h-20 w-20 shrink-0 rounded-2xl object-cover"/> : <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-copper/10 text-copper"><ShoppingBag size={24}/></div>}<div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><h3 className="truncate text-lg font-bold">{it.name}</h3><button onClick={() => removeItem(i)} aria-label={`إزالة ${it.name} من السلة`} className="-m-2 grid h-10 w-10 place-items-center rounded-xl text-brick hover:bg-brick/10"><Trash2 size={18} aria-hidden="true"/></button></div><p className="mt-1 text-sm font-bold text-copper-ink">{(Number(it.price) * Number(it.quantity)).toFixed(2)} ₪</p><div className="mt-3 flex w-fit items-center gap-1 rounded-xl bg-navy p-1 text-paper"><button onClick={() => updateQuantity(i, Math.max(1, it.quantity - 1))} disabled={it.quantity <= 1} aria-label={`إنقاص كمية ${it.name}`} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-paper/10 disabled:opacity-40"><Minus size={16} aria-hidden="true"/></button><b className="min-w-7 text-center text-base tabular-nums" aria-live="polite">{it.quantity}</b><button onClick={() => updateQuantity(i, it.quantity + 1)} aria-label={`زيادة كمية ${it.name}`} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-paper/10"><Plus size={16} aria-hidden="true"/></button></div></div></div><input aria-label={`ملاحظة على ${it.name}`} maxLength={500} placeholder="ملاحظة للمطبخ، مثل: بدون بصل (اختياري)" value={it.note || ""} onChange={(e) => updateNote(i, e.target.value)} className="mt-4 w-full rounded-2xl border border-ink/10 bg-paper-2 px-4 py-3 text-sm outline-none focus:border-copper"/></li>)}</ul>
       <div className="mt-6 rounded-3xl border border-ink/10 bg-paper p-5 shadow-sm"><div className="flex items-center justify-between text-sm text-ink-soft"><span>الإجمالي</span><strong className="text-2xl text-copper-ink">{total.toFixed(2)} ₪</strong></div></div>
     </main>
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-paper-2/95 p-4 backdrop-blur"><div className="mx-auto flex max-w-3xl items-center gap-3"><button onClick={() => navigate(menuPath)} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-ink/10 bg-paper"><ArrowRight size={18}/></button><button onClick={continueToPayment} disabled={!sessionId} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-copper py-3.5 text-sm font-black text-ink disabled:opacity-50">متابعة وإتمام الطلب <ArrowLeft size={18}/></button></div></div>
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-paper-2/95 p-4 backdrop-blur"><div className="mx-auto flex max-w-3xl items-center gap-3"><button onClick={() => navigate(menuPath)} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-ink/10 bg-paper"><ArrowRight size={18}/></button><button onClick={continueToPayment} disabled={!sessionId || sending} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-copper py-3.5 text-sm font-black text-ink disabled:opacity-50">{sending ? "جارٍ الإرسال…" : payAfter ? "إرسال الطلب للمطبخ" : "متابعة وإتمام الطلب"} <ArrowLeft size={18}/></button></div>{sendError && <p role="alert" className="mx-auto mt-2 max-w-3xl rounded-xl bg-brick/10 p-2 text-center text-xs font-bold text-brick">{sendError}</p>}{payAfter && !sendError && <p className="mx-auto mt-2 max-w-3xl text-center text-xs text-muted">تدفع في النهاية من «طلب الفاتورة».</p>}</div>
   </div>;
 }

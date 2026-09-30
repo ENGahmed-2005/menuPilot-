@@ -67,6 +67,11 @@ class OrderController extends Controller
             ->where('dining_sessions.id', $sid)
             ->select('dining_sessions.*', 'restaurant_tables.user_id')
             ->first();
+        // Pay-first restaurants: an order reaches the kitchen only through the
+        // payment flow (confirmed by the cashier), never directly.
+        if ($s && (DB::table('users')->where('id', $s->user_id)->value('payment_timing') ?: 'before') === 'before') {
+            return response()->json(['message' => 'هذا المطعم يطلب الدفع قبل تحضير الطلب. أكمل الطلب من صفحة الدفع.', 'code' => 'PAY_FIRST_REQUIRED'], 409);
+        }
 
         if (! $s) {
             return response()->json(['message' => 'Session not found'], 404);
