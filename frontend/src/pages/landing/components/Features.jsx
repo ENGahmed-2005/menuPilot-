@@ -31,7 +31,7 @@ export default function Features() {
             <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#EEA122]/0 blur-2xl transition-all duration-500 group-hover:bg-[#EEA122]/12" />
 
             <div className="relative">
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#EEA122]/10 text-[#EEA122] transition-colors duration-300 group-hover:bg-[#EEA122] group-hover:text-[#172331]">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#F3EFE5]/[.06] text-[#F3EFE5]/85 transition-colors duration-300 group-hover:bg-[#E67E22]/15 group-hover:text-[#E67E22]">
                 <Icon size={21} />
               </span>
               <h3 className="mt-5 text-lg font-black">{title}</h3>
