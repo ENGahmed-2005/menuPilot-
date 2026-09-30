@@ -131,3 +131,20 @@ it('stores the restaurant WhatsApp in international format and shares it with tr
     $s = openSession($this, makeTable($r['id']));
     expect($this->getJson("/api/public/sessions/{$s['id']}/bill", customer($s))->json('data.restaurant_whatsapp'))->toBe('+970599123456');
 });
+
+it('stores the customer GPS location for delivery and shows it to staff only', function () {
+    $r = onlineRestaurant($this);
+    placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'شارع الشهداء', 'latitude' => 95, 'longitude' => 34.4])->assertStatus(422);
+    $o = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'شارع الشهداء قرب المسجد', 'latitude' => 31.5203, 'longitude' => 34.4521, 'location_accuracy' => 18])->assertCreated()->json('data');
+    $pickup = placeOrder($this, $r, ['phone' => '0599000999', 'latitude' => 31.5, 'longitude' => 34.4])->assertCreated()->json('data');
+
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($r))->assertOk();
+    $board = $this->getJson('/api/outside-orders?status=delivery', authAs($r))->json('data');
+    expect($board)->toHaveCount(1)
+        ->and($board[0]['customer']['location'])->toBe(['lat' => 31.5203, 'lng' => 34.4521, 'accuracy' => 18])
+        ->and($board[0]['customer']['address'])->toBe('شارع الشهداء قرب المسجد');
+
+    // Not exposed on the public tracking page; not stored for pickup orders.
+    expect($this->getJson("/api/public/outside-orders/{$o['id']}?token={$o['token']}")->json('data.customer'))->not->toHaveKey('location');
+    expect(DB::table('outside_order_contacts')->where('order_id', $pickup['id'])->value('latitude'))->toBeNull();
+});

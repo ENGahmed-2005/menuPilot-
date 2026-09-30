@@ -4,7 +4,8 @@
    Plays a short tone when a new order arrives. Refreshes every 8 s.
    ========================================================================== */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bike, Check, ExternalLink, MessageCircle, Phone, Store, X } from "lucide-react";
+import { Bike, Check, ExternalLink, MapPin, MessageCircle, Phone, Store, X } from "lucide-react";
+import { googleDirectionsUrl } from "../../utils/maps";
 import { acceptOutsideOrder, completeOutsideOrder, dispatchOutsideOrder, getOutsideOrders, rejectOutsideOrder, verifyOutsidePayment, whatsappNumber } from "../../api/outsideOrders";
 import { errorText } from "../../utils/errors";
 import { money, orderNo } from "../../utils/format";
@@ -59,7 +60,7 @@ export default function OutsideOrders() {
                   <div>
                     <p className="flex items-center gap-2 text-lg font-extrabold">{o.channel === "delivery" ? <Bike size={18} aria-hidden="true" /> : <Store size={18} aria-hidden="true" />}{orderNo(o.order_number)} · {o.channel === "delivery" ? "توصيل" : "استلام"}</p>
                     <p className="mt-0.5 text-sm text-muted">{o.customer?.name} · <span dir="ltr">{o.customer?.phone}</span> · {ago(o.submitted_at)}</p>
-                    {o.channel === "delivery" && <p className="mt-1 text-sm"><b>{o.customer?.zone}</b> — {o.customer?.address}</p>}
+                    {o.channel === "delivery" && <p className="mt-1 text-sm"><b>{o.customer?.zone}</b> — {o.customer?.address}{o.customer?.location && <a href={googleDirectionsUrl(o.customer.location.lat, o.customer.location.lng)} target="_blank" rel="noopener noreferrer" className="mr-2 inline-flex items-center gap-1 text-xs font-bold text-copper-ink"><MapPin size={12} /> الموقع</a>}</p>}
                     {o.customer?.notes && <p className="mt-1 text-xs font-bold text-copper-ink">{o.customer.notes}</p>}
                   </div>
                   <Badge tone={STATE[o.fulfillment_status]?.[1]}>{STATE[o.fulfillment_status]?.[0]}</Badge>

@@ -6,13 +6,15 @@
    ========================================================================== */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Bike, Minus, Plus, ShoppingBag, Store, Utensils } from "lucide-react";
+import { Bike, LocateFixed, Minus, Plus, ShoppingBag, Store, Utensils, X } from "lucide-react";
 import { getOnlineRestaurant, placeOnlineOrder } from "../../api/outsideOrders";
 import { errorText } from "../../utils/errors";
 import { money } from "../../utils/format";
 import Modal from "../../components/ui/Modal";
 import BrandLogo from "../../components/brand/Logo";
 import { waLink } from "../../utils/whatsapp";
+import { currentPosition } from "../../utils/maps";
+import LocationMap from "../../components/delivery/LocationMap";
 
 export default function OnlineOrder() {
   const { slug } = useParams();
@@ -24,6 +26,12 @@ export default function OnlineOrder() {
   const [form, setForm] = useState({ type: "pickup", name: "", phone: "", zone_id: "", address: "", notes: "", payment_method: "cash", proof: "" });
   const [sending, setSending] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [loc, setLoc] = useState(null); // { lat, lng, accuracy } shared from the phone
+  const [locating, setLocating] = useState(false);
+  async function shareLocation() {
+    setLocating(true); setFormError(null);
+    try { setLoc(await currentPosition()); } catch (e) { setFormError(e.message); } finally { setLocating(false); }
+  }
 
   useEffect(() => { getOnlineRestaurant(slug).then((d) => { setData(d); setForm((f) => ({ ...f, type: d.pickup ? "pickup" : "delivery" })); }).catch(setError); }, [slug]);
 
@@ -49,7 +57,7 @@ export default function OnlineOrder() {
     e.preventDefault();
     setSending(true);
     try {
-      const o = await placeOnlineOrder(slug, { ...form, zone_id: form.type === "delivery" ? Number(form.zone_id) || null : null, proof: form.payment_method === "transfer" ? form.proof : undefined, items: lines.map((l) => ({ menuItemId: l.id, quantity: l.quantity })) });
+      const o = await placeOnlineOrder(slug, { ...form, zone_id: form.type === "delivery" ? Number(form.zone_id) || null : null, proof: form.payment_method === "transfer" ? form.proof : undefined, ...(form.type === "delivery" && loc ? { latitude: loc.lat, longitude: loc.lng, location_accuracy: loc.accuracy } : {}), items: lines.map((l) => ({ menuItemId: l.id, quantity: l.quantity })) });
       navigate(`/o/${o.id}?token=${encodeURIComponent(o.token)}`);
     } catch (err) {
       setFormError(errorText(err, "تعذّر إرسال الطلب."));
@@ -137,7 +145,23 @@ export default function OnlineOrder() {
                 {data.zones.map((z) => <option key={z.id} value={z.id}>{z.name} · التوصيل {money(z.fee)}{Number(z.min_order) ? ` · الحد الأدنى ${money(z.min_order)}` : ""}</option>)}
               </select>
             </label>
-            <label className="block text-sm font-bold">العنوان<textarea required rows={2} maxLength={500} {...field("address")} className="mt-1.5 w-full rounded-xl border border-line px-3 py-2 font-normal" /></label>
+            <label className="block text-sm font-bold">العنوان بالتفصيل<textarea required rows={2} maxLength={500} placeholder="الحي، الشارع، أقرب معلم، رقم العمارة والطابق" {...field("address")} className="mt-1.5 w-full rounded-xl border border-line px-3 py-2 font-normal" /></label>
+            <div className="rounded-xl border border-dashed border-line p-3">
+              {loc ? (
+                <div className="space-y-2">
+                  <LocationMap lat={loc.lat} lng={loc.lng} height={150} title="موقعك على الخريطة" />
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-herb">تمت إضافة موقعك{loc.accuracy ? ` · الدقة ≈ ${loc.accuracy} م` : ""}</span>
+                    <button type="button" onClick={() => setLoc(null)} className="inline-flex items-center gap-1 font-bold text-muted"><X size={13} /> إزالة</button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={shareLocation} disabled={locating} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-navy text-sm font-bold text-paper disabled:opacity-60">
+                  <LocateFixed size={17} aria-hidden="true" /> {locating ? "جارٍ تحديد موقعك…" : "استخدم موقعي الحالي (اختياري)"}
+                </button>
+              )}
+              <p className="mt-2 text-[11px] leading-5 text-muted">يساعد السائق على الوصول بدقة، ولا يراه إلا المطعم.</p>
+            </div>
           </>)}
           <label className="block text-sm font-bold">ملاحظات (اختياري)<input maxLength={500} {...field("notes")} className="mt-1.5 h-11 w-full rounded-xl border border-line px-3 font-normal" /></label>
           <fieldset className="space-y-2">
