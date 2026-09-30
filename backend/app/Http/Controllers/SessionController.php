@@ -124,6 +124,8 @@ class SessionController extends Controller
         // Adding an order is possible while the session is open; the payment
         // step is held only while a previous payment awaits verification.
         $s->can_add_order = ! $s->is_closed;
+        $s->payment_timing = DB::table('restaurant_tables')->join('users', 'users.id', '=', 'restaurant_tables.user_id')
+            ->where('restaurant_tables.id', $s->restaurant_table_id)->value('users.payment_timing') ?: 'before';
         $money = SessionLifecycle::summaries([(int) $id])[(int) $id];
         $s->can_leave = ! $s->is_closed && ! $money['has_pending_payment'] && $money['outstanding'] <= 0;
 

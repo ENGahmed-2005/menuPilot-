@@ -54,3 +54,21 @@ it('lets the customer leave when nothing is owed, and asks for the bill otherwis
     $this->postJson("/api/public/sessions/{$s['id']}/leave", [], customer($s))->assertStatus(409)->assertJsonPath('code', 'BILL_OUTSTANDING');
     $this->postJson("/api/public/sessions/{$s['id']}/leave")->assertForbidden(); // needs the session token
 });
+
+it('lets each restaurant choose pay-first or pay-after-eating for dine-in', function () {
+    $owner = makeOwner();
+    $item = makeItem($owner['id']);
+    $s = openSession($this, makeTable($owner['id']));
+    expect($this->getJson("/api/public/sessions/{$s['id']}", customer($s))->json('data.payment_timing'))->toBe('after');
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => $item, 'quantity' => 1]]], customer($s))->assertCreated(); // straight to the kitchen
+
+    // Pay first: the direct route is closed; the order must go through payment.
+    DB::table('users')->where('id', $owner['id'])->update(['payment_timing' => 'before']);
+    expect($this->getJson("/api/public/sessions/{$s['id']}", customer($s))->json('data.payment_timing'))->toBe('before');
+    $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => $item, 'quantity' => 1]]], customer($s))
+        ->assertStatus(409)->assertJsonPath('code', 'PAY_FIRST_REQUIRED');
+
+    // The owner switches it from the restaurant settings.
+    $this->patchJson('/api/me/restaurant', ['restaurant_name' => 'X', 'payment_timing' => 'later'], authAs($owner))->assertStatus(422);
+    $this->patchJson('/api/me/restaurant', ['restaurant_name' => 'X', 'payment_timing' => 'after'], authAs($owner))->assertOk()->assertJsonPath('data.payment_timing', 'after');
+});

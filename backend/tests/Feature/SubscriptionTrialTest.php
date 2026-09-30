@@ -77,7 +77,7 @@ it('expires after 14 days, allows a grace period, then restricts operations but 
     $owner = registerOwner($this);
     $table = makeTable($owner['id'], 'T1');
     $item = makeItem($owner['id'], 10);
-    DB::table('users')->where('id', $owner['id'])->update(['latitude' => 31.5, 'longitude' => 34.46]);
+    DB::table('users')->where('id', $owner['id'])->update(['latitude' => 31.5, 'longitude' => 34.46, 'payment_timing' => 'after']); // this test orders directly
     $s = openSession($this, $table);
     $orderId = $this->postJson("/api/public/sessions/{$s['id']}/orders", ['items' => [['menuItemId' => $item, 'quantity' => 1]]], customer($s))->assertCreated()->json('data.id');
 
