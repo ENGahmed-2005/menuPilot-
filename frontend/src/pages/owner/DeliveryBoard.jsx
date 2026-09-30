@@ -16,6 +16,7 @@ import EmptyState from "../../components/dashboard/EmptyState";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import LocationMap from "../../components/delivery/LocationMap";
+import OwnerStatusControl from "../../components/delivery/OwnerStatusControl";
 import { useToast } from "../../components/ui/Toast";
 
 export default function DeliveryBoard() {
@@ -79,6 +80,7 @@ export default function DeliveryBoard() {
                       </select>
                     </label>
                   ) : null}
+                  <OwnerStatusControl order={o} onChanged={load} />
                   {canAssign && !drivers.length && <p className="text-xs text-muted">لا يوجد سائقون بعد. أضفهم من «فريق المطعم» بدور «سائق توصيل».</p>}
                   {loc ? <LocationMap lat={loc.lat} lng={loc.lng} height={200} /> : (
                     <p className="flex items-center gap-2 rounded-xl bg-copper/10 p-3 text-xs font-bold text-copper-ink"><MapPin size={15} aria-hidden="true" /> لم يشارك الزبون موقعه. اعتمد على العنوان المكتوب.</p>

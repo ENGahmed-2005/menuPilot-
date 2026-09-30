@@ -362,6 +362,51 @@ class OutsideOrderController extends Controller
         return response()->json(['data' => $this->present(DB::table('orders')->find($id), true)]);
     }
 
+    /**
+     * POST /outside-orders/{id}/status {status, reason?} — restaurant OWNER
+     * override: move an accepted delivery order to any active state (forward
+     * or back), bypassing the hand-over sequence, or cancel it with a reason
+     * the customer sees. Money stays protected: a transfer must be verified
+     * before completion, and completed/rejected orders are final.
+     */
+    public function overrideStatus(Request $r, $id)
+    {
+        if ($r->user()->role !== 'owner') {
+            return response()->json(['message' => 'هذا الإجراء متاح لصاحب المطعم فقط.', 'code' => 'PERMISSION_DENIED'], 403);
+        }
+        $v = $r->validate([
+            'status' => 'required|in:preparing,ready,out_for_delivery,completed,cancelled',
+            'reason' => 'required_if:status,cancelled|nullable|string|min:2|max:255',
+        ], ['reason.required_if' => 'اكتب سبب الإلغاء، سيظهر للزبون.']);
+        $o = $this->orderFor($r, $id);
+        if (! $o || $o->channel !== 'delivery') {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+        if (! in_array($o->fulfillment_status, ['accepted', 'out_for_delivery'], true)) {
+            return response()->json(['message' => 'لا يمكن تعديل طلب مكتمل أو مرفوض أو لم يُقبل بعد.', 'code' => 'INVALID_TRANSITION'], 409);
+        }
+        $now = now();
+        $set = match ($v['status']) {
+            'preparing' => ['fulfillment_status' => 'accepted', 'status' => 'preparing', 'dispatched_at' => null],
+            'ready' => ['fulfillment_status' => 'accepted', 'status' => 'ready', 'ready_at' => $o->ready_at ?? $now, 'dispatched_at' => null],
+            'out_for_delivery' => ['fulfillment_status' => 'out_for_delivery', 'status' => 'ready', 'ready_at' => $o->ready_at ?? $now, 'dispatched_at' => $o->dispatched_at ?? $now],
+            'completed' => ['fulfillment_status' => 'completed', 'status' => 'served', 'served_at' => $now, 'completed_at' => $now, 'payment_status' => 'paid'],
+            'cancelled' => ['fulfillment_status' => 'rejected', 'status' => 'cancelled', 'rejection_reason' => $v['reason']],
+        };
+        if ($v['status'] === 'completed' && $o->payment_method === 'transfer' && $o->payment_status !== 'paid') {
+            return response()->json(['message' => 'أكّد وصول التحويل قبل تسجيل الطلب كمُسلَّم.', 'code' => 'PAYMENT_NOT_VERIFIED'], 409);
+        }
+        DB::table('orders')->where('id', $id)->update($set + ['updated_at' => $now]);
+        if (($set['status'] ?? $o->status) !== $o->status) {
+            OrderWorkflow::logStatus((int) $id, $o->status, $set['status'], $r->user()->id);
+        }
+        Audit::log($r, 'outside_order.status_overridden', 'order', (int) $id, [
+            'from' => ['fulfillment' => $o->fulfillment_status, 'kitchen' => $o->status], 'to' => $v['status'], 'reason' => $v['reason'] ?? null,
+        ], (int) $o->user_id);
+
+        return response()->json(['data' => $this->present(DB::table('orders')->find($id), true)]);
+    }
+
     /** POST /outside-orders/{id}/dispatch — delivery left the restaurant. */
     public function dispatch(Request $r, $id)
     {

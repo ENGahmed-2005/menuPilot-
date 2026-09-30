@@ -263,3 +263,29 @@ it('shows a delivery order to each role only when it is their turn', function ()
     $this->postJson("/api/outside-orders/{$o['id']}/complete", [], authAs($driver))->assertOk();
     expect($this->getJson("/api/public/outside-orders/{$o['id']}?token={$o['token']}")->json('data.fulfillment_status'))->toBe('completed');
 });
+
+it('lets the owner override a delivery order status, with money and finality protected', function () {
+    $r = onlineRestaurant($this);
+    $cashier = makeStaff($r['id'], 'cashier');
+    makeStaff($r['id'], 'delivery'); // restaurant has drivers → normal dispatch needs one
+    $o = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'الرمال'])->json('data');
+    $this->postJson("/api/outside-orders/{$o['id']}/status", ['status' => 'out_for_delivery'], authAs($r))->assertStatus(409); // not accepted yet
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($r))->assertOk();
+
+    $this->postJson("/api/outside-orders/{$o['id']}/status", ['status' => 'out_for_delivery'], authAs($cashier))->assertForbidden(); // owner only
+    $this->postJson("/api/outside-orders/{$o['id']}/status", ['status' => 'out_for_delivery'], authAs($r))->assertOk()
+        ->assertJsonPath('data.fulfillment_status', 'out_for_delivery'); // skips kitchen + driver
+    $this->postJson("/api/outside-orders/{$o['id']}/status", ['status' => 'preparing'], authAs($r))->assertOk()
+        ->assertJsonPath('data.fulfillment_status', 'accepted')->assertJsonPath('data.kitchen_status', 'preparing'); // back a step
+    $this->postJson("/api/outside-orders/{$o['id']}/status", ['status' => 'completed'], authAs($r))->assertOk()->assertJsonPath('data.payment_status', 'paid');
+    $this->postJson("/api/outside-orders/{$o['id']}/status", ['status' => 'ready'], authAs($r))->assertStatus(409); // completed is final
+
+    // Transfer must be verified; cancel needs a reason the customer sees.
+    $t = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'تل الهوى', 'phone' => '0599000777', 'payment_method' => 'transfer', 'proof' => PNG])->json('data');
+    $this->postJson("/api/outside-orders/{$t['id']}/accept", [], authAs($r))->assertOk();
+    $this->postJson("/api/outside-orders/{$t['id']}/status", ['status' => 'completed'], authAs($r))->assertStatus(409)->assertJsonPath('code', 'PAYMENT_NOT_VERIFIED');
+    $this->postJson("/api/outside-orders/{$t['id']}/status", ['status' => 'cancelled'], authAs($r))->assertStatus(422);
+    $this->postJson("/api/outside-orders/{$t['id']}/status", ['status' => 'cancelled', 'reason' => 'تعذّر الوصول للعنوان'], authAs($r))->assertOk();
+    expect($this->getJson("/api/public/outside-orders/{$t['id']}?token={$t['token']}")->json('data.rejection_reason'))->toBe('تعذّر الوصول للعنوان');
+    expect(DB::table('audit_logs')->where('action', 'outside_order.status_overridden')->count())->toBe(4);
+});
