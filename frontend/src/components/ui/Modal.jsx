@@ -12,6 +12,11 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:n
 
 export default function Modal({ open, onClose, title, description, size = "md", footer, bodyClassName = "px-6 py-5", children }) {
   const panelRef = useRef(null);
+  // Latest onClose without re-running the focus effect: parents usually pass
+  // a new arrow function on every render, which used to move the focus back
+  // to the close button on each keystroke.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const titleId = useId();
   const descId = useId();
 
@@ -24,7 +29,7 @@ export default function Modal({ open, onClose, title, description, size = "md", 
     (first || panelRef.current)?.focus();
 
     function onKey(event) {
-      if (event.key === "Escape") { event.stopPropagation(); onClose?.(); return; }
+      if (event.key === "Escape") { event.stopPropagation(); onCloseRef.current?.(); return; }
       if (event.key !== "Tab" || !panelRef.current) return;
       const nodes = [...panelRef.current.querySelectorAll(FOCUSABLE)];
       if (!nodes.length) return;
@@ -38,7 +43,7 @@ export default function Modal({ open, onClose, title, description, size = "md", 
       document.body.style.overflow = overflow;
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

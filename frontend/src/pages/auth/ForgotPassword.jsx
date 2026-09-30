@@ -30,17 +30,17 @@ export default function ForgotPassword() {
   };
 
   return (
-    <AuthLayout eyebrow="استرجاع الحساب" title="نساعدك ترجع لحسابك." subtitle="نسيت كلمة المرور؟ لا مشكلة. أرسل بريد حسابك وسنجهز لك رابط إعادة التعيين.">
+    <AuthLayout eyebrow="استرجاع الحساب" title="نساعدك ترجع لحسابك." subtitle="نسيت كلمة المرور؟ أرسل بريد حسابك، وسيرسل لك فريق menuPilot رابط إعادة التعيين على واتساب.">
       <div className="mb-8">
         <h1 className="font-arabic-display text-4xl leading-tight text-ink">استرجاع كلمة المرور</h1>
-        <p className="mt-3 text-sm leading-6 text-ink-soft">سنرسل تعليمات إعادة التعيين إلى بريدك الإلكتروني.</p>
+        <p className="mt-3 text-sm leading-6 text-ink-soft">سيصلك رابط إعادة التعيين على رقم واتساب المسجّل للمطعم. إذا كنت موظفًا، اطلب من صاحب المطعم تغيير كلمة مرورك.</p>
       </div>
 
       {sent ? (
         <div className="space-y-5">
           <div className="flex gap-3 rounded-2xl border border-herb/25 bg-herb/5 p-4 text-sm leading-6 text-ink">
             <CheckCircle2 className="mt-0.5 shrink-0 text-herb" size={19} />
-            <span>إذا كان البريد <strong dir="ltr">{email}</strong> مسجلًا لدينا، فقد تم إنشاء طلب الاسترجاع.</span>
+            <span>إذا كان البريد <strong dir="ltr">{email}</strong> مسجلًا لدينا، فقد وصل طلبك إلى فريق menuPilot، وسيرسل لك الرابط على واتساب قريبًا.</span>
           </div>
           <Link to="/login" className="inline-flex items-center gap-2 text-sm font-bold text-copper-ink no-underline hover:text-copper">العودة إلى تسجيل الدخول <ArrowRight size={15} /></Link>
         </div>

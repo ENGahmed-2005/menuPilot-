@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\ResetPasswordLink;
 use App\Models\Staff;
 use App\Models\User;
 use App\Support\Permissions;
@@ -10,7 +9,6 @@ use App\Support\SubscriptionAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -146,21 +144,20 @@ class AuthController extends Controller
         $email = Str::lower(trim($v['email']));
         $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
-        // The token is only ever sent by e-mail (it used to be returned here,
-        // which let anyone reset any account). Same answer whether or not the
-        // e-mail exists, so accounts can't be enumerated.
-        if ($user && $user->is_active !== false) {
-            $token = Str::random(64);
-            DB::table('password_reset_tokens')->updateOrInsert(['email' => $user->email], ['token' => hash('sha256', $token), 'created_at' => now()]);
-            $link = rtrim(config('app.frontend_url'), '/').'/reset-password?token='.$token.'&email='.rawurlencode($user->email);
-            try {
-                Mail::to($user->email)->send(new ResetPasswordLink($user->name ?: $user->email, $link));
-            } catch (\Throwable $e) {
-                Log::error('password reset mail failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        // Restaurant owners: the request goes to the platform admin, who sends a
+        // one-time reset link on WhatsApp. Staff passwords are changed by their
+        // restaurant owner. No token is ever returned here, and the answer is
+        // the same whether or not the e-mail exists (no account enumeration).
+        if ($user && $user->is_active !== false && $user->role === 'owner') {
+            $pending = DB::table('password_reset_requests')->where('user_id', $user->id)->where('status', 'pending')->first();
+            if ($pending) {
+                DB::table('password_reset_requests')->where('id', $pending->id)->update(['updated_at' => now(), 'ip' => $r->ip()]);
+            } else {
+                DB::table('password_reset_requests')->insert(['user_id' => $user->id, 'status' => 'pending', 'ip' => $r->ip(), 'created_at' => now(), 'updated_at' => now()]);
             }
         }
 
-        return $this->out(['message' => 'إذا كان البريد مسجلًا لدينا، ستصلك رسالة فيها رابط إعادة التعيين خلال دقائق.']);
+        return $this->out(['message' => 'استلمنا طلبك. سيتواصل معك فريق menuPilot على رقم واتساب المطعم ويرسل لك رابط إعادة التعيين. إذا كنت موظفًا، اطلب من صاحب المطعم تغيير كلمة مرورك.']);
     }
 
     public function resetPassword(Request $r)

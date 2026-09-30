@@ -41,6 +41,9 @@ export default function OnlineOrder() {
   const zone = data?.zones?.find((z) => String(z.id) === String(form.zone_id));
   const fee = form.type === "delivery" && zone ? Number(zone.fee) : 0;
   const count = lines.reduce((s, l) => s + l.quantity, 0);
+  // Delivery minimum applies to the items (not the delivery fee) — same rule as the server.
+  const minOrder = form.type === "delivery" && zone ? Number(zone.min_order) || 0 : 0;
+  const missing = Math.max(0, Math.round((minOrder - subtotal) * 100) / 100);
   const groups = useMemo(() => { const g = new Map(); items.forEach((i) => { const k = i.category || "أصناف"; g.set(k, [...(g.get(k) || []), i]); }); return [...g.entries()]; }, [items]);
   const setQty = (id, q) => setCart((c) => { const n = { ...c }; if (q <= 0) delete n[id]; else n[id] = Math.min(50, q); return n; });
   const field = (k) => ({ value: form[k], onChange: (e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setFormError(null); } });
@@ -178,8 +181,13 @@ export default function OnlineOrder() {
             {form.type === "delivery" && <div className="flex justify-between"><dt>التوصيل</dt><dd className="num">{zone ? money(fee) : "—"}</dd></div>}
             <div className="flex justify-between text-base font-black"><dt>الإجمالي</dt><dd className="num">{money(subtotal + fee)}</dd></div>
           </dl>
+          {missing > 0 && (
+            <p role="status" className="rounded-xl bg-copper/10 p-3 text-sm font-bold text-copper-ink">
+              الحد الأدنى للتوصيل إلى {zone.name} هو <span className="num">{money(minOrder)}</span> (دون رسوم التوصيل). أضف أصنافًا بقيمة <span className="num">{money(missing)}</span>.
+            </p>
+          )}
           {formError && <p role="alert" className="rounded-xl bg-brick/10 p-3 text-sm font-bold text-brick">{formError}</p>}
-          <button type="submit" disabled={sending} className="h-12 w-full rounded-2xl bg-copper text-base font-black text-ink disabled:opacity-60">{sending ? "جارٍ الإرسال…" : `إرسال الطلب · ${money(subtotal + fee)}`}</button>
+          <button type="submit" disabled={sending || missing > 0} className="h-12 w-full rounded-2xl bg-copper text-base font-black text-ink disabled:opacity-60">{sending ? "جارٍ الإرسال…" : `إرسال الطلب · ${money(subtotal + fee)}`}</button>
           <p className="text-center text-xs text-muted">يؤكد المطعم طلبك ويحدد وقت التحضير، وتتابع الحالة من رابط التتبع.</p>
         </form>
       </Modal>

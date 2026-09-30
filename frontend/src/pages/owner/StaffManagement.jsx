@@ -86,6 +86,21 @@ export default function StaffManagement() {
     }
   }
 
+  // Owner sets a new password for an employee; the employee's current
+  // session ends and the new credentials are shown once to share.
+  async function changePassword(member) {
+    const pw = window.prompt(`كلمة مرور جديدة للموظف ${member.name} (6 أحرف على الأقل):`);
+    if (pw == null) return;
+    if (pw.trim().length < 6) { window.alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل."); return; }
+    try {
+      await updateStaff(member.id, { password: pw.trim() });
+      setCredentials({ ...member, password: pw.trim() });
+      setShowPassword(true);
+    } catch (err) {
+      setError(err);
+    }
+  }
+
   async function toggle(member) {
     if (member.active) {
       const ok = await confirm({
@@ -163,13 +178,13 @@ export default function StaffManagement() {
       <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
         <Card className="p-5">
           <div className="mb-5 flex items-center gap-2"><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><UserPlus size={19}/></span><div><h2 className="font-black">إضافة حساب</h2><p className="text-xs text-muted">الحساب يستطيع تسجيل الدخول مباشرة</p></div></div>
-          <form onSubmit={submit} className="space-y-3">
+          <form onSubmit={submit} className="space-y-3" autoComplete="off">
             <input required placeholder="اسم الموظف" value={form.name} onChange={(e)=>setForm({...form,name:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
-            <input required type="email" placeholder="البريد الإلكتروني" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
+            <input required type="email" name="new-staff-email" autoComplete="off" placeholder="بريد الموظف لتسجيل الدخول" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
             <input type="tel" inputMode="tel" placeholder="رقم الهاتف (اختياري)" aria-label="رقم الهاتف" value={form.phone} onChange={(e)=>setForm({...form,phone:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
             <select value={form.role} onChange={(e)=>setForm({...form,role:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper">{roles.map(r=><option key={r.value} value={r.value}>{r.label}</option>)}</select>
-            <div className="relative"><KeyRound size={16} className="absolute right-3 top-3.5 text-muted"/><input type="password" minLength={6} placeholder="كلمة مرور (اختياري: تُنشأ تلقائيًا)" value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper py-3 pr-9 pl-3 text-sm outline-none focus:border-copper" /></div>
-            <Button disabled={saving} className="w-full">{saving ? "جارِ إنشاء الحساب…" : "إنشاء الحساب"}</Button>
+            <div className="relative"><KeyRound size={16} className="absolute right-3 top-3.5 text-muted"/><input type="password" name="new-staff-password" autoComplete="new-password" minLength={6} placeholder="كلمة مرور (اختياري: تُنشأ تلقائيًا)" value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper py-3 pr-9 pl-3 text-sm outline-none focus:border-copper" /></div>
+            <Button type="submit" disabled={saving} className="w-full">{saving ? "جارِ إنشاء الحساب…" : "إنشاء الحساب"}</Button>
           </form>
         </Card>
 
@@ -184,7 +199,7 @@ export default function StaffManagement() {
                 <span className="text-xs text-muted">{(m.permissions || []).length} صلاحية{m.custom_permissions ? "، مخصّصة" : ""}</span>
                 <span className="text-xs text-muted">{activityLabel(m.last_active_at)} · أُضيف {dateLabel(m.created_at)}</span>
               </div>
-              <div className="flex flex-wrap gap-2"><button onClick={()=>openPermissions(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:border-copper">الصلاحيات</button><button onClick={()=>toggle(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold">{m.active?"إيقاف":"تفعيل"}</button><button onClick={()=>remove(m)} className="rounded-xl border border-brick/20 p-2 text-brick hover:bg-brick/5" title="حذف الحساب"><Trash2 size={16}/></button></div>
+              <div className="flex flex-wrap gap-2"><button onClick={()=>changePassword(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:border-copper">كلمة المرور</button><button onClick={()=>openPermissions(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:border-copper">الصلاحيات</button><button onClick={()=>toggle(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold">{m.active?"إيقاف":"تفعيل"}</button><button onClick={()=>remove(m)} className="rounded-xl border border-brick/20 p-2 text-brick hover:bg-brick/5" title="حذف الحساب"><Trash2 size={16}/></button></div>
             </div>)}
           </div>
         </Card>

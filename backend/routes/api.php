@@ -13,6 +13,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OutsideOrderController;
 use App\Http\Controllers\OwnerReportsController;
+use App\Http\Controllers\PasswordRequestController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\SessionController;
@@ -191,6 +192,10 @@ Route::middleware('api.auth')->group(function () {
         Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
         Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);
         Route::post('admin/restaurants/{id}/subscription/cancel', [AdminController::class, 'cancelSubscription']);
+        // Owners' forgot-password requests (link sent by the admin on WhatsApp).
+        Route::get('admin/password-requests', [PasswordRequestController::class, 'index']);
+        Route::post('admin/password-requests/{id}/link', [PasswordRequestController::class, 'link']);
+        Route::post('admin/password-requests/{id}/dismiss', [PasswordRequestController::class, 'dismiss']);
         Route::get('admin/subscription-payments', [SubscriptionPaymentController::class, 'adminIndex']);
         Route::post('admin/subscription-payments/{id}/verify', [SubscriptionPaymentController::class, 'verify']);
         Route::post('admin/subscription-payments/{id}/reject', [SubscriptionPaymentController::class, 'reject']);

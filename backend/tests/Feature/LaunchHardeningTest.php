@@ -1,9 +1,7 @@
 <?php
 
-use App\Mail\ResetPasswordLink;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
@@ -12,35 +10,25 @@ uses(RefreshDatabase::class);
 | Password reset: token only by e-mail
 */
 
-it('never returns the reset token and e-mails a frontend link instead', function () {
+it('never returns the reset token; owners get an admin request instead of an e-mail', function () {
     Mail::fake();
-    config(['app.frontend_url' => 'https://app.menupilot.test']);
     $owner = makeOwner();
     $email = DB::table('users')->where('id', $owner['id'])->value('email');
 
     $res = $this->postJson('/api/auth/forgot-password', ['email' => $email])->assertOk();
     expect($res->json('data'))->not->toHaveKey('reset_token')->not->toHaveKey('_devResetToken');
-
-    $link = null;
-    Mail::assertSent(ResetPasswordLink::class, function ($mail) use ($email, &$link) {
-        $link = $mail->link;
-
-        return $mail->hasTo($email) && str_starts_with($mail->link, 'https://app.menupilot.test/reset-password?token=');
-    });
-
-    parse_str(parse_url($link, PHP_URL_QUERY), $q);
-    $this->postJson('/api/auth/reset-password', ['token' => $q['token'], 'email' => $email, 'password' => 'N3w#Password', 'password_confirmation' => 'N3w#Password'])->assertOk();
-    expect(Hash::check('N3w#Password', DB::table('users')->where('id', $owner['id'])->value('password')))->toBeTrue();
+    expect(json_encode($res->json()))->not->toContain('token');
+    Mail::assertNothingSent(); // the admin sends the link on WhatsApp
+    expect(DB::table('password_reset_requests')->where('user_id', $owner['id'])->where('status', 'pending')->exists())->toBeTrue();
 });
 
 it('answers the same for unknown e-mails and rejects expired links', function () {
-    Mail::fake();
     $unknown = $this->postJson('/api/auth/forgot-password', ['email' => 'nobody@nowhere.test'])->assertOk()->json('data.message');
     $owner = makeOwner();
     $email = DB::table('users')->where('id', $owner['id'])->value('email');
     $known = $this->postJson('/api/auth/forgot-password', ['email' => $email])->assertOk()->json('data.message');
     expect($unknown)->toBe($known);
-    Mail::assertSent(ResetPasswordLink::class, 1);
+    expect(DB::table('password_reset_requests')->count())->toBe(1); // only the real owner
 
     DB::table('password_reset_tokens')->updateOrInsert(['email' => $email], ['token' => hash('sha256', 'old-token'), 'created_at' => now()->subMinutes(61)]);
     $this->postJson('/api/auth/reset-password', ['token' => 'old-token', 'email' => $email, 'password' => 'N3w#Password', 'password_confirmation' => 'N3w#Password'])
