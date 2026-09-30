@@ -38,10 +38,21 @@ class AccountController extends Controller
             'payment_methods.wallet.account_name' => 'nullable|string|max:255',
             'payment_methods.wallet.account_number' => 'nullable|string|max:100',
             'payment_methods.wallet.qr_url' => 'nullable|url|max:1000',
+            'payment_methods.cash' => 'nullable|array',
+            'payment_methods.cash.enabled' => 'nullable|boolean',
+            'payment_methods.cash.note' => 'nullable|string|max:255',
             // Dine-in: pay before the kitchen prepares, or after eating.
             'payment_timing' => 'nullable|in:before,after',
         ]);
 
+        // Guests must always have at least one way to pay.
+        if (isset($validated['payment_methods'])) {
+            $pm = $validated['payment_methods'];
+            $anyOn = ($pm['cash']['enabled'] ?? true) || ($pm['bank']['enabled'] ?? false) || ($pm['wallet']['enabled'] ?? false);
+            if (! $anyOn) {
+                return response()->json(['message' => 'فعّل طريقة دفع واحدة على الأقل ليستطيع الزبائن الدفع.', 'errors' => ['payment_methods' => ['none_enabled']]], 422);
+            }
+        }
         $user->update([...$validated, 'name' => $validated['restaurant_name']]);
 
         return response()->json(['data' => $user->fresh()]);

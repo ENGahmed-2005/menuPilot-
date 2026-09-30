@@ -72,3 +72,18 @@ it('lets each restaurant choose pay-first or pay-after-eating for dine-in', func
     $this->patchJson('/api/me/restaurant', ['restaurant_name' => 'X', 'payment_timing' => 'later'], authAs($owner))->assertStatus(422);
     $this->patchJson('/api/me/restaurant', ['restaurant_name' => 'X', 'payment_timing' => 'after'], authAs($owner))->assertOk()->assertJsonPath('data.payment_timing', 'after');
 });
+
+it('lets the restaurant turn cash on or off, keeping at least one way to pay', function () {
+    $owner = makeOwner();
+    $item = makeItem($owner['id']);
+    $s = openSession($this, makeTable($owner['id']));
+    expect($this->getJson("/api/public/sessions/{$s['id']}/payment-options", customer($s))->json('data.cash.enabled'))->toBeTrue(); // on by default
+
+    $this->patchJson('/api/me/restaurant', ['restaurant_name' => 'X', 'payment_methods' => ['cash' => ['enabled' => false]]], authAs($owner))
+        ->assertStatus(422); // nothing left to pay with
+    $this->patchJson('/api/me/restaurant', ['restaurant_name' => 'X', 'payment_methods' => ['cash' => ['enabled' => false], 'bank' => ['enabled' => true, 'name' => 'بنك فلسطين', 'account_number' => '123']]], authAs($owner))->assertOk();
+    expect($this->getJson("/api/public/sessions/{$s['id']}/payment-options", customer($s))->json('data.cash.enabled'))->toBeFalse();
+
+    $this->postJson("/api/public/sessions/{$s['id']}/payment", ['items' => json_encode([['menuItemId' => $item, 'quantity' => 1]]), 'method' => 'cash', 'payer_name' => 'سارة', 'payer_phone' => '0599123456'], customer($s))
+        ->assertStatus(422); // cash is off
+});
