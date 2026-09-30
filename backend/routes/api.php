@@ -126,14 +126,17 @@ Route::middleware('api.auth')->group(function () {
     Route::post('order-items/{id}/cancel', [OrderController::class, 'cancel'])->middleware('permission:cancel_orders');
 
     // Outside orders inbox (pickup / delivery).
-    Route::get('outside-orders', [OutsideOrderController::class, 'index'])->middleware('permission:view_orders|deliver_orders');
+    Route::get('outside-orders', [OutsideOrderController::class, 'index'])->middleware('permission:view_orders|deliver_orders|dispatch_deliveries');
+    // Assigning delivery orders to drivers.
+    Route::get('outside-orders/drivers', [OutsideOrderController::class, 'drivers'])->middleware('permission:dispatch_deliveries|manage_orders|view_payments');
+    Route::post('outside-orders/{id}/assign', [OutsideOrderController::class, 'assign'])->middleware(['permission:dispatch_deliveries|manage_orders|view_payments', 'subscription']);
     Route::middleware(['permission:manage_orders|view_payments', 'subscription'])->group(function () {
         Route::post('outside-orders/{id}/accept', [OutsideOrderController::class, 'accept']);
         Route::post('outside-orders/{id}/reject', [OutsideOrderController::class, 'reject']);
         Route::post('outside-orders/{id}/verify-payment', [OutsideOrderController::class, 'verifyPayment']);
     });
     // Out for delivery / completed: also allowed for delivery drivers (checked per order in the controller).
-    Route::middleware(['permission:manage_orders|view_payments|deliver_orders', 'subscription'])->group(function () {
+    Route::middleware(['permission:manage_orders|view_payments|deliver_orders|dispatch_deliveries', 'subscription'])->group(function () {
         Route::post('outside-orders/{id}/dispatch', [OutsideOrderController::class, 'dispatch']);
         Route::post('outside-orders/{id}/complete', [OutsideOrderController::class, 'complete']);
     });

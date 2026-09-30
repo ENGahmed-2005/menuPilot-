@@ -159,8 +159,9 @@ it('lets a delivery driver see and complete delivery orders only', function () {
     $this->postJson("/api/outside-orders/{$d['id']}/accept", [], authAs($driver))->assertForbidden(); // cannot accept
     $this->postJson("/api/outside-orders/{$d['id']}/accept", [], authAs($r))->assertOk();
     $this->postJson("/api/outside-orders/{$p['id']}/accept", [], authAs($r))->assertOk();
+    $this->postJson("/api/outside-orders/{$d['id']}/assign", ['driver_id' => $driver['id']], authAs($r))->assertOk(); // the owner can assign too
 
-    // Board shows delivery orders only, whatever filter is requested.
+    // Board shows the driver's delivery orders only, whatever filter is requested.
     $ids = collect($this->getJson('/api/outside-orders?status=active', authAs($driver))->json('data'))->pluck('id');
     expect($ids->all())->toBe([$d['id']]);
     $this->postJson("/api/outside-orders/{$p['id']}/complete", [], authAs($driver))->assertForbidden(); // pickup is not theirs
@@ -182,4 +183,34 @@ it('applies permission changes immediately without signing the employee out', fu
 
     $this->putJson("/api/staff/{$staffId}", ['role' => 'cashier'], authAs($owner))->assertOk();
     $this->getJson('/api/auth/me', authAs($waiter))->assertUnauthorized(); // role change: sign in again
+});
+
+it('lets the delivery manager assign orders to drivers who then see only their own', function () {
+    $r = onlineRestaurant($this);
+    $manager = makeStaff($r['id'], 'delivery_manager');
+    $sami = makeStaff($r['id'], 'delivery');
+    $omar = makeStaff($r['id'], 'delivery');
+    $other = onlineRestaurant($this);
+    $foreign = makeStaff($other['id'], 'delivery');
+
+    $a = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'الرمال'])->json('data');
+    $b = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'تل الهوى', 'phone' => '0599000444'])->json('data');
+    foreach ([$a, $b] as $o) {
+        $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($r))->assertOk();
+    }
+
+    // Manager sees every delivery order and the drivers list.
+    expect(collect($this->getJson('/api/outside-orders?status=active', authAs($manager))->json('data'))->pluck('id')->sort()->values()->all())->toBe([$a['id'], $b['id']]);
+    expect(collect($this->getJson('/api/outside-orders/drivers', authAs($manager))->json('data'))->pluck('id')->sort()->values()->all())->toBe(collect([$sami['id'], $omar['id']])->sort()->values()->all());
+    $this->postJson("/api/outside-orders/{$a['id']}/assign", ['driver_id' => $foreign['id']], authAs($manager))->assertStatus(422); // not our driver
+    $this->postJson("/api/outside-orders/{$a['id']}/assign", ['driver_id' => $sami['id']], authAs($manager))->assertOk()->assertJsonPath('data.driver.id', $sami['id']);
+    $this->postJson("/api/outside-orders/{$b['id']}/assign", ['driver_id' => $omar['id']], authAs($manager))->assertOk();
+    $this->postJson("/api/outside-orders/{$a['id']}/assign", ['driver_id' => $sami['id']], authAs($sami))->assertForbidden(); // drivers cannot assign
+
+    // Each driver sees and completes only their own order.
+    expect(collect($this->getJson('/api/outside-orders', authAs($sami))->json('data'))->pluck('id')->all())->toBe([$a['id']]);
+    $this->postJson("/api/outside-orders/{$b['id']}/dispatch", [], authAs($sami))->assertForbidden();
+    $this->postJson("/api/outside-orders/{$b['id']}/complete", [], authAs($sami))->assertForbidden();
+    $this->postJson("/api/outside-orders/{$a['id']}/dispatch", [], authAs($sami))->assertOk();
+    $this->postJson("/api/outside-orders/{$a['id']}/complete", [], authAs($sami))->assertOk();
 });

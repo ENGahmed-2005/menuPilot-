@@ -30,6 +30,7 @@ class Permissions
         'reassign_orders' => 'نقل الأصناف بين الطاولات',
         'handle_assistance' => 'التعامل مع طلبات النادل',
         'deliver_orders' => 'توصيل الطلبات الخارجية',
+        'dispatch_deliveries' => 'توزيع طلبات التوصيل على السائقين',
         'view_menu' => 'عرض المنيو',
         'manage_menu' => 'إدارة المنيو',
         'view_payments' => 'عرض الفواتير والمدفوعات',
@@ -67,12 +68,14 @@ class Permissions
         'kitchen' => ['view_orders', 'manage_orders', 'view_menu'],
         // Delivery driver: sees and completes delivery orders only.
         'delivery' => ['deliver_orders'],
+        // Delivery manager: assigns delivery orders to drivers and follows them.
+        'delivery_manager' => ['dispatch_deliveries', 'deliver_orders'],
     ];
 
     /** A manager starts read-only; the owner grants management explicitly. */
     public const MANAGER_DEFAULTS = ['view_dashboard', 'view_tables', 'view_orders', 'view_menu', 'view_payments', 'view_reports'];
 
-    public const STAFF_ROLES = ['manager', 'cashier', 'waiter', 'kitchen', 'delivery'];
+    public const STAFF_ROLES = ['manager', 'cashier', 'waiter', 'kitchen', 'delivery', 'delivery_manager'];
 
     public static function all(): array
     {

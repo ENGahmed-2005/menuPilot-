@@ -47,7 +47,7 @@ export default function ProtectedRoute({ allow, permission }) {
   // A staff member who was GRANTED the page's permission may open it even if
   // their role is not in the default list (owner-only pages have no
   // permission prop and stay closed; the platform admin is never staff).
-  const STAFF = ["manager", "cashier", "waiter", "kitchen", "delivery"];
+  const STAFF = ["manager", "cashier", "waiter", "kitchen", "delivery", "delivery_manager"];
   const roleOk = !allow || allow.includes(role) || (Boolean(permission) && STAFF.includes(role));
   const permissionOk = !permission || permission.split("|").some((p) => can(p));
   if (!roleOk || !permissionOk) {

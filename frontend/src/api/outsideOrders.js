@@ -23,3 +23,7 @@ export const saveOnlineOrderingSettings = (payload) => api.put("/online-ordering
 
 /** 0599… → 970599… for wa.me links (Palestine numbers). */
 export const whatsappNumber = (phone) => String(phone || "").replace(/\D/g, "").replace(/^0/, "970");
+
+// Delivery dispatch
+export const getDrivers = () => api.get("/outside-orders/drivers");
+export const assignDriver = (id, driverId) => api.post(`/outside-orders/${id}/assign`, { driver_id: driverId || null });

@@ -29,6 +29,7 @@ const roles = [
   { value: "waiter", label: "النادل" },
   { value: "cashier", label: "الكاشير" },
   { value: "delivery", label: "سائق توصيل" },
+  { value: "delivery_manager", label: "مسؤول التوصيل" },
   { value: "manager", label: "مدير" },
 ];
 const labels = Object.fromEntries(roles.map((r) => [r.value, r.label]));

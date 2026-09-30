@@ -84,7 +84,7 @@ export default function AppRoutes() {
         <Route path="/owner/outside-orders" element={<DashboardShell><OutsideOrders /></DashboardShell>} />
         <Route path="/owner/deliveries" element={<DashboardShell><DeliveryBoard /></DashboardShell>} />
       </Route>
-      <Route element={<ProtectedRoute allow={["delivery"]} permission="deliver_orders" />}>
+      <Route element={<ProtectedRoute allow={["delivery", "delivery_manager"]} permission="deliver_orders|dispatch_deliveries" />}>
         <Route path="/delivery" element={<DashboardShell><DeliveryBoard /></DashboardShell>} />
       </Route>
 

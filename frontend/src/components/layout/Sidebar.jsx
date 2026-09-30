@@ -60,7 +60,8 @@ const NAV = {
     ] },
   ],
   kitchen: [{ links: [["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"]] }],
-  delivery: [{ links: [["/delivery", "التوصيل", MapPin, null, "deliver_orders"]] }],
+  delivery: [{ links: [["/delivery", "طلباتي للتوصيل", MapPin, null, "deliver_orders"]] }],
+  delivery_manager: [{ links: [["/delivery", "إدارة التوصيل", MapPin, null, "dispatch_deliveries"]] }],
   cashier: [{ links: [
     ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
     ["/cashier/reports", "تقارير المبيعات", BarChart3, "cashier", "view_reports|view_payments"],
@@ -82,7 +83,7 @@ const NAV = {
   ],
 };
 
-const ROLE_LABEL = { delivery: "سائق توصيل", owner: "صاحب المطعم", kitchen: "المطبخ", cashier: "الكاشير", waiter: "النادل", admin: "إدارة المنصة", manager: "مدير" };
+const ROLE_LABEL = { delivery_manager: "مسؤول التوصيل", delivery: "سائق توصيل", owner: "صاحب المطعم", kitchen: "المطبخ", cashier: "الكاشير", waiter: "النادل", admin: "إدارة المنصة", manager: "مدير" };
 
 function Logo({ compact = false }) {
   return <BrandLogo on="dark" height={compact ? 30 : 36} priority />;
@@ -133,7 +134,7 @@ export default function Sidebar() {
   // «صلاحيات إضافية», so granting a permission updates the employee's menu
   // (permissions refresh live, see AuthContext).
   const extraLinks = (() => {
-    if (!["cashier", "waiter", "kitchen", "delivery"].includes(role)) return [];
+    if (!["cashier", "waiter", "kitchen", "delivery", "delivery_manager"].includes(role)) return [];
     const defaults = ROLE_DEFAULTS[role] || [];
     const granted = (permissions || []).filter((p) => !defaults.includes(p));
     const present = new Set(baseGroups.flatMap((g) => g.links.map(([to]) => to)));

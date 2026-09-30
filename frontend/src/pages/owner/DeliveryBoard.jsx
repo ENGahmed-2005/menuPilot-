@@ -5,7 +5,8 @@
    ========================================================================== */
 import { useCallback, useEffect, useState } from "react";
 import { Bike, CheckCircle2, MapPin, MessageCircle, Navigation, Phone } from "lucide-react";
-import { completeOutsideOrder, dispatchOutsideOrder, getOutsideOrders, whatsappNumber } from "../../api/outsideOrders";
+import { assignDriver, completeOutsideOrder, dispatchOutsideOrder, getDrivers, getOutsideOrders, whatsappNumber } from "../../api/outsideOrders";
+import { useAuth } from "../../context/AuthContext";
 import { errorText } from "../../utils/errors";
 import { money, orderNo } from "../../utils/format";
 import { googleDirectionsUrl, googleSearchUrl } from "../../utils/maps";
@@ -21,7 +22,16 @@ export default function DeliveryBoard() {
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [busy, setBusy] = useState(null);
-  const load = useCallback(() => getOutsideOrders("delivery").then((d) => setRows(d || [])).catch(() => {}), []);
+  const { can } = useAuth();
+  // The delivery manager, owner and manager distribute orders; drivers only see theirs.
+  const canAssign = can("dispatch_deliveries") || can("manage_orders") || can("view_payments");
+  const [drivers, setDrivers] = useState([]);
+  const [filter, setFilter] = useState("all");
+  const load = useCallback(() => {
+    getOutsideOrders("delivery").then((d) => setRows(d || [])).catch(() => {});
+    if (canAssign) getDrivers().then((d) => setDrivers(d || [])).catch(() => {});
+  }, [canAssign]);
+  const shown = filter === "unassigned" ? rows.filter((o) => !o.driver) : rows;
   useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, [load]);
 
   async function act(o, fn, done) {
@@ -31,12 +41,20 @@ export default function DeliveryBoard() {
 
   return (
     <div>
-      <PageHeader title="التوصيل" subtitle="طلبات التوصيل المقبولة مع موقع الزبون على الخريطة والعنوان الذي كتبه." />
-      {!rows.length ? (
-        <Card><EmptyState icon={Bike} title="لا توجد طلبات توصيل الآن" description="تظهر هنا طلبات التوصيل بعد قبولها من «الطلبات الخارجية»." /></Card>
+      <PageHeader title={canAssign ? "إدارة التوصيل" : "طلباتي للتوصيل"}
+        subtitle={canAssign ? "وزّع طلبات التوصيل المقبولة على السائقين، وتابعها حتى التسليم." : "الطلبات المعيّنة لك، مع موقع الزبون والعنوان الذي كتبه."}
+        action={canAssign ? (
+          <div className="flex gap-1 rounded-full bg-ink/[0.05] p-1 text-sm font-bold" role="group" aria-label="التصفية">
+            {[["all", `الكل (${rows.length})`], ["unassigned", `غير معيّن (${rows.filter((o) => !o.driver).length})`]].map(([v, l]) => (
+              <button key={v} type="button" aria-pressed={filter === v} onClick={() => setFilter(v)} className={`rounded-full px-4 py-1.5 ${filter === v ? "bg-white shadow-sm" : "text-muted"}`}>{l}</button>
+            ))}
+          </div>
+        ) : null} />
+      {!shown.length ? (
+        <Card><EmptyState icon={Bike} title={canAssign ? "لا توجد طلبات توصيل هنا" : "لا توجد طلبات معيّنة لك الآن"} description={canAssign ? "تظهر هنا طلبات التوصيل بعد قبولها من «الطلبات الخارجية»." : "عندما يعيّن لك مسؤول التوصيل طلبًا، يظهر هنا مباشرة."} /></Card>
       ) : (
         <ul className="grid gap-4 lg:grid-cols-2">
-          {rows.map((o) => {
+          {shown.map((o) => {
             const c = o.customer || {};
             const loc = c.location;
             return (
@@ -50,6 +68,18 @@ export default function DeliveryBoard() {
                     <Badge tone={o.fulfillment_status === "out_for_delivery" ? "info" : "warning"}>{o.fulfillment_status === "out_for_delivery" ? "خرج للتوصيل" : o.kitchen_status === "ready" ? "جاهز للتوصيل" : "قيد التحضير"}</Badge>
                   </div>
 
+                  {canAssign ? (
+                    <label className="flex items-center gap-2 rounded-xl border border-line p-2 text-sm font-bold">
+                      <span className="shrink-0 text-muted">السائق</span>
+                      <select aria-label={`السائق للطلب ${orderNo(o.order_number)}`} value={o.driver?.id || ""} disabled={busy === o.id}
+                        onChange={(e) => act(o, () => assignDriver(o.id, Number(e.target.value) || null), e.target.value ? "تم تعيين السائق." : "أُلغي التعيين.")}
+                        className={`h-10 min-w-0 flex-1 rounded-lg border px-2 ${o.driver ? "border-line bg-white" : "border-copper bg-copper/[0.06]"}`}>
+                        <option value="">— غير معيّن —</option>
+                        {drivers.map((d) => <option key={d.id} value={d.id}>{d.name} · {d.active_orders} طلب حالي</option>)}
+                      </select>
+                    </label>
+                  ) : null}
+                  {canAssign && !drivers.length && <p className="text-xs text-muted">لا يوجد سائقون بعد. أضفهم من «فريق المطعم» بدور «سائق توصيل».</p>}
                   {loc ? <LocationMap lat={loc.lat} lng={loc.lng} height={200} /> : (
                     <p className="flex items-center gap-2 rounded-xl bg-copper/10 p-3 text-xs font-bold text-copper-ink"><MapPin size={15} aria-hidden="true" /> لم يشارك الزبون موقعه. اعتمد على العنوان المكتوب.</p>
                   )}
