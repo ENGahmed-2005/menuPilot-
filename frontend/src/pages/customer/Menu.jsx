@@ -274,7 +274,7 @@ export default function Menu() {
 
         {brand.show_menupilot_branding && (
           <a href="/" className="mx-auto mt-10 flex w-fit items-center gap-2 text-xs font-bold opacity-60 transition-opacity hover:opacity-100" dir="ltr">
-            Powered by <BrandLogo height={20} />
+            مدعوم من <BrandLogo height={20} />
           </a>
         )}
       </main>

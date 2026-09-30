@@ -12,6 +12,7 @@ import {
   Smartphone,
   Users,
   WalletCards,
+  Bike,
 } from "lucide-react";
 
 export const FEATURES = [
@@ -19,8 +20,8 @@ export const FEATURES = [
   { icon: LayoutDashboard, title: "لوحة تحكم موحدة", text: "إدارة المنيو والطلبات والطاولات والفواتير من مكان واحد." },
   { icon: ChefHat, title: "تشغيل المطبخ", text: "الطلبات تصل للمطبخ بشكل واضح مع متابعة حالة كل طلب لحظة بلحظة." },
   { icon: WalletCards, title: "فواتير ومدفوعات", text: "تنظيم الفواتير والمدفوعات وتقليل الأخطاء في نهاية كل جلسة." },
-  { icon: ClipboardList, title: "تتبع الطلبات", text: "من استلام الطلب حتى تسليمه، كل خطوة واضحة للموظفين والعميل." },
-  { icon: ShieldCheck, title: "صلاحيات متعددة", text: "Owner وKitchen وCashier وWaiter، لكل دور مساحة عمل مناسبة له." },
+  { icon: Bike, title: "طلب أونلاين بلا عمولة", text: "استلام وتوصيل من رابط المطعم، مع تتبع حي للطلب وتأكيد الفاتورة على واتساب." },
+  { icon: ShieldCheck, title: "صلاحيات متعددة", text: "المالك والمطبخ والكاشير والنادل، لكل دور مساحة عمل مناسبة له." },
 ];
 
 export const STEPS = [
@@ -31,10 +32,10 @@ export const STEPS = [
 ];
 
 export const ROLES = [
-  [Users, "Owner", "إدارة المطعم والتقارير والمنيو والطاولات."],
-  [ChefHat, "Kitchen", "استقبال الطلبات وإدارة حالة التحضير."],
-  [WalletCards, "Cashier", "إدارة الفواتير والمدفوعات وإغلاق الجلسات."],
-  [Smartphone, "Waiter", "متابعة الطاولات والجلسات والطلبات."],
+  [Users, "المالك", "إدارة المطعم والتقارير والمنيو والطاولات."],
+  [ChefHat, "المطبخ", "استقبال الطلبات وإدارة حالة التحضير."],
+  [WalletCards, "الكاشير", "إدارة الفواتير والمدفوعات وإغلاق الجلسات."],
+  [Smartphone, "النادل", "متابعة الطاولات والجلسات والطلبات."],
 ];
 
 export const NAV_LINKS = [

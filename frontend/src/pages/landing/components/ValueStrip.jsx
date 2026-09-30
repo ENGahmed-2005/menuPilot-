@@ -1,7 +1,7 @@
 import { Clock3, LayoutDashboard, QrCode, ShieldCheck } from "lucide-react";
 
 const ITEMS = [
-  [QrCode,          "QR Ordering",    "اطلب بدون نادل"],
+  [QrCode,          "الطلب عبر QR",    "اطلب بدون نادل"],
   [Clock3,          "تشغيل أسرع",    "وقت أقل، إنتاج أكثر"],
   [ShieldCheck,     "صلاحيات آمنة",  "كل دور بحدوده"],
   [LayoutDashboard, "إدارة مركزية",  "كل شيء في مكان"],
