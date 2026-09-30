@@ -109,7 +109,7 @@ export default function OnlineOrder() {
             </ul>
           </section>
         ))}
-        <a href="/" className="mx-auto mt-10 flex w-fit items-center gap-2 text-xs font-bold opacity-60" dir="ltr">Powered by <BrandLogo height={20} /></a>
+        <a href="/" className="mx-auto mt-10 flex w-fit items-center gap-2 text-xs font-bold opacity-60" dir="rtl">مدعوم من <BrandLogo height={20} /></a>
       </div>
 
       {count > 0 && (

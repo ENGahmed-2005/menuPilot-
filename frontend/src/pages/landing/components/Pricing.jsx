@@ -16,6 +16,7 @@ const COLLAPSED_COUNT = 4;
 const PLAN_ORDER = ["basic", "pro", "premium"];
 
 const FEATURE_LABELS = {
+  online_orders: "طلب أونلاين: استلام وتوصيل بلا عمولة",
   dashboard: "لوحة تحكم موحّدة",
   tables: "إدارة الطاولات",
   menu: "إدارة القائمة",
@@ -35,7 +36,10 @@ function formatLimit(value) {
   return value === Infinity ? "بلا حدود" : value;
 }
 
-function PlanCard({ id, plan, popular, delay }) {
+// Annual billing: pay 10 months, get 12 (server applies the same rule).
+const ANNUAL_PAID_MONTHS = 10;
+
+function PlanCard({ id, plan, popular, delay, annual }) {
   const [expanded, setExpanded] = useState(false);
   const features = plan.features;
   const hidden = features.length > COLLAPSED_COUNT;
@@ -62,8 +66,9 @@ function PlanCard({ id, plan, popular, delay }) {
             <p className="mt-1 text-xs leading-5 text-[#F3EFE5]/70">{plan.description}</p>
           </div>
           <div className="shrink-0 text-right">
-            <span className="text-2xl font-black">${plan.price}</span>
-            <span className="block text-[11px] text-[#F3EFE5]/70">/ شهريًا</span>
+            <span className="text-2xl font-black">${annual ? plan.price * ANNUAL_PAID_MONTHS : plan.price}</span>
+            <span className="block text-[11px] text-[#F3EFE5]/70">{annual ? "/ سنويًا" : "/ شهريًا"}</span>
+            {annual && <span className="mt-1 block text-[11px] font-bold text-[#EEA122]">≈ ${(plan.price * ANNUAL_PAID_MONTHS / 12).toFixed(1)} شهريًا</span>}
           </div>
         </div>
 
@@ -116,6 +121,7 @@ function PlanCard({ id, plan, popular, delay }) {
 }
 
 export default function Pricing() {
+  const [annual, setAnnual] = useState(false);
   return (
     <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
       <Reveal className="mx-auto max-w-2xl text-center">
@@ -126,9 +132,17 @@ export default function Pricing() {
         </p>
 
         {/* 14-day trial badge */}
-        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#4B6A8A]/40 bg-[#4B6A8A]/10 px-4 py-2 text-sm font-bold text-[#4B6A8A]">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4B6A8A]" />
+        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#EEA122]/30 bg-[#EEA122]/10 px-4 py-2 text-sm font-bold text-[#F3EFE5]">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#EEA122]" />
           تجربة مجانية لمدة 14 يومًا — بدون بطاقة ائتمانية
+        </div>
+
+        {/* Monthly / annual */}
+        <div role="group" aria-label="مدة الاشتراك" className="mx-auto mt-6 flex w-fit items-center gap-1 rounded-full border border-[#F3EFE5]/15 bg-[#F3EFE5]/[.04] p-1 text-sm font-bold">
+          <button type="button" aria-pressed={!annual} onClick={() => setAnnual(false)} className={`rounded-full px-5 py-2 transition ${!annual ? "bg-[#EEA122] text-[#172331]" : "text-[#F3EFE5]/80 hover:text-[#F3EFE5]"}`}>شهري</button>
+          <button type="button" aria-pressed={annual} onClick={() => setAnnual(true)} className={`flex items-center gap-2 rounded-full px-5 py-2 transition ${annual ? "bg-[#EEA122] text-[#172331]" : "text-[#F3EFE5]/80 hover:text-[#F3EFE5]"}`}>
+            سنوي <span className={`rounded-full px-2 py-0.5 text-[10px] ${annual ? "bg-[#172331] text-[#EEA122]" : "bg-[#EEA122]/20 text-[#EEA122]"}`}>شهران مجانًا</span>
+          </button>
         </div>
       </Reveal>
 
@@ -139,13 +153,14 @@ export default function Pricing() {
             id={id}
             plan={SUBSCRIPTION_PLANS[id]}
             popular={id === "pro"}
+            annual={annual}
             delay={i * 80}
           />
         ))}
       </div>
 
-      <p className="mt-8 text-center text-[11px] text-[#F3EFE5]/30">
-        جميع الباقات تشمل: طلب عبر QR، متابعة حية للطلبات، ولوحات مخصّصة للمطبخ والكاشير والنادل. لا عقود، إلغاء في أي وقت.
+      <p className="mt-8 text-center text-xs leading-6 text-[#F3EFE5]/70">
+        جميع الباقات تشمل: طلب عبر QR، ومتابعة حية للطلبات، ولوحات للمطبخ والكاشير والنادل. الباقة المميزة تضيف الطلب أونلاين. بلا عمولة على الطلبات، وبلا عقود، وإلغاء في أي وقت.
       </p>
     </section>
   );

@@ -3,27 +3,27 @@ import { Code2, Database, UsersRound } from "lucide-react";
 const TEAM = [
   {
     name: "أحمد الكحلوت",
-    role: "Owner · Team Leader",
+    role: "صاحب المشروع · قائد الفريق",
     icon: UsersRound,
   },
   {
     name: "علي عابد",
-    role: "Laravel Backend Developer",
+    role: "مطوّر الخادم (Laravel)",
     icon: Database,
   },
   {
     name: "عمار يحيى عمر العرعير",
-    role: "Co-Owner · Laravel Backend Developer",
+    role: "شريك · مطوّر الخادم (Laravel)",
     icon: Database,
   },
   {
-    name: "Saja Saqallah",
-    role: "React Frontend Developer",
+    name: "سجى سقالله",
+    role: "مطوّرة الواجهات (React)",
     icon: Code2,
   },
   {
-    name: "Raneen Rayan",
-    role: "React Developer",
+    name: "رنين ريان",
+    role: "مطوّرة الواجهات (React)",
     icon: Code2,
   },
 ];
@@ -36,7 +36,7 @@ export default function TeamSection() {
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <span className="mb-4 inline-block font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#EEA122]">
-            The Team
+            فريق العمل
           </span>
           <h2 className="font-[Aref_Ruqaa] text-4xl font-normal leading-tight text-[#F3EFE5] md:text-5xl">
             فريق menuPilot
