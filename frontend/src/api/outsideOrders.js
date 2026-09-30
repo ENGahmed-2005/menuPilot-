@@ -27,3 +27,6 @@ export const whatsappNumber = (phone) => String(phone || "").replace(/\D/g, "").
 // Delivery dispatch
 export const getDrivers = () => api.get("/outside-orders/drivers");
 export const assignDriver = (id, driverId) => api.post(`/outside-orders/${id}/assign`, { driver_id: driverId || null });
+
+// Owner override of a delivery order's status
+export const overrideOutsideStatus = (id, status, reason) => api.post(`/outside-orders/${id}/status`, { status, reason: reason || undefined });

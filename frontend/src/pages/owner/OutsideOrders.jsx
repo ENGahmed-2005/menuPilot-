@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bike, Check, ExternalLink, MapPin, MessageCircle, Phone, Store, X } from "lucide-react";
 import { googleDirectionsUrl } from "../../utils/maps";
+import OwnerStatusControl from "../../components/delivery/OwnerStatusControl";
 import { acceptOutsideOrder, completeOutsideOrder, getOutsideOrders, rejectOutsideOrder, verifyOutsidePayment, whatsappNumber } from "../../api/outsideOrders";
 import { errorText } from "../../utils/errors";
 import { money, orderNo } from "../../utils/format";
@@ -70,6 +71,7 @@ export default function OutsideOrders() {
                   <span className="num font-black">{money(o.total)}{o.delivery_fee > 0 && <span className="text-xs font-medium text-muted"> (منها توصيل {money(o.delivery_fee)})</span>}</span>
                   <span className="text-xs font-bold">{o.payment_method === "transfer" ? (o.payment_status === "paid" ? "تحويل ✓" : "تحويل · يحتاج تحقق") : "نقدًا"}{o.payment_proof_url && <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer" className="mr-2 inline-flex items-center gap-1 text-copper-ink">الإشعار <ExternalLink size={12} /></a>}</span>
                 </div>
+                <div className="mt-3"><OwnerStatusControl order={o} onChanged={load} /></div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {o.fulfillment_status === "awaiting_acceptance" && <>
                     <Button size="sm" loading={busy === o.id} onClick={() => accept(o)}><Check size={15} /> قبول</Button>

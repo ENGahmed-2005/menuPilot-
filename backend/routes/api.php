@@ -141,6 +141,8 @@ Route::middleware('api.auth')->group(function () {
         Route::post('outside-orders/{id}/dispatch', [OutsideOrderController::class, 'dispatch']);
         Route::post('outside-orders/{id}/complete', [OutsideOrderController::class, 'complete']);
     });
+    // Owner override of a delivery order's status (checked in the controller).
+    Route::post('outside-orders/{id}/status', [OutsideOrderController::class, 'overrideStatus'])->middleware(['permission:view_orders', 'subscription']);
     Route::get('online-ordering/settings', [OutsideOrderController::class, 'settings'])->middleware('permission:manage_settings');
     Route::put('online-ordering/settings', [OutsideOrderController::class, 'updateSettings'])->middleware('permission:manage_settings');
     Route::post('order-items/{id}/reassign', [OrderController::class, 'reassign'])->middleware('permission:reassign_orders');
