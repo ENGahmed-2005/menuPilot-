@@ -135,6 +135,7 @@ class StaffController extends Controller
             if (array_key_exists('permissions', $v)) {
                 $staffData['permissions'] = $permissions;
             }
+            $previousRole = $staff->role; // captured before saving
             if ($staffData) {
                 $staff->update($staffData);
             }
@@ -145,9 +146,11 @@ class StaffController extends Controller
                 if (! empty($v['password'])) {
                     $userData['password'] = Hash::make($v['password']);
                 }
-                // Any change of access revokes the current token: the employee
-                // signs in again and gets their new permissions.
-                if ((array_key_exists('active', $v) && ! $v['active']) || isset($v['role']) || array_key_exists('permissions', $v) || ! empty($v['password'])) {
+                // Disabling, a role change or a new password revoke the current
+                // token (sign in again). Permission changes do NOT: they are
+                // checked on every request, so they apply immediately and the
+                // employee's screen refreshes them (AuthContext).
+                if ((array_key_exists('active', $v) && ! $v['active']) || (isset($v['role']) && $v['role'] !== $previousRole) || ! empty($v['password'])) {
                     $userData['api_token'] = null;
                 }
                 if ($userData) {

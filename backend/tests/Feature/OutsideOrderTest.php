@@ -148,3 +148,38 @@ it('stores the customer GPS location for delivery and shows it to staff only', f
     expect($this->getJson("/api/public/outside-orders/{$o['id']}?token={$o['token']}")->json('data.customer'))->not->toHaveKey('location');
     expect(DB::table('outside_order_contacts')->where('order_id', $pickup['id'])->value('latitude'))->toBeNull();
 });
+
+it('lets a delivery driver see and complete delivery orders only', function () {
+    $r = onlineRestaurant($this);
+    $driver = makeStaff($r['id'], 'delivery');
+    expect($this->getJson('/api/auth/me', authAs($driver))->json('user.permissions') ?? $this->getJson('/api/auth/me', authAs($driver))->json('data.permissions'))->toContain('deliver_orders');
+
+    $d = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'الرمال'])->json('data');
+    $p = placeOrder($this, $r, ['phone' => '0599000555'])->json('data');
+    $this->postJson("/api/outside-orders/{$d['id']}/accept", [], authAs($driver))->assertForbidden(); // cannot accept
+    $this->postJson("/api/outside-orders/{$d['id']}/accept", [], authAs($r))->assertOk();
+    $this->postJson("/api/outside-orders/{$p['id']}/accept", [], authAs($r))->assertOk();
+
+    // Board shows delivery orders only, whatever filter is requested.
+    $ids = collect($this->getJson('/api/outside-orders?status=active', authAs($driver))->json('data'))->pluck('id');
+    expect($ids->all())->toBe([$d['id']]);
+    $this->postJson("/api/outside-orders/{$p['id']}/complete", [], authAs($driver))->assertForbidden(); // pickup is not theirs
+    $this->postJson("/api/outside-orders/{$d['id']}/dispatch", [], authAs($driver))->assertOk();
+    $this->postJson("/api/outside-orders/{$d['id']}/complete", [], authAs($driver))->assertOk()->assertJsonPath('data.fulfillment_status', 'completed');
+    $this->getJson('/api/kitchen/orders', authAs($driver))->assertForbidden(); // no general order access
+});
+
+it('applies permission changes immediately without signing the employee out', function () {
+    $owner = makeOwner();
+    $waiter = makeStaff($owner['id'], 'waiter');
+    $staffId = DB::table('staff')->where('account_user_id', $waiter['id'])->value('id');
+    $this->getJson('/api/tables', authAs($waiter))->assertOk();
+
+    $this->putJson("/api/staff/{$staffId}", ['permissions' => ['view_orders', 'view_menu']], authAs($owner))->assertOk();
+    $me = $this->getJson('/api/auth/me', authAs($waiter))->assertOk(); // still signed in
+    expect(json_encode($me->json()))->not->toContain('view_tables');
+    $this->getJson('/api/tables', authAs($waiter))->assertForbidden(); // revoked right away
+
+    $this->putJson("/api/staff/{$staffId}", ['role' => 'cashier'], authAs($owner))->assertOk();
+    $this->getJson('/api/auth/me', authAs($waiter))->assertUnauthorized(); // role change: sign in again
+});
