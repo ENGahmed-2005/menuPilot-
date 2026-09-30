@@ -93,6 +93,7 @@ class OutsideOrderController extends Controller
             'ready_at' => $o->ready_at,
             'dispatched_at' => $o->dispatched_at,
             'completed_at' => $o->completed_at,
+            'driver' => $staff && $o->assigned_driver_id ? ['id' => (int) $o->assigned_driver_id, 'name' => DB::table('staff')->where('account_user_id', $o->assigned_driver_id)->value('name')] : null,
             'items' => $items->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'quantity' => (int) $i->quantity, 'unit_price' => (float) $i->unit_price, 'note' => $i->note])->values(),
             'subtotal' => $subtotal,
             'delivery_fee' => (float) $o->delivery_fee,
@@ -110,7 +111,7 @@ class OutsideOrderController extends Controller
     {
         $perms = Permissions::for($r->user());
 
-        return in_array('deliver_orders', $perms, true) && ! array_intersect(['view_orders', 'manage_orders', 'view_payments'], $perms);
+        return in_array('deliver_orders', $perms, true) && ! array_intersect(['view_orders', 'manage_orders', 'view_payments', 'dispatch_deliveries'], $perms);
     }
 
     private function orderFor(Request $r, $id): ?object
@@ -265,7 +266,13 @@ class OutsideOrderController extends Controller
     {
         $q = DB::table('orders')->where('user_id', $this->restaurantId($r))->whereIn('channel', ['pickup', 'delivery']);
         // Drivers only ever see the delivery board.
-        match ($this->isDriverOnly($r) ? 'delivery' : $r->query('status', 'active')) {
+        $driverOnly = $this->isDriverOnly($r);
+        $dispatcher = ! $driverOnly && in_array('dispatch_deliveries', Permissions::for($r->user()), true)
+            && ! array_intersect(['view_orders', 'manage_orders', 'view_payments'], Permissions::for($r->user()));
+        if ($driverOnly) {
+            $q->where('assigned_driver_id', $r->user()->id); // a driver only sees orders assigned to them
+        }
+        match ($driverOnly || $dispatcher ? 'delivery' : $r->query('status', 'active')) {
             'awaiting' => $q->where('fulfillment_status', 'awaiting_acceptance'),
             // Delivery board: accepted delivery orders not yet completed.
             'delivery' => $q->where('channel', 'delivery')->whereIn('fulfillment_status', ['accepted', 'out_for_delivery']),
@@ -315,12 +322,47 @@ class OutsideOrderController extends Controller
         return response()->json(['data' => $this->present(DB::table('orders')->find($id), true)]);
     }
 
+    /** Active drivers of this restaurant with their current load. */
+    public function drivers(Request $r)
+    {
+        $rid = $this->restaurantId($r);
+        $load = DB::table('orders')->where('user_id', $rid)->whereIn('fulfillment_status', ['accepted', 'out_for_delivery'])
+            ->whereNotNull('assigned_driver_id')->groupBy('assigned_driver_id')->select('assigned_driver_id', DB::raw('COUNT(*) as n'))->pluck('n', 'assigned_driver_id');
+
+        return response()->json(['data' => DB::table('staff')->where('user_id', $rid)->where('role', 'delivery')->where('active', true)->whereNotNull('account_user_id')
+            ->orderBy('name')->get(['account_user_id as id', 'name'])->map(fn ($d) => ['id' => (int) $d->id, 'name' => $d->name, 'active_orders' => (int) ($load[$d->id] ?? 0)])]);
+    }
+
+    /** POST /outside-orders/{id}/assign {driver_id|null} — assign / unassign a driver. */
+    public function assign(Request $r, $id)
+    {
+        $v = $r->validate(['driver_id' => 'nullable|integer']);
+        $o = $this->orderFor($r, $id);
+        if (! $o || $o->channel !== 'delivery') {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+        if (! in_array($o->fulfillment_status, ['accepted', 'out_for_delivery'], true)) {
+            return response()->json(['message' => 'يمكن تعيين سائق للطلبات المقبولة فقط.', 'code' => 'INVALID_TRANSITION'], 409);
+        }
+        $driverId = $v['driver_id'] ?? null;
+        if ($driverId && ! DB::table('staff')->where('user_id', $o->user_id)->where('role', 'delivery')->where('active', true)->where('account_user_id', $driverId)->exists()) {
+            return response()->json(['message' => 'السائق غير موجود في فريق هذا المطعم أو غير مفعّل.', 'errors' => ['driver_id' => ['invalid']]], 422);
+        }
+        DB::table('orders')->where('id', $id)->update(['assigned_driver_id' => $driverId, 'assigned_at' => $driverId ? now() : null, 'updated_at' => now()]);
+        Audit::log($r, 'outside_order.driver_assigned', 'order', (int) $id, ['from' => $o->assigned_driver_id, 'to' => $driverId], (int) $o->user_id);
+
+        return response()->json(['data' => $this->present(DB::table('orders')->find($id), true)]);
+    }
+
     /** POST /outside-orders/{id}/dispatch — delivery left the restaurant. */
     public function dispatch(Request $r, $id)
     {
         $o = $this->orderFor($r, $id);
         if (! $o || $o->channel !== 'delivery') {
             return response()->json(['message' => 'Order not found'], 404);
+        }
+        if ($this->isDriverOnly($r) && (int) $o->assigned_driver_id !== (int) $r->user()->id) {
+            return response()->json(['message' => 'هذا الطلب غير معيّن لك.', 'code' => 'PERMISSION_DENIED'], 403);
         }
         if ($o->fulfillment_status !== 'accepted') {
             return response()->json(['message' => 'اقبل الطلب أولًا.', 'code' => 'INVALID_TRANSITION'], 409);
@@ -338,7 +380,7 @@ class OutsideOrderController extends Controller
         if (! $o) {
             return response()->json(['message' => 'Order not found'], 404);
         }
-        if ($this->isDriverOnly($r) && $o->channel !== 'delivery') {
+        if ($this->isDriverOnly($r) && ($o->channel !== 'delivery' || (int) $o->assigned_driver_id !== (int) $r->user()->id)) {
             return response()->json(['message' => 'You do not have permission for this action.', 'code' => 'PERMISSION_DENIED'], 403);
         }
         if (! in_array($o->fulfillment_status, ['accepted', 'out_for_delivery'], true)) {

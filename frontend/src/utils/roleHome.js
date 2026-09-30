@@ -15,6 +15,7 @@ export const ROLE_HOME = {
   manager: "/owner/dashboard",
   kitchen: "/kitchen",
   delivery: "/delivery",
+  delivery_manager: "/delivery",
   cashier: "/cashier/tables",
   waiter: "/waiter",
   admin: "/admin/dashboard",

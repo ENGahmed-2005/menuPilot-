@@ -22,6 +22,7 @@ export const PERMISSION_LABELS = {
   reassign_orders: "نقل الأصناف بين الطاولات",
   handle_assistance: "التعامل مع طلبات النادل",
   deliver_orders: "توصيل الطلبات الخارجية",
+  dispatch_deliveries: "توزيع طلبات التوصيل على السائقين",
   view_menu: "عرض المنيو",
   manage_menu: "إدارة المنيو",
   view_payments: "عرض الفواتير والمدفوعات",
@@ -58,6 +59,7 @@ export const ROLE_DEFAULTS = {
   waiter: ["view_tables", "view_orders", "view_menu", "cancel_orders", "reassign_orders", "handle_assistance"],
   kitchen: ["view_orders", "manage_orders", "view_menu"],
   delivery: ["deliver_orders"],
+  delivery_manager: ["dispatch_deliveries", "deliver_orders"],
 };
 
-export const ROLE_LABELS = { delivery: "سائق توصيل", owner: "صاحب المطعم", manager: "مدير", cashier: "كاشير", waiter: "نادل", kitchen: "مطبخ", admin: "إدارة المنصة" };
+export const ROLE_LABELS = { delivery_manager: "مسؤول التوصيل", delivery: "سائق توصيل", owner: "صاحب المطعم", manager: "مدير", cashier: "كاشير", waiter: "نادل", kitchen: "مطبخ", admin: "إدارة المنصة" };
