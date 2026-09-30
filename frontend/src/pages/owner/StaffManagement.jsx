@@ -169,7 +169,7 @@ export default function StaffManagement() {
             <input type="tel" inputMode="tel" placeholder="رقم الهاتف (اختياري)" aria-label="رقم الهاتف" value={form.phone} onChange={(e)=>setForm({...form,phone:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
             <select value={form.role} onChange={(e)=>setForm({...form,role:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper">{roles.map(r=><option key={r.value} value={r.value}>{r.label}</option>)}</select>
             <div className="relative"><KeyRound size={16} className="absolute right-3 top-3.5 text-muted"/><input type="password" minLength={6} placeholder="كلمة مرور (اختياري: تُنشأ تلقائيًا)" value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper py-3 pr-9 pl-3 text-sm outline-none focus:border-copper" /></div>
-            <Button disabled={saving} className="w-full">{saving ? "جارِ إنشاء الحساب…" : "إنشاء الحساب"}</Button>
+            <Button type="button" onClick={submit} disabled={saving} className="w-full">{saving ? "جارِ إنشاء الحساب…" : "إنشاء الحساب"}</Button>
           </form>
         </Card>
 
