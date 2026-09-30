@@ -198,7 +198,9 @@ class OutsideOrderController extends Controller
                 return response()->json(['message' => 'منطقة التوصيل غير متاحة.', 'errors' => ['zone_id' => ['invalid']]], 422);
             }
             if ($subtotal < (float) $zone->min_order) {
-                return response()->json(['message' => "الحد الأدنى للتوصيل إلى {$zone->name} هو {$zone->min_order}.", 'code' => 'BELOW_MIN_ORDER'], 422);
+                $min = rtrim(rtrim(number_format((float) $zone->min_order, 2, '.', ''), '0'), '.');
+
+                return response()->json(['message' => "الحد الأدنى للتوصيل إلى {$zone->name} هو {$min} ₪ (دون رسوم التوصيل). أضف أصنافًا لتصل إليه.", 'code' => 'BELOW_MIN_ORDER', 'min_order' => (float) $zone->min_order], 422);
             }
         }
 

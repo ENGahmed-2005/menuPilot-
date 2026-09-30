@@ -45,6 +45,7 @@ const OwnersManagement = lazy(() => import("../pages/admin/OwnersManagement"));
 const AdminSubscriptions = lazy(() => import("../pages/admin/AdminSubscriptions"));
 const AdminSettings = lazy(() => import("../pages/admin/AdminSettings"));
 const AdminNotifications = lazy(() => import("../pages/admin/AdminNotifications"));
+const PasswordRequests = lazy(() => import("../pages/admin/PasswordRequests"));
 
 // Each role only downloads its own screens: a customer scanning a QR code
 // never loads the admin or cashier bundles.
@@ -132,6 +133,7 @@ export default function AppRoutes() {
         <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/admin/notifications" element={<AdminNotifications />} />
+        <Route path="/admin/password-requests" element={<PasswordRequests />} />
       </Route>
     </Routes>
     </Suspense>

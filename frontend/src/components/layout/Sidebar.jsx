@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import BrandLogo from "../brand/Logo";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  BarChart3, Bell, Bike, ChefHat, MapPin, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
+  BarChart3, Bell, Bike, ChefHat, KeyRound, MapPin, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
   ChevronDown, QrCode, Receipt, Settings, Settings2, Sparkles, UtensilsCrossed, Users, X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -73,6 +73,7 @@ const NAV = {
       ["/admin/dashboard", "نظرة عامة", LayoutDashboard, null, null],
       ["/admin/restaurants", "المطاعم", UtensilsCrossed, null, null],
       ["/admin/owners", "أصحاب المطاعم", Users, null, null],
+      ["/admin/password-requests", "استعادة كلمات المرور", KeyRound, null, null],
       ["/admin/subscriptions", "الاشتراكات", Crown, null, null],
       ["/admin/reports", "التقارير", BarChart3, null, null],
     ] },
