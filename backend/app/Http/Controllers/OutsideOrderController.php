@@ -275,7 +275,10 @@ class OutsideOrderController extends Controller
         match ($driverOnly || $dispatcher ? 'delivery' : $r->query('status', 'active')) {
             'awaiting' => $q->where('fulfillment_status', 'awaiting_acceptance'),
             // Delivery board: accepted delivery orders not yet completed.
-            'delivery' => $q->where('channel', 'delivery')->whereIn('fulfillment_status', ['accepted', 'out_for_delivery']),
+            // Strict sequence: the delivery team sees an order only once the
+            // kitchen has marked it ready (or it is already on the road).
+            'delivery' => $q->where('channel', 'delivery')->where(fn ($w) => $w->where('fulfillment_status', 'out_for_delivery')
+                ->orWhere(fn ($x) => $x->where('fulfillment_status', 'accepted')->whereIn('status', ['ready', 'served']))),
             'done' => $q->whereIn('fulfillment_status', ['completed', 'rejected'])->where('updated_at', '>=', now()->subDays(2)),
             default => $q->whereIn('fulfillment_status', self::OPEN_STATES),
         };
@@ -344,6 +347,9 @@ class OutsideOrderController extends Controller
         if (! in_array($o->fulfillment_status, ['accepted', 'out_for_delivery'], true)) {
             return response()->json(['message' => 'يمكن تعيين سائق للطلبات المقبولة فقط.', 'code' => 'INVALID_TRANSITION'], 409);
         }
+        if ($o->fulfillment_status === 'accepted' && ! in_array($o->status, ['ready', 'served'], true)) {
+            return response()->json(['message' => 'الطلب لم يجهز بعد في المطبخ.', 'code' => 'NOT_READY'], 409);
+        }
         $driverId = $v['driver_id'] ?? null;
         if ($driverId && ! DB::table('staff')->where('user_id', $o->user_id)->where('role', 'delivery')->where('active', true)->where('account_user_id', $driverId)->exists()) {
             return response()->json(['message' => 'السائق غير موجود في فريق هذا المطعم أو غير مفعّل.', 'errors' => ['driver_id' => ['invalid']]], 422);
@@ -367,7 +373,16 @@ class OutsideOrderController extends Controller
         if ($o->fulfillment_status !== 'accepted') {
             return response()->json(['message' => 'اقبل الطلب أولًا.', 'code' => 'INVALID_TRANSITION'], 409);
         }
-        DB::table('orders')->where('id', $id)->update(['fulfillment_status' => 'out_for_delivery', 'dispatched_at' => now(), 'status' => in_array($o->status, ['pending', 'preparing'], true) ? 'ready' : $o->status, 'updated_at' => now()]);
+        if (! in_array($o->status, ['ready', 'served'], true)) {
+            return response()->json(['message' => 'الطلب لم يجهز بعد في المطبخ.', 'code' => 'NOT_READY'], 409);
+        }
+        // With drivers on the team, a driver must be assigned first (restaurants
+        // without drivers can still dispatch directly).
+        $hasDrivers = DB::table('staff')->where('user_id', $o->user_id)->where('role', 'delivery')->where('active', true)->exists();
+        if ($hasDrivers && ! $o->assigned_driver_id) {
+            return response()->json(['message' => 'عيّن سائقًا للطلب أولًا.', 'code' => 'DRIVER_REQUIRED'], 409);
+        }
+        DB::table('orders')->where('id', $id)->update(['fulfillment_status' => 'out_for_delivery', 'dispatched_at' => now(), 'updated_at' => now()]);
         Audit::log($r, 'outside_order.dispatched', 'order', (int) $id, [], (int) $o->user_id);
 
         return response()->json(['data' => $this->present(DB::table('orders')->find($id), true)]);
@@ -385,6 +400,9 @@ class OutsideOrderController extends Controller
         }
         if (! in_array($o->fulfillment_status, ['accepted', 'out_for_delivery'], true)) {
             return response()->json(['message' => 'لا يمكن إنهاء هذا الطلب في حالته الحالية.', 'code' => 'INVALID_TRANSITION'], 409);
+        }
+        if ($o->channel === 'delivery' && $o->fulfillment_status !== 'out_for_delivery') {
+            return response()->json(['message' => 'اضغط «خرج للتوصيل» أولًا.', 'code' => 'INVALID_TRANSITION'], 409);
         }
         if ($o->payment_method === 'transfer' && $o->payment_status !== 'paid') {
             return response()->json(['message' => 'أكّد وصول التحويل قبل تسليم الطلب.', 'code' => 'PAYMENT_NOT_VERIFIED'], 409);

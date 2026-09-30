@@ -65,7 +65,7 @@ export default function DeliveryBoard() {
                       <p className="text-lg font-extrabold">{orderNo(o.order_number)} · {c.name}</p>
                       <p className="text-sm text-muted" dir="ltr">{c.phone}</p>
                     </div>
-                    <Badge tone={o.fulfillment_status === "out_for_delivery" ? "info" : "warning"}>{o.fulfillment_status === "out_for_delivery" ? "خرج للتوصيل" : o.kitchen_status === "ready" ? "جاهز للتوصيل" : "قيد التحضير"}</Badge>
+                    <Badge tone={o.fulfillment_status === "out_for_delivery" ? "info" : o.driver ? "success" : "warning"}>{o.fulfillment_status === "out_for_delivery" ? "خرج للتوصيل" : o.driver ? (canAssign ? `مع ${o.driver.name} · بانتظار الخروج` : "جاهز · اخرج للتوصيل") : "جاهز · بانتظار تعيين سائق"}</Badge>
                   </div>
 
                   {canAssign ? (
@@ -97,8 +97,8 @@ export default function DeliveryBoard() {
                     <a href={loc ? googleDirectionsUrl(loc.lat, loc.lng) : googleSearchUrl(`${c.zone || ""} ${c.address || ""}`)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-control)] bg-navy px-3 text-xs font-bold text-paper"><Navigation size={14} /> {loc ? "الاتجاهات في خرائط Google" : "ابحث عن العنوان"}</a>
                     <a href={`tel:${c.phone}`} className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-control)] px-3 text-xs font-bold ring-1 ring-line"><Phone size={14} /> اتصال</a>
                     <a href={`https://wa.me/${whatsappNumber(c.phone)}?text=${encodeURIComponent(`مرحبًا ${c.name}، أنا سائق التوصيل لطلبك ${orderNo(o.order_number)}.`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-control)] px-3 text-xs font-bold text-[#1f7a52] ring-1 ring-line"><MessageCircle size={14} /> واتساب</a>
-                    {o.fulfillment_status === "accepted" && <Button size="sm" variant="dark" loading={busy === o.id} onClick={() => act(o, () => dispatchOutsideOrder(o.id), "خرج الطلب للتوصيل.")}><Bike size={15} /> خرج للتوصيل</Button>}
-                    {o.fulfillment_status === "out_for_delivery" && <Button size="sm" loading={busy === o.id} onClick={() => act(o, () => completeOutsideOrder(o.id), "تم تسليم الطلب.")}><CheckCircle2 size={15} /> تم التسليم</Button>}
+                    {o.fulfillment_status === "accepted" && (!canAssign || !drivers.length) && <Button size="sm" variant="dark" loading={busy === o.id} onClick={() => act(o, () => dispatchOutsideOrder(o.id), "خرج الطلب للتوصيل.")}><Bike size={15} /> خرج للتوصيل</Button>}
+                    {o.fulfillment_status === "out_for_delivery" && (!canAssign || !drivers.length) && <Button size="sm" loading={busy === o.id} onClick={() => act(o, () => completeOutsideOrder(o.id), "تم تسليم الطلب.")}><CheckCircle2 size={15} /> تم التسليم</Button>}
                   </div>
                 </Card>
               </li>

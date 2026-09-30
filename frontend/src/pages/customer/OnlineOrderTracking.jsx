@@ -12,7 +12,7 @@ import { money, orderNo } from "../../utils/format";
 
 const STEPS = {
   pickup: [["awaiting_acceptance", "استُلم طلبك"], ["accepted", "قبِل المطعم الطلب"], ["preparing", "قيد التحضير"], ["ready", "جاهز للاستلام"], ["completed", "تم الاستلام"]],
-  delivery: [["awaiting_acceptance", "استُلم طلبك"], ["accepted", "قبِل المطعم الطلب"], ["preparing", "قيد التحضير"], ["out_for_delivery", "خرج للتوصيل"], ["completed", "تم التسليم"]],
+  delivery: [["awaiting_acceptance", "استُلم طلبك"], ["accepted", "قبِل المطعم الطلب"], ["preparing", "قيد التحضير"], ["ready", "جاهز · يُسلَّم للسائق"], ["out_for_delivery", "خرج للتوصيل"], ["completed", "تم التسليم"]],
 };
 
 const clock = (iso) => (iso ? new Date(iso).toLocaleTimeString("ar-PS-u-nu-latn", { hour: "2-digit", minute: "2-digit" }) : null);
@@ -36,7 +36,12 @@ function invoiceText(o, link) {
 }
 
 function stepIndex(o) {
-  if (o.fulfillment_status === "completed") return 5; // every step done
+  if (o.fulfillment_status === "completed") return 6; // every step done
+  if (o.channel === "delivery") {
+    if (o.fulfillment_status === "out_for_delivery") return 4;
+    if (o.fulfillment_status === "accepted") return o.kitchen_status === "ready" || o.kitchen_status === "served" ? 3 : o.kitchen_status === "preparing" ? 2 : 1;
+    return 0;
+  }
   if (o.fulfillment_status === "out_for_delivery" || (o.channel === "pickup" && o.kitchen_status === "ready")) return 3;
   if (o.fulfillment_status === "accepted") return o.kitchen_status === "preparing" || o.kitchen_status === "ready" ? 2 : 1;
   return 0;
