@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bike, Check, ExternalLink, MapPin, MessageCircle, Phone, Store, X } from "lucide-react";
 import { googleDirectionsUrl } from "../../utils/maps";
-import { acceptOutsideOrder, completeOutsideOrder, dispatchOutsideOrder, getOutsideOrders, rejectOutsideOrder, verifyOutsidePayment, whatsappNumber } from "../../api/outsideOrders";
+import { acceptOutsideOrder, completeOutsideOrder, getOutsideOrders, rejectOutsideOrder, verifyOutsidePayment, whatsappNumber } from "../../api/outsideOrders";
 import { errorText } from "../../utils/errors";
 import { money, orderNo } from "../../utils/format";
 import PageHeader from "../../components/dashboard/PageHeader";
@@ -76,8 +76,8 @@ export default function OutsideOrders() {
                     <Button size="sm" variant="secondary" disabled={busy === o.id} onClick={() => reject(o)}><X size={15} /> رفض</Button>
                   </>}
                   {o.payment_method === "transfer" && o.payment_status !== "paid" && !["rejected", "completed"].includes(o.fulfillment_status) && <Button size="sm" variant="secondary" disabled={busy === o.id} onClick={() => act(o, () => verifyOutsidePayment(o.id), "تأكد وصول التحويل.")}>تأكيد التحويل</Button>}
-                  {o.channel === "delivery" && o.fulfillment_status === "accepted" && <Button size="sm" variant="dark" disabled={busy === o.id} onClick={() => act(o, () => dispatchOutsideOrder(o.id), "خرج الطلب للتوصيل.")}><Bike size={15} /> خرج للتوصيل</Button>}
-                  {["accepted", "out_for_delivery"].includes(o.fulfillment_status) && <Button size="sm" variant="dark" disabled={busy === o.id} onClick={() => act(o, () => completeOutsideOrder(o.id), "اكتمل الطلب.")}>{o.channel === "delivery" ? "تم التسليم" : "تم الاستلام"}</Button>}
+                  {o.channel === "delivery" && ["accepted", "out_for_delivery"].includes(o.fulfillment_status) && <span className="inline-flex h-9 items-center gap-1.5 text-xs font-bold text-muted"><Bike size={15} /> {o.fulfillment_status === "out_for_delivery" ? `مع السائق${o.driver ? ` ${o.driver.name}` : ""}` : o.kitchen_status === "ready" ? "لدى قسم التوصيل" : "في المطبخ، ثم قسم التوصيل"}</span>}
+                  {o.channel === "pickup" && o.fulfillment_status === "accepted" && <Button size="sm" variant="dark" disabled={busy === o.id} onClick={() => act(o, () => completeOutsideOrder(o.id), "اكتمل الطلب.")}>تم الاستلام</Button>}
                   {o.customer?.phone && <a href={`https://wa.me/${whatsappNumber(o.customer.phone)}?text=${encodeURIComponent(`مرحبًا ${o.customer.name}، بخصوص طلبك ${orderNo(o.order_number)}.`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-control)] px-3 text-xs font-bold text-[#1f7a52] hover:bg-herb/10"><MessageCircle size={15} /> واتساب</a>}
                   {o.customer?.phone && <a href={`tel:${o.customer.phone}`} className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-control)] px-3 text-xs font-bold hover:bg-ink/[0.05]"><Phone size={15} /> اتصال</a>}
                 </div>

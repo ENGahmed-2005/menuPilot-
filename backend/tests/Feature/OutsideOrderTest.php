@@ -19,6 +19,12 @@ function onlineRestaurant($test, string $plan = 'premium'): array
     return $owner + ['item' => $item, 'slug' => $s['settings']['slug'], 'zone' => $s['zones'][0]['id']];
 }
 
+/** The kitchen finished the order (status ready). */
+function kitchenReady(int $orderId): void
+{
+    DB::table('orders')->where('id', $orderId)->update(['status' => 'ready', 'ready_at' => now()]);
+}
+
 function placeOrder($test, array $r, array $extra = [])
 {
     return $test->postJson("/api/public/restaurants/{$r['slug']}/orders", array_merge([
@@ -66,6 +72,8 @@ it('prices delivery with the zone fee, enforces the minimum and dispatches', fun
     expect((float) $o['delivery_fee'])->toBe(5.0)->and((float) $o['total'])->toBe(45.0);
     $this->postJson("/api/outside-orders/{$o['id']}/dispatch", [], authAs($cashier))->assertStatus(409); // not accepted yet
     $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($cashier))->assertOk();
+    $this->postJson("/api/outside-orders/{$o['id']}/dispatch", [], authAs($cashier))->assertStatus(409)->assertJsonPath('code', 'NOT_READY');
+    kitchenReady($o['id']);
     $this->postJson("/api/outside-orders/{$o['id']}/dispatch", [], authAs($cashier))->assertOk()->assertJsonPath('data.fulfillment_status', 'out_for_delivery');
     $this->postJson("/api/outside-orders/{$o['id']}/complete", [], authAs($cashier))->assertOk()->assertJsonPath('data.fulfillment_status', 'completed');
 });
@@ -139,6 +147,7 @@ it('stores the customer GPS location for delivery and shows it to staff only', f
     $pickup = placeOrder($this, $r, ['phone' => '0599000999', 'latitude' => 31.5, 'longitude' => 34.4])->assertCreated()->json('data');
 
     $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($r))->assertOk();
+    kitchenReady($o['id']);
     $board = $this->getJson('/api/outside-orders?status=delivery', authAs($r))->json('data');
     expect($board)->toHaveCount(1)
         ->and($board[0]['customer']['location'])->toBe(['lat' => 31.5203, 'lng' => 34.4521, 'accuracy' => 18])
@@ -159,6 +168,7 @@ it('lets a delivery driver see and complete delivery orders only', function () {
     $this->postJson("/api/outside-orders/{$d['id']}/accept", [], authAs($driver))->assertForbidden(); // cannot accept
     $this->postJson("/api/outside-orders/{$d['id']}/accept", [], authAs($r))->assertOk();
     $this->postJson("/api/outside-orders/{$p['id']}/accept", [], authAs($r))->assertOk();
+    kitchenReady($d['id']);
     $this->postJson("/api/outside-orders/{$d['id']}/assign", ['driver_id' => $driver['id']], authAs($r))->assertOk(); // the owner can assign too
 
     // Board shows the driver's delivery orders only, whatever filter is requested.
@@ -197,6 +207,7 @@ it('lets the delivery manager assign orders to drivers who then see only their o
     $b = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'تل الهوى', 'phone' => '0599000444'])->json('data');
     foreach ([$a, $b] as $o) {
         $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($r))->assertOk();
+        kitchenReady($o['id']);
     }
 
     // Manager sees every delivery order and the drivers list.
@@ -213,4 +224,42 @@ it('lets the delivery manager assign orders to drivers who then see only their o
     $this->postJson("/api/outside-orders/{$b['id']}/complete", [], authAs($sami))->assertForbidden();
     $this->postJson("/api/outside-orders/{$a['id']}/dispatch", [], authAs($sami))->assertOk();
     $this->postJson("/api/outside-orders/{$a['id']}/complete", [], authAs($sami))->assertOk();
+});
+
+it('shows a delivery order to each role only when it is their turn', function () {
+    $r = onlineRestaurant($this);
+    $cashier = makeStaff($r['id'], 'cashier');
+    $kitchen = makeStaff($r['id'], 'kitchen');
+    $manager = makeStaff($r['id'], 'delivery_manager');
+    $driver = makeStaff($r['id'], 'delivery');
+    $ids = fn ($user, $url) => collect($this->getJson($url, authAs($user))->json('data'))->pluck('id')->all();
+    $board = '/api/outside-orders?status=delivery';
+
+    // 1. Customer → cashier only.
+    $o = placeOrder($this, $r, ['type' => 'delivery', 'zone_id' => $r['zone'], 'address' => 'الرمال'])->json('data');
+    expect($ids($cashier, '/api/outside-orders?status=awaiting'))->toContain($o['id'])
+        ->and($ids($kitchen, '/api/kitchen/orders'))->not->toContain($o['id'])
+        ->and($ids($manager, $board))->toBe([])->and($ids($driver, $board))->toBe([]);
+
+    // 2. Cashier accepts → kitchen; still not the delivery team.
+    $this->postJson("/api/outside-orders/{$o['id']}/accept", [], authAs($cashier))->assertOk();
+    expect($ids($kitchen, '/api/kitchen/orders'))->toContain($o['id'])->and($ids($manager, $board))->toBe([]);
+    $this->postJson("/api/outside-orders/{$o['id']}/assign", ['driver_id' => $driver['id']], authAs($manager))->assertStatus(409)->assertJsonPath('code', 'NOT_READY');
+
+    // 3. Kitchen ready → delivery manager; not the driver yet.
+    foreach (['preparing', 'ready'] as $st) {
+        $this->patchJson("/api/kitchen/orders/{$o['id']}/status", ['status' => $st], authAs($kitchen))->assertOk();
+    }
+    expect($ids($manager, $board))->toBe([$o['id']])->and($ids($driver, $board))->toBe([]);
+    $this->postJson("/api/outside-orders/{$o['id']}/dispatch", [], authAs($manager))->assertStatus(409)->assertJsonPath('code', 'DRIVER_REQUIRED');
+
+    // 4. Manager assigns → driver.
+    $this->postJson("/api/outside-orders/{$o['id']}/assign", ['driver_id' => $driver['id']], authAs($manager))->assertOk();
+    expect($ids($driver, $board))->toBe([$o['id']]);
+    $this->postJson("/api/outside-orders/{$o['id']}/complete", [], authAs($driver))->assertStatus(409); // must leave first
+
+    // 5. Driver → customer.
+    $this->postJson("/api/outside-orders/{$o['id']}/dispatch", [], authAs($driver))->assertOk();
+    $this->postJson("/api/outside-orders/{$o['id']}/complete", [], authAs($driver))->assertOk();
+    expect($this->getJson("/api/public/outside-orders/{$o['id']}?token={$o['token']}")->json('data.fulfillment_status'))->toBe('completed');
 });
