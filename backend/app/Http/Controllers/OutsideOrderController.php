@@ -96,7 +96,11 @@ class OutsideOrderController extends Controller
             'subtotal' => $subtotal,
             'delivery_fee' => (float) $o->delivery_fee,
             'total' => round($subtotal + (float) $o->delivery_fee, 2),
-            'customer' => $c ? ['name' => $c->name, 'phone' => $c->phone, 'address' => $c->address, 'zone' => $c->zone_name, 'notes' => $c->notes] : null,
+            'customer' => $c ? array_filter([
+                'name' => $c->name, 'phone' => $c->phone, 'address' => $c->address, 'zone' => $c->zone_name, 'notes' => $c->notes,
+                // GPS location is staff-only (never on the public tracking page).
+                'location' => $staff && $c->latitude !== null ? ['lat' => (float) $c->latitude, 'lng' => (float) $c->longitude, 'accuracy' => $c->location_accuracy !== null ? (int) $c->location_accuracy : null] : null,
+            ], fn ($v) => $v !== null) : null,
         ], fn ($v) => $v !== null);
     }
 
@@ -149,6 +153,10 @@ class OutsideOrderController extends Controller
             'address' => 'required_if:type,delivery|nullable|string|max:500',
             'zone_id' => 'required_if:type,delivery|nullable|integer',
             'notes' => 'nullable|string|max:500',
+            // Optional GPS location shared by the customer (delivery only).
+            'latitude' => 'nullable|required_with:longitude|numeric|between:-90,90',
+            'longitude' => 'nullable|required_with:latitude|numeric|between:-180,180',
+            'location_accuracy' => 'nullable|integer|min:0|max:100000',
             'payment_method' => 'required|in:cash,transfer',
             'proof' => 'required_if:payment_method,transfer|nullable|string',
             'items' => 'required|array|min:1|max:50',
@@ -212,7 +220,10 @@ class OutsideOrderController extends Controller
             foreach ($v['items'] as $line) {
                 DB::table('order_items')->insert(['order_id' => $id, 'menu_item_id' => $line['menuItemId'], 'quantity' => $line['quantity'], 'unit_price' => $prices[$line['menuItemId']], 'note' => $line['note'] ?? null, 'status' => 'active', 'created_at' => $now, 'updated_at' => $now]);
             }
-            DB::table('outside_order_contacts')->insert(['order_id' => $id, 'name' => trim($v['name']), 'phone' => $phone, 'address' => $v['address'] ?? null, 'zone_id' => $zone->id ?? null, 'zone_name' => $zone->name ?? null, 'notes' => $v['notes'] ?? null, 'created_at' => $now, 'updated_at' => $now]);
+            DB::table('outside_order_contacts')->insert(['order_id' => $id, 'name' => trim($v['name']), 'phone' => $phone, 'address' => $v['address'] ?? null, 'zone_id' => $zone->id ?? null, 'zone_name' => $zone->name ?? null, 'notes' => $v['notes'] ?? null,
+                'latitude' => $v['type'] === 'delivery' ? ($v['latitude'] ?? null) : null,
+                'longitude' => $v['type'] === 'delivery' ? ($v['longitude'] ?? null) : null,
+                'location_accuracy' => $v['type'] === 'delivery' && isset($v['latitude']) ? ($v['location_accuracy'] ?? null) : null, 'created_at' => $now, 'updated_at' => $now]);
 
             return $id;
         });
@@ -246,6 +257,8 @@ class OutsideOrderController extends Controller
         $q = DB::table('orders')->where('user_id', $this->restaurantId($r))->whereIn('channel', ['pickup', 'delivery']);
         match ($r->query('status', 'active')) {
             'awaiting' => $q->where('fulfillment_status', 'awaiting_acceptance'),
+            // Delivery board: accepted delivery orders not yet completed.
+            'delivery' => $q->where('channel', 'delivery')->whereIn('fulfillment_status', ['accepted', 'out_for_delivery']),
             'done' => $q->whereIn('fulfillment_status', ['completed', 'rejected'])->where('updated_at', '>=', now()->subDays(2)),
             default => $q->whereIn('fulfillment_status', self::OPEN_STATES),
         };

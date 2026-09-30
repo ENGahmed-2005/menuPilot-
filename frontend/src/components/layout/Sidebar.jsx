@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import BrandLogo from "../brand/Logo";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  BarChart3, Bell, Bike, ChefHat, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
+  BarChart3, Bell, Bike, ChefHat, MapPin, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
   ChevronDown, QrCode, Receipt, Settings, Settings2, Sparkles, UtensilsCrossed, Users, X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -23,6 +23,7 @@ const OPERATIONS = [
   ["/owner/dashboard", "نظرة عامة", LayoutDashboard, "dashboard", "view_dashboard"],
   ["/owner/orders", "الطلبات", ClipboardList, null, "view_orders"],
   ["/owner/outside-orders", "الطلبات الخارجية", Bike, "online_orders", "view_orders"],
+  ["/owner/deliveries", "التوصيل", MapPin, "online_orders", "view_orders"],
   ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
   ["/waiter", "طلبات النادل", HandPlatter, "waiter", "handle_assistance"],
   ["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"],
