@@ -10,7 +10,7 @@ import Button from "../../components/ui/Button";
 import Spinner from "../../components/ui/Spinner";
 
 const fieldClass = "w-full rounded-xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-copper focus:ring-4 focus:ring-copper/10";
-const emptyPayments = { bank: { enabled: false, name: "", account_name: "", account_number: "", qr_url: "" }, wallet: { enabled: false, name: "", account_name: "", account_number: "", qr_url: "" } };
+const emptyPayments = { cash: { enabled: true, note: "" }, bank: { enabled: false, name: "", account_name: "", account_number: "", qr_url: "" }, wallet: { enabled: false, name: "", account_name: "", account_number: "", qr_url: "" } };
 
 export default function RestaurantSettings() {
   const { user } = useAuth();
@@ -70,6 +70,15 @@ export default function RestaurantSettings() {
               ))}
             </div>
           </fieldset>
+          <div className="mb-4 rounded-2xl border border-ink/10 p-4">
+            <label className="flex items-center justify-between gap-3">
+              <span><span className="block text-sm font-extrabold">الدفع كاش</span><span className="block text-xs text-muted">يدفع الزبون للنادل أو عند الكاشير، ويؤكد الكاشير الاستلام.</span></span>
+              <input type="checkbox" aria-label="تفعيل الدفع كاش" className="h-5 w-5 accent-[var(--color-copper)]" checked={form.payment_methods.cash?.enabled !== false} onChange={(e) => setForm((c) => ({ ...c, payment_methods: { ...c.payment_methods, cash: { ...c.payment_methods.cash, enabled: e.target.checked } } }))} />
+            </label>
+            {form.payment_methods.cash?.enabled !== false && (
+              <input aria-label="تعليمات الدفع كاش" placeholder="تعليمات للزبون (اختياري)، مثل: الدفع عند الكاشير قرب المدخل" value={form.payment_methods.cash?.note || ""} onChange={(e) => setForm((c) => ({ ...c, payment_methods: { ...c.payment_methods, cash: { ...c.payment_methods.cash, note: e.target.value } } }))} className="mt-3 w-full rounded-xl border border-ink/10 bg-paper px-3 py-2.5 text-sm" />
+            )}
+          </div>
           {[['bank','التحويل البنكي'],['wallet','المحفظة الإلكترونية']].map(([method,label]) => <div key={method} className="mb-4 rounded-2xl border border-ink/10 p-4"><label className="flex items-center gap-3 font-bold"><input type="checkbox" checked={Boolean(form.payment_methods[method]?.enabled)} onChange={setPayment(method,"enabled")} /> {label}</label>{form.payment_methods[method]?.enabled && <div className="mt-4 grid gap-3 sm:grid-cols-2"><input className={fieldClass} placeholder="اسم البنك / المحفظة" value={form.payment_methods[method]?.name || ""} onChange={setPayment(method,"name")} /><input className={fieldClass} placeholder="اسم صاحب الحساب" value={form.payment_methods[method]?.account_name || ""} onChange={setPayment(method,"account_name")} /><input className={fieldClass} placeholder="رقم الحساب / رقم الجوال" value={form.payment_methods[method]?.account_number || ""} onChange={setPayment(method,"account_number")} /><input className={fieldClass} placeholder="رابط QR Code (اختياري)" value={form.payment_methods[method]?.qr_url || ""} onChange={setPayment(method,"qr_url")} type="url" /></div>}</div>)}
         </div>
         <div className="mt-7 flex justify-end"><Button type="submit" disabled={saving}><Save size={16}/> {saving ? "جارِ الحفظ…" : "حفظ التغييرات"}</Button></div>

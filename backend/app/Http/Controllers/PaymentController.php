@@ -45,7 +45,8 @@ class PaymentController extends Controller
         $configured = is_array($session->payment_methods) ? $session->payment_methods : (json_decode($session->payment_methods ?? '[]', true) ?: []);
 
         return $this->out([
-            'cash' => ['id' => 'cash', 'name' => 'كاش بمساعدة النادل', 'enabled' => true],
+            // Cash is on unless the restaurant turned it off (older restaurants keep it).
+            'cash' => ['id' => 'cash', 'name' => 'كاش بمساعدة النادل', 'enabled' => (bool) ($configured['cash']['enabled'] ?? true), 'note' => $configured['cash']['note'] ?? null],
             'bank' => ['id' => 'bank', 'name' => $configured['bank']['name'] ?? 'تحويل بنكي', 'enabled' => (bool) ($configured['bank']['enabled'] ?? false), 'account_name' => $configured['bank']['account_name'] ?? null, 'account_number' => $configured['bank']['account_number'] ?? null, 'qr_url' => $configured['bank']['qr_url'] ?? null],
             'wallet' => ['id' => 'wallet', 'name' => $configured['wallet']['name'] ?? 'محفظة إلكترونية', 'enabled' => (bool) ($configured['wallet']['enabled'] ?? false), 'account_name' => $configured['wallet']['account_name'] ?? null, 'account_number' => $configured['wallet']['account_number'] ?? null, 'qr_url' => $configured['wallet']['qr_url'] ?? null],
         ]);
@@ -77,7 +78,8 @@ class PaymentController extends Controller
         }
 
         $configured = is_array($session->payment_methods) ? $session->payment_methods : (json_decode($session->payment_methods ?? '[]', true) ?: []);
-        if ($v['method'] !== 'cash' && ! ($configured[$v['method']]['enabled'] ?? false)) {
+        $methodOn = $v['method'] === 'cash' ? ($configured['cash']['enabled'] ?? true) : ($configured[$v['method']]['enabled'] ?? false);
+        if (! $methodOn) {
             return response()->json(['message' => 'طريقة الدفع هذه غير مفعلة من المطعم.'], 422);
         }
         $proofPath = $request->hasFile('proof') ? $request->file('proof')->store('payment-proofs', 'public') : null;
