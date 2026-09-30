@@ -68,7 +68,7 @@ class AuthController extends Controller
         $u = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
         if ($u && $u->login_locked_until && now()->lt($u->login_locked_until)) {
-            return response()->json(['message' => 'Account temporarily locked. Try again in 15 minutes.'], 429);
+            return response()->json(['message' => 'تم إيقاف الدخول مؤقتًا بعد عدة محاولات خاطئة. حاول مجددًا بعد 15 دقيقة، أو استخدم «نسيت كلمة المرور».'], 429);
         }
 
         if (! $u || ! Hash::check($v['password'], $u->password)) {
@@ -80,12 +80,12 @@ class AuthController extends Controller
                         'login_locked_until' => now()->addMinutes(15),
                     ]);
 
-                    return response()->json(['message' => 'Account temporarily locked. Try again in 15 minutes.'], 429);
+                    return response()->json(['message' => 'تم إيقاف الدخول مؤقتًا بعد عدة محاولات خاطئة. حاول مجددًا بعد 15 دقيقة، أو استخدم «نسيت كلمة المرور».'], 429);
                 }
                 $u->update(['login_failed_attempts' => $attempts]);
             }
 
-            return response()->json(['message' => 'Invalid credentials.'], 422);
+            return response()->json(['message' => 'البريد الإلكتروني أو كلمة المرور غير صحيحة. تأكد منهما وحاول مجددًا.', 'code' => 'INVALID_CREDENTIALS'], 422);
         }
 
         if ($u->login_locked_until) {
@@ -97,10 +97,10 @@ class AuthController extends Controller
         if ($u->role !== 'owner' && $u->role !== 'admin') {
             $staff = Staff::where('account_user_id', $u->id)->first();
             if (! $staff || ! $staff->active || $staff->role !== $u->role) {
-                return response()->json(['message' => 'This staff account is disabled or not linked to a restaurant.', 'code' => 'ACCOUNT_DISABLED'], 403);
+                return response()->json(['message' => 'حساب الموظف هذا موقوف أو غير مرتبط بمطعم. تواصل مع صاحب المطعم.', 'code' => 'ACCOUNT_DISABLED'], 403);
             }
             if (User::where('id', $staff->user_id)->value('is_active') === false) {
-                return response()->json(['message' => 'This restaurant account is disabled.', 'code' => 'ACCOUNT_DISABLED'], 403);
+                return response()->json(['message' => 'حساب هذا المطعم موقوف. تواصل مع إدارة المنصة.', 'code' => 'ACCOUNT_DISABLED'], 403);
             }
         }
         $u->refreshSubscriptionStatus();
