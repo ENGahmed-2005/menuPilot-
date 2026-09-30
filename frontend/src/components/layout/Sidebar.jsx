@@ -15,6 +15,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { getSubscriptionPlan, hasPlanFeature } from "../../config/subscriptions";
 import SettingsDialog from "./SettingsDialog";
+import { ROLE_DEFAULTS } from "../../config/permissions";
 
 // [to, label, icon, plan feature (null = always), permission(s) "a|b" (null = any)]
 // Links are shown only when the plan includes the feature AND the user holds
@@ -119,7 +120,7 @@ function PlanCard({ user }) {
 }
 
 export default function Sidebar() {
-  const { user, role, logout, can } = useAuth();
+  const { user, role, logout, can, permissions } = useAuth();
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
@@ -127,7 +128,26 @@ export default function Sidebar() {
   const trial = user?.plan === "trial" && user?.trial_ends_at && new Date(user.trial_ends_at) > new Date();
   const planAllows = (feature) => !feature || trial || (feature === "branding" && ["pro", "premium"].includes(planId)) || hasPlanFeature(planId, feature);
   const allowed = ([, , , feature, permission]) => planAllows(feature) && (!permission || permission.split("|").some((p) => can(p)));
-  const allGroups = (NAV[role] || []).map((group) => ({ ...group, links: group.links.filter(allowed) })).filter((group) => group.links.length);
+  const baseGroups = (NAV[role] || []).map((group) => ({ ...group, links: group.links.filter(allowed) })).filter((group) => group.links.length);
+  // Pages unlocked by permissions granted beyond the role's defaults appear in
+  // «صلاحيات إضافية», so granting a permission updates the employee's menu
+  // (permissions refresh live, see AuthContext).
+  const extraLinks = (() => {
+    if (!["cashier", "waiter", "kitchen", "delivery"].includes(role)) return [];
+    const defaults = ROLE_DEFAULTS[role] || [];
+    const granted = (permissions || []).filter((p) => !defaults.includes(p));
+    const present = new Set(baseGroups.flatMap((g) => g.links.map(([to]) => to)));
+    const candidates = [...OPERATIONS, ...NAV.manager[1].links];
+    const seen = new Set();
+    return candidates.filter((link) => {
+      const [to, , , , permission] = link;
+      if (!permission || present.has(to) || seen.has(to)) return false;
+      if (!permission.split("|").some((p) => granted.includes(p)) || !allowed(link)) return false;
+      seen.add(to);
+      return true;
+    });
+  })();
+  const allGroups = extraLinks.length ? [...baseGroups, { id: "extra", title: "صلاحيات إضافية", icon: Sparkles, links: extraLinks }] : baseGroups;
   const groups = allGroups.filter((g) => !g.settings);
   const settingsItems = allGroups.find((g) => g.settings)?.links || [];
   const [settingsOpen, setSettingsOpen] = useState(false);

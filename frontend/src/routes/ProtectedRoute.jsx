@@ -44,7 +44,11 @@ export default function ProtectedRoute({ allow, permission }) {
 
   // Role allow-list and/or a permission (any of "a|b"). Server-side checks
   // still apply to every API call made by the page.
-  const roleOk = !allow || allow.includes(role);
+  // A staff member who was GRANTED the page's permission may open it even if
+  // their role is not in the default list (owner-only pages have no
+  // permission prop and stay closed; the platform admin is never staff).
+  const STAFF = ["manager", "cashier", "waiter", "kitchen", "delivery"];
+  const roleOk = !allow || allow.includes(role) || (Boolean(permission) && STAFF.includes(role));
   const permissionOk = !permission || permission.split("|").some((p) => can(p));
   if (!roleOk || !permissionOk) {
     return <NoAccess home={getRoleHome(role)} />;
