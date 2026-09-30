@@ -59,6 +59,7 @@ const NAV = {
     ] },
   ],
   kitchen: [{ links: [["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"]] }],
+  delivery: [{ links: [["/delivery", "التوصيل", MapPin, null, "deliver_orders"]] }],
   cashier: [{ links: [
     ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
     ["/cashier/reports", "تقارير المبيعات", BarChart3, "cashier", "view_reports|view_payments"],
@@ -80,7 +81,7 @@ const NAV = {
   ],
 };
 
-const ROLE_LABEL = { owner: "صاحب المطعم", kitchen: "المطبخ", cashier: "الكاشير", waiter: "النادل", admin: "إدارة المنصة", manager: "مدير" };
+const ROLE_LABEL = { delivery: "سائق توصيل", owner: "صاحب المطعم", kitchen: "المطبخ", cashier: "الكاشير", waiter: "النادل", admin: "إدارة المنصة", manager: "مدير" };
 
 function Logo({ compact = false }) {
   return <BrandLogo on="dark" height={compact ? 30 : 36} priority />;

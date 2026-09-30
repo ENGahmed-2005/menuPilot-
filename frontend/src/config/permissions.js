@@ -21,6 +21,7 @@ export const PERMISSION_LABELS = {
   cancel_orders: "إلغاء أصناف من الطلبات",
   reassign_orders: "نقل الأصناف بين الطاولات",
   handle_assistance: "التعامل مع طلبات النادل",
+  deliver_orders: "توصيل الطلبات الخارجية",
   view_menu: "عرض المنيو",
   manage_menu: "إدارة المنيو",
   view_payments: "عرض الفواتير والمدفوعات",
@@ -56,6 +57,7 @@ export const ROLE_DEFAULTS = {
   cashier: ["view_dashboard", "view_tables", "view_orders", "view_menu", "view_payments", "verify_payments", "record_payment", "adjust_bill", "close_session", "cancel_orders", "reassign_orders", "handle_assistance"],
   waiter: ["view_tables", "view_orders", "view_menu", "cancel_orders", "reassign_orders", "handle_assistance"],
   kitchen: ["view_orders", "manage_orders", "view_menu"],
+  delivery: ["deliver_orders"],
 };
 
-export const ROLE_LABELS = { owner: "صاحب المطعم", manager: "مدير", cashier: "كاشير", waiter: "نادل", kitchen: "مطبخ", admin: "إدارة المنصة" };
+export const ROLE_LABELS = { delivery: "سائق توصيل", owner: "صاحب المطعم", manager: "مدير", cashier: "كاشير", waiter: "نادل", kitchen: "مطبخ", admin: "إدارة المنصة" };

@@ -30,6 +30,22 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Keep permissions current: when the owner changes an employee's permissions
+  // (or disables the account), the employee's screen follows within ~30 s,
+  // on returning to the tab, or right after the API refuses an action.
+  useEffect(() => {
+    if (!user) return undefined;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      // 401 = access revoked (disabled, role or password changed): back to login.
+      fetchCurrentUser().then(setUser).catch((err) => { if (err?.status === 401) setUser(null); });
+    };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("menupilot:permission-denied", refresh);
+    return () => { clearInterval(timer); window.removeEventListener("focus", refresh); window.removeEventListener("menupilot:permission-denied", refresh); };
+  }, [Boolean(user)]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function login(payload) {
     const data = await apiLogin(payload);
     setUser(data.user);

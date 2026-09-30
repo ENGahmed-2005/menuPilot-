@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Support\Audit;
 use App\Support\MediaStore;
 use App\Support\OrderWorkflow;
+use App\Support\Permissions;
 use App\Support\ResolvesRestaurant;
 use App\Support\SubscriptionAccess;
 use Illuminate\Http\Request;
@@ -102,6 +103,14 @@ class OutsideOrderController extends Controller
                 'location' => $staff && $c->latitude !== null ? ['lat' => (float) $c->latitude, 'lng' => (float) $c->longitude, 'accuracy' => $c->location_accuracy !== null ? (int) $c->location_accuracy : null] : null,
             ], fn ($v) => $v !== null) : null,
         ], fn ($v) => $v !== null);
+    }
+
+    /** A driver holds deliver_orders but not the general order permissions. */
+    private function isDriverOnly(Request $r): bool
+    {
+        $perms = Permissions::for($r->user());
+
+        return in_array('deliver_orders', $perms, true) && ! array_intersect(['view_orders', 'manage_orders', 'view_payments'], $perms);
     }
 
     private function orderFor(Request $r, $id): ?object
@@ -255,7 +264,8 @@ class OutsideOrderController extends Controller
     public function index(Request $r)
     {
         $q = DB::table('orders')->where('user_id', $this->restaurantId($r))->whereIn('channel', ['pickup', 'delivery']);
-        match ($r->query('status', 'active')) {
+        // Drivers only ever see the delivery board.
+        match ($this->isDriverOnly($r) ? 'delivery' : $r->query('status', 'active')) {
             'awaiting' => $q->where('fulfillment_status', 'awaiting_acceptance'),
             // Delivery board: accepted delivery orders not yet completed.
             'delivery' => $q->where('channel', 'delivery')->whereIn('fulfillment_status', ['accepted', 'out_for_delivery']),
@@ -327,6 +337,9 @@ class OutsideOrderController extends Controller
         $o = $this->orderFor($r, $id);
         if (! $o) {
             return response()->json(['message' => 'Order not found'], 404);
+        }
+        if ($this->isDriverOnly($r) && $o->channel !== 'delivery') {
+            return response()->json(['message' => 'You do not have permission for this action.', 'code' => 'PERMISSION_DENIED'], 403);
         }
         if (! in_array($o->fulfillment_status, ['accepted', 'out_for_delivery'], true)) {
             return response()->json(['message' => 'لا يمكن إنهاء هذا الطلب في حالته الحالية.', 'code' => 'INVALID_TRANSITION'], 409);

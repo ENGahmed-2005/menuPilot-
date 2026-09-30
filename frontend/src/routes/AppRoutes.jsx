@@ -84,6 +84,9 @@ export default function AppRoutes() {
         <Route path="/owner/outside-orders" element={<DashboardShell><OutsideOrders /></DashboardShell>} />
         <Route path="/owner/deliveries" element={<DashboardShell><DeliveryBoard /></DashboardShell>} />
       </Route>
+      <Route element={<ProtectedRoute allow={["delivery"]} permission="deliver_orders" />}>
+        <Route path="/delivery" element={<DashboardShell><DeliveryBoard /></DashboardShell>} />
+      </Route>
 
       {/* Shown once after registration: the 14-day trial is already running (no checkout). */}
       <Route element={<ProtectedRoute allow={["owner"]} />}>

@@ -55,6 +55,8 @@ export async function request(path, options = {}) {
   if (!response.ok) {
     const error = new Error(friendlyMessage(response.status, data?.message));
     error.status = response.status;
+    // Tell the auth layer to re-read permissions (e.g. the owner just revoked one).
+    if (response.status === 403 && typeof window !== "undefined") window.dispatchEvent(new Event("menupilot:permission-denied"));
     error.friendly = true;
     error.serverMessage = data?.message || null;
     error.code = data?.code || null;
