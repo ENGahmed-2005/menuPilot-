@@ -76,10 +76,16 @@ class SubscriptionAccess
         };
     }
 
-    /** Does the plan include tables and QR table sessions? (not delivery_only) */
+    /** Is the restaurant entitled to a feature (plan + admin overrides)? No restaurant (admin) = yes. */
+    public function entitles(string $feature): bool
+    {
+        return ! $this->owner || in_array($feature, $this->owner->entitlements(), true);
+    }
+
+    /** Tables and QR table sessions (not on delivery_only unless the admin grants them). */
     public function allowsDineIn(): bool
     {
-        return SubscriptionPlans::allowsDineIn($this->owner?->plan);
+        return $this->entitles('dine_in');
     }
 
     public function owner(): ?User

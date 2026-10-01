@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\RestaurantFeatures;
 use App\Support\SubscriptionAccess;
 use App\Support\SubscriptionPlans;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,6 +35,7 @@ class User extends Authenticatable
             'subscription_notices' => 'array',
             'addons' => 'array',
             'requested_addons' => 'array',
+            'feature_overrides' => 'array',
             'password' => 'hashed',
             'theme' => 'array',
             'payment_methods' => 'array',
@@ -103,19 +105,36 @@ class User extends Authenticatable
     }
 
     /**
-     * Gated features this restaurant can use right now: everything during a
-     * trial, the plan's and add-ons' features while the subscription runs
-     * (config/subscriptions.php), nothing otherwise.
+     * Features the restaurant is entitled to, whatever the subscription state:
+     * its plan and add-ons (a trial = all), then the platform admin's grants
+     * and revokes (App\Support\RestaurantFeatures).
+     *
+     * @return list<string>
+     */
+    public function entitlements(): array
+    {
+        if ($this->role === 'admin') {
+            return RestaurantFeatures::keys();
+        }
+
+        return RestaurantFeatures::apply(SubscriptionPlans::defaultsFor($this->plan, $this->addons ?? []), $this->feature_overrides);
+    }
+
+    /**
+     * Features usable right now: the entitlements while a trial or a paid
+     * period runs; once it ends, the paid extras (online ordering, branding)
+     * stop and operations follow restricted mode.
      *
      * @return list<string>
      */
     public function features(): array
     {
-        if ($this->role === 'admin' || $this->trialActive()) {
-            return SubscriptionPlans::allFeatures();
+        $entitled = $this->entitlements();
+        if ($this->role === 'admin' || $this->trialActive() || $this->subscriptionActive()) {
+            return $entitled;
         }
 
-        return $this->subscriptionActive() ? SubscriptionPlans::features($this->plan, $this->addons ?? []) : [];
+        return array_values(array_diff($entitled, RestaurantFeatures::PAID_EXTRAS));
     }
 
     public function hasFeature(string $feature): bool

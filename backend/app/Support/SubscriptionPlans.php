@@ -63,10 +63,10 @@ class SubscriptionPlans
         return $addonFeatures && ! array_diff($addonFeatures, config("subscriptions.plan_features.$plan", []));
     }
 
-    /** Tables and QR table sessions. Trials and unknown plans keep them. */
+    /** Does the plan come with tables and QR table sessions? Trials do. */
     public static function allowsDineIn(?string $plan): bool
     {
-        return ! in_array($plan, config('subscriptions.plans_without_dine_in', []), true);
+        return ! in_array($plan, self::plans(), true) || in_array('dine_in', config("subscriptions.plan_features.$plan", []), true);
     }
 
     /** Arabic message for the first add-on the plan can't take, or null when all fit. */
@@ -127,15 +127,16 @@ class SubscriptionPlans
         return array_values(array_unique($features));
     }
 
-    /** Every gated feature (what a trial gets). */
+    /** Every feature (what a trial gets). */
     public static function allFeatures(): array
     {
-        $all = array_merge(...array_values(config('subscriptions.plan_features', [])));
-        foreach (self::addons() as $addon) {
-            $all = [...$all, ...$addon['features']];
-        }
+        return RestaurantFeatures::keys();
+    }
 
-        return array_values(array_unique($all));
+    /** A restaurant's default features before admin overrides (trial = all). */
+    public static function defaultsFor(?string $plan, array $addons = []): array
+    {
+        return $plan === 'trial' ? self::allFeatures() : RestaurantFeatures::ordered(self::features($plan, $addons));
     }
 
     /** Catalogue for GET /api/subscription. */
