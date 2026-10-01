@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Support\Audit;
+use App\Support\RestaurantFeatures;
 use App\Support\SubscriptionAccess;
 use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
@@ -71,6 +72,71 @@ class AdminController extends Controller
         SubscriptionAccess::event('subscription_activated', $u->id, ['plan' => $plan, 'addons' => $addons, 'by' => $r->user()->id]);
 
         return response()->json(['data' => $u->fresh()]);
+    }
+
+    /** The restaurant's features: plan defaults, admin overrides, result. */
+    private function featureSheet(User $u): array
+    {
+        $defaults = SubscriptionPlans::defaultsFor($u->plan, $u->addons ?? []);
+        $overrides = RestaurantFeatures::effectiveOverrides($u->feature_overrides, $defaults);
+        $enabled = $u->entitlements();
+
+        return [
+            'plan' => $u->plan,
+            'plan_label' => $u->plan === 'trial' ? 'التجربة المجانية' : SubscriptionPlans::label($u->plan, $u->addons ?? []),
+            'overrides' => $overrides,
+            'groups' => array_map(fn ($group) => [
+                'title' => $group['title'],
+                'items' => array_map(fn ($key) => [
+                    'key' => $key,
+                    'label' => $group['items'][$key],
+                    'enabled' => in_array($key, $enabled, true),
+                    'from_plan' => in_array($key, $defaults, true),
+                    'override' => in_array($key, $overrides['grant'], true) ? 'grant' : (in_array($key, $overrides['revoke'], true) ? 'revoke' : null),
+                ], array_keys($group['items'])),
+            ], RestaurantFeatures::GROUPS),
+        ];
+    }
+
+    /** GET admin/restaurants/{id}/features */
+    public function features(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        return response()->json(['data' => $this->featureSheet(User::where('role', 'owner')->findOrFail($id))]);
+    }
+
+    /**
+     * PUT admin/restaurants/{id}/features {features: [...] | null}
+     * The full list the restaurant should have (like staff permissions);
+     * null restores the plan's defaults. Stored as grants/revokes so a later
+     * plan change keeps the admin's decisions.
+     */
+    public function updateFeatures(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $v = $r->validate([
+            'features' => ['present', 'nullable', 'array'],
+            'features.*' => ['string', 'distinct', Rule::in(RestaurantFeatures::keys())],
+        ]);
+        $u = User::where('role', 'owner')->findOrFail($id);
+        $defaults = SubscriptionPlans::defaultsFor($u->plan, $u->addons ?? []);
+        $before = RestaurantFeatures::effectiveOverrides($u->feature_overrides, $defaults);
+        $overrides = $v['features'] === null ? null : RestaurantFeatures::overridesFor($v['features'], $defaults);
+
+        $u->forceFill(['feature_overrides' => $overrides])->save();
+        Audit::log($r, 'admin.restaurant_features_changed', 'restaurant', $u->id, [
+            'before' => $before,
+            'after' => $overrides ?? ['grant' => [], 'revoke' => []],
+            'reset' => $v['features'] === null,
+        ], $u->id);
+
+        return response()->json(['data' => $this->featureSheet($u->fresh())]);
     }
 
     public function extendTrial(Request $r, $id)

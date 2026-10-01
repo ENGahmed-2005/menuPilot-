@@ -96,9 +96,9 @@ it('activates the paid add-ons on verify, for the owner and the staff', function
 
     $sub = $this->getJson('/api/auth/me', authAs($owner))->json('data.subscription');
     expect($sub)->toMatchArray(['status' => 'ACTIVE', 'plan' => 'basic', 'addons' => ['delivery'], 'monthly_price' => 30, 'requested_addons' => []])
-        ->and($sub['features'])->toBe(['online_orders']);
+        ->and($sub['features'])->toBe(['dine_in', 'kitchen', 'cashier', 'waiter', 'staff', 'online_orders']);
     // Staff get the owner's live features (their own row only copies an old plan name).
-    expect($this->getJson('/api/auth/me', authAs($cashier))->json('data.subscription.features'))->toBe(['online_orders']);
+    expect($this->getJson('/api/auth/me', authAs($cashier))->json('data.subscription.features'))->toBe($sub['features']);
     expect($this->getJson('/api/online-ordering/settings', authAs($owner))->json('data.plan_allows'))->toBeTrue();
 });
 
@@ -126,8 +126,9 @@ it('gates each feature by plan and add-on, and ignores an add-on the plan cannot
     $proFull = User::find(addonPaidOwner('pro', ['delivery', 'brand_plus'])['id']);
     $basicBrand = User::find(addonPaidOwner('basic', ['brand_plus'])['id']); // invalid row
 
-    expect($basic->features())->toBe([])
-        ->and($basicDelivery->features())->toBe(['online_orders'])
+    expect($basic->features())->toBe(['dine_in', 'kitchen', 'cashier', 'waiter', 'staff'])
+        ->and($basicDelivery->hasFeature('online_orders'))->toBeTrue()
+        ->and($basic->hasFeature('reports'))->toBeFalse()
         ->and($pro->hasFeature('branding'))->toBeTrue()
         ->and($pro->hasFeature('online_orders'))->toBeFalse()
         ->and($pro->hasFeature('custom-theme'))->toBeFalse()
@@ -136,13 +137,15 @@ it('gates each feature by plan and add-on, and ignores an add-on the plan cannot
         ->and($basicBrand->hasFeature('custom-font'))->toBeFalse();
 });
 
-it('gives a trial every feature, and an expired plan none', function () {
+it('gives a trial every feature, and an expired plan no paid extras', function () {
     $owner = addonTrialOwner($this);
     $features = $this->getJson('/api/auth/me', authAs($owner))->json('data.subscription.features');
     expect($features)->toContain('online_orders', 'branding', 'custom-theme', 'remove-branding');
 
     $ended = User::find(addonPaidOwner('pro', ['delivery'], now()->subDay())['id']);
-    expect($ended->features())->toBe([]);
+    // Online ordering and branding stop; operations follow restricted mode.
+    expect($ended->features())->not->toContain('online_orders')->not->toContain('branding')
+        ->and($ended->features())->toContain('kitchen', 'reports');
 });
 
 it('lets the admin set add-ons, keeps compatible ones on a plan change, and refuses invalid ones', function () {
@@ -206,7 +209,7 @@ it('lets a delivery-only restaurant receive online orders', function () {
     $this->putJson('/api/online-ordering/settings', ['enabled' => true, 'pickup_enabled' => true, 'delivery_enabled' => false, 'slug' => $slug], authAs($owner))->assertOk();
 
     $sub = $this->getJson('/api/auth/me', authAs($owner))->json('data.subscription');
-    expect($sub)->toMatchArray(['plan' => 'delivery_only', 'features' => ['online_orders'], 'dine_in' => false, 'monthly_price' => 15]);
+    expect($sub)->toMatchArray(['plan' => 'delivery_only', 'features' => ['kitchen', 'staff', 'online_orders'], 'dine_in' => false, 'monthly_price' => 15]);
     expect($this->getJson('/api/online-ordering/settings', authAs($owner))->json('data.plan_allows'))->toBeTrue();
     $this->postJson("/api/public/restaurants/{$slug}/orders", ['type' => 'pickup', 'name' => 'سارة', 'phone' => '0599 123 456', 'payment_method' => 'cash',
         'items' => [['menuItemId' => $item, 'quantity' => 1]]])->assertCreated();
@@ -214,11 +217,11 @@ it('lets a delivery-only restaurant receive online orders', function () {
 
 it('blocks tables and table sessions on delivery only, but not on Basic or during a trial', function () {
     $only = addonPaidOwner('delivery_only');
-    $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs($only))->assertForbidden()->assertJsonPath('code', 'DINE_IN_NOT_IN_PLAN');
+    $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs($only))->assertForbidden()->assertJsonPath('code', 'FEATURE_NOT_AVAILABLE');
     // A table left from an earlier plan can't start a QR session.
     $old = makeTable($only['id']);
     $this->postJson("/api/public/tables/{$old->table_code}/sessions", ['name' => 'Sara', 'phone' => '0599000000', 'latitude' => 31.5, 'longitude' => 34.46])
-        ->assertForbidden()->assertJsonPath('code', 'DINE_IN_NOT_IN_PLAN');
+        ->assertForbidden()->assertJsonPath('code', 'FEATURE_NOT_AVAILABLE');
 
     $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs(addonPaidOwner('basic')))->assertCreated();
     $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs(addonTrialOwner($this)))->assertCreated();

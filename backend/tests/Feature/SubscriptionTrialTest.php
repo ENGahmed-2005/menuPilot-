@@ -123,7 +123,7 @@ it('does not let the owner activate a plan or change trial/status by themselves'
     expect($res->json('data.subscription.status'))->toBe('EXPIRED')
         ->and($res->json('data.requested_plan'))->toBe('pro')
         ->and($res->json('data.requested_addons'))->toBe(['delivery'])
-        ->and($res->json('data.subscription.features'))->toBe([]); // requested ≠ active
+        ->and($res->json('data.subscription.features'))->not->toContain('online_orders'); // requested ≠ active
     $this->patchJson('/api/me/restaurant', ['restaurant_name' => 'X', 'trial_ends_at' => '2099-01-01', 'plan' => 'premium', 'subscription_status' => 'ACTIVE'], authAs($owner))->assertOk();
 
     $u = User::find($owner['id']);

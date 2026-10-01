@@ -11,3 +11,6 @@ export const setOwnerActive=(ownerId,active)=>api.patch(`/admin/owners/${ownerId
 export const getPasswordRequests = () => api.get("/admin/password-requests");
 export const createPasswordLink = (id) => api.post(`/admin/password-requests/${id}/link`);
 export const dismissPasswordRequest = (id) => api.post(`/admin/password-requests/${id}/dismiss`);
+// Restaurant permissions: features on top of the plan (null = the plan's defaults).
+export const getRestaurantFeatures=(restaurantId)=>api.get(`/admin/restaurants/${restaurantId}/features`);
+export const setRestaurantFeatures=(restaurantId,features)=>api.put(`/admin/restaurants/${restaurantId}/features`,{features});

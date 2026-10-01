@@ -29,17 +29,15 @@ return [
     'display_ils_rate' => (float) env('SUBSCRIPTION_ILS_RATE', 3.65),
     'plan_names' => ['basic' => 'الأساسية', 'pro' => 'الاحترافية', 'delivery_only' => 'التوصيل فقط'],
 
-    // Gated features each plan unlocks (operations — menu, tables, QR, orders,
-    // kitchen, cashier, staff — are in every plan and are not gated here).
+    // Features each plan gives by default (keys: App\Support\RestaurantFeatures).
+    // The menu, orders and the dashboard are in every plan and not listed.
+    // The platform admin can grant or revoke any of them per restaurant.
     'plan_features' => [
-        'basic' => [],
-        'pro' => ['branding', 'background', 'full-colors', 'theme-presets', 'presets'],
-        // Online ordering itself; no tables (see plans_without_dine_in).
-        'delivery_only' => ['online_orders'],
+        'basic' => ['dine_in', 'kitchen', 'cashier', 'waiter', 'staff'],
+        'pro' => ['dine_in', 'kitchen', 'cashier', 'waiter', 'staff', 'reports', 'branding', 'background', 'full-colors', 'theme-presets', 'presets'],
+        // Online ordering itself, no tables.
+        'delivery_only' => ['kitchen', 'staff', 'online_orders'],
     ],
-
-    // Plans with no tables: no table management, no QR table sessions.
-    'plans_without_dine_in' => ['delivery_only'],
 
     // Monthly add-ons on top of a plan. `plans` = the plans it can be added to.
     // Pro + both add-ons = 49, the old Premium price, with the same features.

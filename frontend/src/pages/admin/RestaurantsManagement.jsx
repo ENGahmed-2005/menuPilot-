@@ -1,14 +1,16 @@
 /* ==========================================================================
    RestaurantsManagement.jsx — platform admin: all restaurants.
    Create a restaurant (owner account, password shown once), edit its details,
-   change the plan and add-ons, enable/disable the account, and delete it permanently
+   change the plan and add-ons, grant or revoke features (restaurant
+   permissions, like staff permissions in the owner panel), enable/disable
+   the account, and delete it permanently
    (typing the owner's email to confirm). Every action is admin-only in the
    API (role:admin + manage_admin) and written to the audit log.
    ========================================================================== */
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Copy, Pencil, Plus, RefreshCw, Search, Trash2, XCircle } from "lucide-react";
+import { Building2, Copy, Pencil, Plus, RefreshCw, Search, ShieldCheck, Trash2, XCircle } from "lucide-react";
 import {
-  createRestaurant, deleteRestaurant, getAllRestaurants, overrideRestaurantPlan, setOwnerActive, updateRestaurant,
+  createRestaurant, deleteRestaurant, getAllRestaurants, getRestaurantFeatures, overrideRestaurantPlan, setOwnerActive, setRestaurantFeatures, updateRestaurant,
 } from "../../api/admin";
 import AdminPageShell from "../../components/layout/AdminPageShell";
 import Modal from "../../components/ui/Modal";
@@ -37,6 +39,7 @@ export default function RestaurantsManagement() {
   const [form, setForm] = useState(null); // { mode: "create"|"edit", id?, values, saving, error }
   const [created, setCreated] = useState(null); // { email, password }
   const [deleting, setDeleting] = useState(null); // { row, email, saving, error }
+  const [features, setFeatures] = useState(null); // { row, sheet, enabled, saving, error }
 
   async function load() {
     setLoading(true);
@@ -56,6 +59,25 @@ export default function RestaurantsManagement() {
       const extras = (updated?.addons || []).map((id) => SUBSCRIPTION_ADDONS[id]?.name).filter(Boolean);
       toast.success(`أصبحت باقة ${row.restaurant_name || row.email}: ${[PLAN_LABEL[plan], ...extras].join(" + ")}.`);
     } catch (e) { toast.error(errorText(e, "تعذّر تغيير الباقة.")); } finally { setBusy(null); }
+  }
+
+  // Restaurant permissions: the full list is saved (like staff permissions); reset = the plan's defaults.
+  async function openFeatures(row) {
+    setFeatures({ row, sheet: null, enabled: [], saving: false, error: null });
+    try {
+      const sheet = await getRestaurantFeatures(row.id);
+      setFeatures((f) => f && { ...f, sheet, enabled: sheet.groups.flatMap((g) => g.items).filter((i) => i.enabled).map((i) => i.key) });
+    } catch (e) { setFeatures((f) => f && { ...f, error: e }); }
+  }
+  const toggleFeature = (key) => setFeatures((f) => ({ ...f, enabled: f.enabled.includes(key) ? f.enabled.filter((k) => k !== key) : [...f.enabled, key] }));
+  async function saveFeatures(reset = false) {
+    setFeatures((f) => ({ ...f, saving: true, error: null }));
+    try {
+      const sheet = await setRestaurantFeatures(features.row.id, reset ? null : features.enabled);
+      patchRow(features.row.id, { feature_overrides: sheet.overrides.grant.length || sheet.overrides.revoke.length ? sheet.overrides : null });
+      toast.success(reset ? `عادت صلاحيات ${features.row.restaurant_name || features.row.email} إلى افتراضي الخطة.` : `حُفظت صلاحيات ${features.row.restaurant_name || features.row.email}.`);
+      setFeatures(null);
+    } catch (e) { setFeatures((f) => ({ ...f, saving: false, error: e })); }
   }
 
   async function toggleActive(row) {
@@ -152,12 +174,14 @@ export default function RestaurantsManagement() {
                       {PLANS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                     {r.plan === "trial" && r.trial_ends_at && <div className="mt-1 text-xs text-muted">تنتهي {dateLabel(r.trial_ends_at)}</div>}
+                    {(r.feature_overrides?.grant?.length > 0 || r.feature_overrides?.revoke?.length > 0) && <div className="mt-1 text-xs font-bold text-copper-ink">صلاحيات مخصّصة</div>}
                   </td>
                   <td><AddonToggles row={r} disabled={busy === r.id} onChange={(addons) => changePlan(r, r.plan, addons)} /></td>
                   <td><span className={`admin-status ${r.is_active === false ? "inactive" : "active"}`}><i />{r.is_active === false ? "معطّل" : "نشط"}</span></td>
                   <td className="text-xs">{dateLabel(r.created_at)}</td>
                   <td>
                     <div className="admin-actions">
+                      <button className="admin-edit" disabled={busy === r.id} onClick={() => openFeatures(r)}><ShieldCheck size={14} aria-hidden="true" /> الصلاحيات</button>
                       <button className="admin-edit" onClick={() => setForm({ mode: "edit", id: r.id, values: { name: r.name || "", email: r.email || "", restaurant_name: r.restaurant_name || "", restaurant_phone: r.restaurant_phone || "" }, saving: false, error: null })}><Pencil size={14} aria-hidden="true" /> تعديل</button>
                       <button className={r.is_active === false ? "admin-enable" : "admin-disable"} disabled={busy === r.id} onClick={() => toggleActive(r)}>{r.is_active === false ? "تفعيل" : "تعطيل"}</button>
                       <button className="admin-disable" onClick={() => setDeleting({ row: r, email: "", saving: false, error: null })} aria-label={`حذف ${r.restaurant_name || r.email}`}><Trash2 size={14} aria-hidden="true" /></button>
@@ -196,6 +220,45 @@ export default function RestaurantsManagement() {
               <Button type="submit" loading={form.saving}>{form.mode === "create" ? "إنشاء المطعم" : "حفظ"}</Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(features)}
+        onClose={() => !features?.saving && setFeatures(null)}
+        size="lg"
+        title={features ? `صلاحيات ${features.row.restaurant_name || features.row.email}` : ""}
+        description={features?.sheet ? `الخطة: ${features.sheet.plan_label}. الميزات غير المحددة مخفية عن المطعم وموظفيه، ومرفوضة من الخادم أيضًا.` : ""}
+        footer={features?.sheet && <>
+          <Button variant="ghost" onClick={() => saveFeatures(true)} disabled={features.saving}>إرجاع افتراضي الخطة</Button>
+          <Button variant="secondary" onClick={() => setFeatures(null)} disabled={features.saving}>تراجع</Button>
+          <Button onClick={() => saveFeatures(false)} loading={features.saving}>حفظ الصلاحيات</Button>
+        </>}
+      >
+        {features && (
+          <div className="space-y-5">
+            {features.error && <Alert tone="danger">{errorText(features.error, "تعذّر تحميل الصلاحيات أو حفظها.")}</Alert>}
+            {!features.sheet && !features.error && <p className="text-sm text-muted">جارٍ تحميل صلاحيات المطعم…</p>}
+            {features.sheet?.groups.map((group) => (
+              <fieldset key={group.title}>
+                <legend className="mb-2 text-sm font-extrabold text-ink">{group.title}</legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {group.items.map((item) => {
+                    const on = features.enabled.includes(item.key);
+                    // Differs from the plan → the admin's own decision.
+                    const custom = on !== item.from_plan;
+                    return (
+                      <label key={item.key} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 text-sm ${on ? "border-copper bg-copper/[0.06]" : "border-line"}`}>
+                        <input type="checkbox" className="h-4 w-4 accent-[var(--color-copper)]" checked={on} disabled={features.saving} onChange={() => toggleFeature(item.key)} />
+                        <span className="flex-1 font-bold">{item.label}</span>
+                        <span className={`text-xs ${custom ? "font-bold text-copper-ink" : "text-muted"}`}>{custom ? (on ? "ممنوحة" : "مسحوبة") : item.from_plan ? "من الخطة" : "خارج الخطة"}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            ))}
+          </div>
         )}
       </Modal>
 

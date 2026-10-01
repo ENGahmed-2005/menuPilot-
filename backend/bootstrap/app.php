@@ -2,8 +2,8 @@
 
 use App\Http\Middleware\ApiAuth;
 use App\Http\Middleware\Cors;
-use App\Http\Middleware\EnsureDineIn;
 use App\Http\Middleware\EnsureSessionToken;
+use App\Http\Middleware\EnsureRestaurantFeature;
 use App\Http\Middleware\EnsureSubscriptionAccess;
 use App\Http\Middleware\PermissionAccess;
 use App\Http\Middleware\RoleAccess;
@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionAccess::class,
             'session.token' => EnsureSessionToken::class,
             'subscription' => EnsureSubscriptionAccess::class,
-            'dine_in' => EnsureDineIn::class,
+            'feature' => EnsureRestaurantFeature::class,
         ]);
         $middleware->append(Cors::class);
     })

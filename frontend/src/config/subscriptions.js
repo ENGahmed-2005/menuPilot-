@@ -65,12 +65,14 @@ export const ADDON_ORDER = ["delivery", "brand_plus"];
 // Retired plans, as the server maps them.
 const LEGACY_PLANS = { premium: { plan: "pro", addons: ["delivery", "brand_plus"] } };
 
-// Features the server gates (User::hasFeature). For these its list wins.
+// Features the server decides per restaurant (plan + the admin's grants and
+// revokes, App\Support\RestaurantFeatures). For these its list always wins.
 const SERVER_GATED = new Set([
-  ...SUBSCRIPTION_PLANS.pro.features.filter((f) => !SUBSCRIPTION_PLANS.basic.features.includes(f)),
-  ...ADDON_ORDER.flatMap((id) => SUBSCRIPTION_ADDONS[id].features),
+  "dine_in", "kitchen", "cashier", "waiter", "staff", "online_orders", "reports",
+  "branding", "background", "full-colors", "presets", "theme-presets", "custom-theme", "custom-font", "remove-branding",
 ]);
-["reports", "order-history", "smart-alerts"].forEach((f) => SERVER_GATED.delete(f)); // shown by plan only
+// UI names → server feature keys.
+const FEATURE_ALIASES = { tables: "dine_in" };
 
 /** Does the plan already give everything the add-on gives? (delivery on delivery_only) */
 export function addonIncluded(addonId, plan) {
@@ -129,11 +131,14 @@ export function subscriptionOf(user) {
 /** Can this user's restaurant use a feature? null/undefined feature = always. */
 export function userHasFeature(user, feature) {
   if (!feature || user?.role === "admin") return true;
+  const key = FEATURE_ALIASES[feature] || feature;
   const { plan, addons, trial, serverFeatures } = subscriptionOf(user);
+  // The server's list includes the admin's grants and revokes (also during a trial).
+  if (serverFeatures && SERVER_GATED.has(key)) return serverFeatures.includes(key);
   if (trial) return true;
-  if (serverFeatures && SERVER_GATED.has(feature)) return serverFeatures.includes(feature);
   const fromAddons = compatibleAddons(plan, addons).flatMap((id) => SUBSCRIPTION_ADDONS[id].features);
-  return getSubscriptionPlan(plan).features.includes(feature) || fromAddons.includes(feature);
+  const own = [...getSubscriptionPlan(plan).features, ...fromAddons];
+  return own.includes(feature) || own.includes(key);
 }
 
 /** Kept for callers that only know a plan id (no add-ons). */

@@ -37,7 +37,7 @@ Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
 // SRS-compatible public QR menu endpoint. Alias of the table-code menu route.
 Route::get('menu/{table_token}', [MenuController::class, 'publicMenu']);
 // New table sessions stop in restricted mode (trial ended / subscription stopped).
-Route::post('public/tables/{code}/sessions', [SessionController::class, 'open'])->middleware(['subscription:table', 'dine_in:table']);
+Route::post('public/tables/{code}/sessions', [SessionController::class, 'open'])->middleware(['subscription:table', 'feature:dine_in,table']);
 // Customer (no login) session endpoints. They require the session secret
 // issued when the QR session opens (X-Session-Token header, or ?token= for SSE).
 Route::middleware('session.token')->group(function () {
@@ -87,8 +87,8 @@ Route::middleware('api.auth')->group(function () {
         });
     });
     Route::middleware('permission:manage_tables')->group(function () {
-        // No tables on delivery_only (dine_in).
-        Route::middleware(['subscription', 'dine_in'])->group(function () {
+        // No tables on delivery_only, or when the admin revokes them.
+        Route::middleware(['subscription', 'feature:dine_in'])->group(function () {
             Route::apiResource('tables', TableController::class)->except(['show', 'create', 'index']);
             Route::get('tables/{id}/qr', [TableController::class, 'qr']);
             Route::patch('tables/{id}/status', [TableController::class, 'updateStatus']);
@@ -96,7 +96,7 @@ Route::middleware('api.auth')->group(function () {
     });
     Route::middleware('permission:manage_staff')->group(function () {
         // Adding staff is operational; editing / disabling existing staff stays open.
-        Route::post('staff', [StaffController::class, 'store'])->middleware('subscription');
+        Route::post('staff', [StaffController::class, 'store'])->middleware(['subscription', 'feature:staff']);
         Route::apiResource('staff', StaffController::class)->except(['show', 'create', 'store']);
         Route::patch('staff/{id}/status', [StaffController::class, 'status']);
     });
@@ -118,8 +118,8 @@ Route::middleware('api.auth')->group(function () {
         Route::post('sessions/{id}/assistance/resolve', [SessionController::class, 'resolveSessionAssistance']);
     });
     Route::middleware('permission:manage_orders')->group(function () {
-        Route::get('kitchen/orders', [OrderController::class, 'kitchen']);
-        Route::patch('kitchen/orders/{id}/status', [OrderController::class, 'status']);
+        Route::get('kitchen/orders', [OrderController::class, 'kitchen'])->middleware('feature:kitchen');
+        Route::patch('kitchen/orders/{id}/status', [OrderController::class, 'status'])->middleware('feature:kitchen');
         // Same action for the owner's orders screen.
         Route::patch('orders/{id}/status', [OrderController::class, 'status']);
     });
@@ -181,7 +181,7 @@ Route::middleware('api.auth')->group(function () {
         Route::get('me/branding', [BrandingController::class, 'show'])->middleware('permission:manage_branding');
         Route::post('me/branding', [BrandingController::class, 'update'])->middleware('permission:manage_branding');
         Route::post('me/branding/reset', [BrandingController::class, 'reset'])->middleware('permission:manage_branding');
-        Route::get('owner/reports/sales-trend', [OwnerReportsController::class, 'salesTrend'])->middleware('permission:view_reports');
+        Route::get('owner/reports/sales-trend', [OwnerReportsController::class, 'salesTrend'])->middleware(['permission:view_reports', 'feature:reports']);
         Route::get('owner/audit-logs', [AuditLogController::class, 'owner'])->middleware('permission:manage_staff');
     });
 
@@ -193,6 +193,9 @@ Route::middleware('api.auth')->group(function () {
         Route::delete('admin/restaurants/{id}', [AdminController::class, 'destroyRestaurant']);
         Route::get('admin/reports', [AdminController::class, 'reports']);
         Route::patch('admin/restaurants/{id}/plan', [AdminController::class, 'plan']);
+        // Restaurant permissions: features granted/revoked on top of the plan.
+        Route::get('admin/restaurants/{id}/features', [AdminController::class, 'features']);
+        Route::put('admin/restaurants/{id}/features', [AdminController::class, 'updateFeatures']);
         Route::post('admin/restaurants/{id}/trial/extend', [AdminController::class, 'extendTrial']);
         Route::post('admin/restaurants/{id}/subscription/cancel', [AdminController::class, 'cancelSubscription']);
         // Owners' forgot-password requests (link sent by the admin on WhatsApp).
