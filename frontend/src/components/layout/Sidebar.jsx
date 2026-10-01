@@ -13,7 +13,7 @@ import {
   ChevronDown, QrCode, Receipt, Settings, Settings2, Sparkles, UtensilsCrossed, Users, X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { getSubscriptionPlan, hasPlanFeature } from "../../config/subscriptions";
+import { SUBSCRIPTION_ADDONS, getSubscriptionPlan, monthlyPrice, subscriptionOf, userHasFeature } from "../../config/subscriptions";
 import SettingsDialog from "./SettingsDialog";
 import { ROLE_DEFAULTS } from "../../config/permissions";
 
@@ -91,9 +91,8 @@ function Logo({ compact = false }) {
 }
 
 function PlanCard({ user }) {
-  const planId = user?.plan || "basic";
+  const { plan: planId, addons, trial } = subscriptionOf(user);
   const plan = getSubscriptionPlan(planId);
-  const trial = user?.plan === "trial" && user?.trial_ends_at && new Date(user.trial_ends_at) > new Date();
   // Days and status come from the server (user.subscription), not the browser clock.
   const sub = user?.subscription;
   const trialDays = sub ? sub.remaining_days : trial ? Math.max(0, Math.ceil((new Date(user.trial_ends_at) - Date.now()) / 86400000)) : 0;
@@ -116,7 +115,10 @@ function PlanCard({ user }) {
       </div>
       {trial
         ? <p className="mt-1 text-xs font-bold">متبقٍ {trialDays} يوم، وكل الميزات مفعّلة</p>
-        : <p className="mt-1 text-sm font-extrabold">${plan.price}<span className="text-xs font-medium text-paper/70"> / شهريًا</span></p>}
+        : <>
+            <p className="mt-1 text-sm font-extrabold">${monthlyPrice(plan.id, addons)}<span className="text-xs font-medium text-paper/70"> / شهريًا</span></p>
+            {addons.length > 0 && <p className="mt-0.5 text-xs text-paper/70">+ {addons.map((id) => SUBSCRIPTION_ADDONS[id]?.name).join("، ")}</p>}
+          </>}
     </div>
   );
 }
@@ -126,9 +128,8 @@ export default function Sidebar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
-  const planId = user?.plan || "basic";
-  const trial = user?.plan === "trial" && user?.trial_ends_at && new Date(user.trial_ends_at) > new Date();
-  const planAllows = (feature) => !feature || trial || (feature === "branding" && ["pro", "premium"].includes(planId)) || hasPlanFeature(planId, feature);
+  const planId = subscriptionOf(user).plan;
+  const planAllows = (feature) => userHasFeature(user, feature);
   const allowed = ([, , , feature, permission]) => planAllows(feature) && (!permission || permission.split("|").some((p) => can(p)));
   const baseGroups = (NAV[role] || []).map((group) => ({ ...group, links: group.links.filter(allowed) })).filter((group) => group.links.length);
   // Pages unlocked by permissions granted beyond the role's defaults appear in

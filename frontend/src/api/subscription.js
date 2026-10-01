@@ -10,9 +10,9 @@ export const getSubscription = () => api.get("/subscription");
 /** "I have transferred": creates a pending payment + returns whatsapp_url. */
 export const reportTransfer = (payload) => api.post("/subscription/payments", payload);
 
-/** Legacy: records the chosen plan as a request (no activation without payment). */
-export async function changePlan(planId) {
-  return api.patch("/me/plan", { plan: planId });
+/** Legacy: records the chosen plan (+ add-ons) as a request (no activation without payment). */
+export async function changePlan(planId, addons) {
+  return api.patch("/me/plan", addons ? { plan: planId, addons } : { plan: planId });
 }
 
 // Platform admin

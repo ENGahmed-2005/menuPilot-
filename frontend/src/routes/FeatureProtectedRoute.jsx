@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { hasPlanFeature } from "../config/subscriptions";
+import { addonForFeature, subscriptionOf, userHasFeature } from "../config/subscriptions";
 
 export default function FeatureProtectedRoute({ feature, children }) {
   const { user, isAuthenticated, loading } = useAuth();
@@ -12,19 +12,13 @@ export default function FeatureProtectedRoute({ feature, children }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  const trial =
-    user?.plan === "trial" &&
-    user?.trial_ends_at &&
-    new Date(user.trial_ends_at) > new Date();
-
-  const planId = user?.plan || "basic";
-
-  if (!trial && !hasPlanFeature(planId, feature)) {
+  if (!userHasFeature(user, feature)) {
+    // The subscription page preselects the plan or add-on that unlocks it.
     return (
       <Navigate
-        to={`/owner/subscription/${planId}`}
+        to={`/owner/subscription/${subscriptionOf(user).plan}`}
         replace
-        state={{ requiredFeature: feature }}
+        state={{ requiredFeature: feature, requiredAddon: addonForFeature(feature) }}
       />
     );
   }

@@ -1,7 +1,7 @@
 /* ==========================================================================
    RestaurantsManagement.jsx — platform admin: all restaurants.
    Create a restaurant (owner account, password shown once), edit its details,
-   change the plan, enable/disable the account, and delete it permanently
+   change the plan and add-ons, enable/disable the account, and delete it permanently
    (typing the owner's email to confirm). Every action is admin-only in the
    API (role:admin + manage_admin) and written to the audit log.
    ========================================================================== */
@@ -18,8 +18,10 @@ import Alert from "../../components/ui/Alert";
 import { useToast } from "../../components/ui/Toast";
 import { useConfirm } from "../../components/ui/ConfirmDialog";
 import { errorText } from "../../utils/errors";
+import AddonToggles from "../../components/subscription/AddonToggles";
+import { SUBSCRIPTION_ADDONS } from "../../config/subscriptions";
 
-const PLANS = [["trial", "تجربة مجانية"], ["basic", "Basic"], ["pro", "Pro"], ["premium", "Premium"]];
+const PLANS = [["trial", "تجربة مجانية"], ["basic", "Basic"], ["pro", "Pro"]];
 const PLAN_LABEL = Object.fromEntries(PLANS);
 const EMPTY = { name: "", email: "", restaurant_name: "", restaurant_phone: "", plan: "trial" };
 const dateLabel = (iso) => (iso ? new Date(iso).toLocaleDateString("ar-PS-u-nu-latn", { day: "numeric", month: "short", year: "numeric" }) : "—");
@@ -46,10 +48,14 @@ export default function RestaurantsManagement() {
 
   const patchRow = (id, data) => setRows((list) => list.map((r) => (r.id === id ? { ...r, ...data } : r)));
 
-  async function changePlan(row, plan) {
+  async function changePlan(row, plan, addons) {
     setBusy(row.id);
-    try { patchRow(row.id, await overrideRestaurantPlan(row.id, plan)); toast.success(`أصبحت باقة ${row.restaurant_name || row.email}: ${PLAN_LABEL[plan]}.`); }
-    catch (e) { toast.error(errorText(e, "تعذّر تغيير الباقة.")); } finally { setBusy(null); }
+    try {
+      const updated = await overrideRestaurantPlan(row.id, plan, addons);
+      patchRow(row.id, updated);
+      const extras = (updated?.addons || []).map((id) => SUBSCRIPTION_ADDONS[id]?.name).filter(Boolean);
+      toast.success(`أصبحت باقة ${row.restaurant_name || row.email}: ${[PLAN_LABEL[plan], ...extras].join(" + ")}.`);
+    } catch (e) { toast.error(errorText(e, "تعذّر تغيير الباقة.")); } finally { setBusy(null); }
   }
 
   async function toggleActive(row) {
@@ -134,7 +140,7 @@ export default function RestaurantsManagement() {
         </div>
         <div className="admin-table-wrapper">
           <table className="admin-table">
-            <thead><tr><th>المطعم</th><th>صاحب المطعم</th><th>الباقة</th><th>الحساب</th><th>التسجيل</th><th>إجراءات</th></tr></thead>
+            <thead><tr><th>المطعم</th><th>صاحب المطعم</th><th>الباقة</th><th>الإضافات</th><th>الحساب</th><th>التسجيل</th><th>إجراءات</th></tr></thead>
             <tbody>
               {filtered.map((r) => (
                 <tr key={r.id}>
@@ -147,6 +153,7 @@ export default function RestaurantsManagement() {
                     </select>
                     {r.plan === "trial" && r.trial_ends_at && <div className="mt-1 text-xs text-muted">تنتهي {dateLabel(r.trial_ends_at)}</div>}
                   </td>
+                  <td><AddonToggles row={r} disabled={busy === r.id} onChange={(addons) => changePlan(r, r.plan, addons)} /></td>
                   <td><span className={`admin-status ${r.is_active === false ? "inactive" : "active"}`}><i />{r.is_active === false ? "معطّل" : "نشط"}</span></td>
                   <td className="text-xs">{dateLabel(r.created_at)}</td>
                   <td>

@@ -12,7 +12,7 @@
 
    بيانات وهمية (in-memory) — بترجع لحالتها الأصلية عند تحديث الصفحة (F5).
    ========================================================================== */
-import { SUBSCRIPTION_PLANS, getSubscriptionPlan } from "../config/subscriptions";
+import { SUBSCRIPTION_PLANS, compatibleAddons, getSubscriptionPlan, normalizePlan } from "../config/subscriptions";
 
 const SUBSCRIPTION_PLAN_IDS = Object.keys(SUBSCRIPTION_PLANS);
 
@@ -33,7 +33,7 @@ export const DEMO_ACCOUNTS = [
   {
     email: "owner@menupilot.test", password: "password123", role: "owner",
     name: "Ahmed Restaurant Group", restaurantName: "Coppertop Kitchen",
-    plan: "premium", theme: null, // null = يستخدم هوية menuPilot الافتراضية
+    plan: "pro", addons: ["delivery", "brand_plus"], theme: null, // null = يستخدم هوية menuPilot الافتراضية
   },
   // حسابان إضافيان لنفس الدور owner، كل واحد على باقة مختلفة — عشان تقدر
   // تجرّب فعليًا إزاي اللوحة والمزايا بتختلف حسب الباقة (basic/pro) بدون
@@ -172,7 +172,7 @@ function sessionBillItems(sessionId) {
 function toUserPayload(account) {
   const base = { id: 1, email: account.email, role: account.role, restaurantName: account.restaurantName };
   if (account.role === "owner") {
-    return { ...base, plan: account.plan || "basic", theme: account.theme || null };
+    return { ...base, plan: account.plan || "basic", addons: account.addons || [], theme: account.theme || null };
   }
   return base;
 }
@@ -241,7 +241,7 @@ export async function mockRequest(method, rawPath, body, token) {
   const adminOnly = () => { const a = decodeToken(token); if (!a || a.role !== "admin") fail(403, "ليس لديك صلاحية لتنفيذ هذا الإجراء."); };
   const ownerRow = (o, i) => ({
     id: i, email: o.email, name: o.name || o.email.split("@")[0], restaurant_name: o.restaurantName || null,
-    restaurant_phone: o.phone || null, plan: o.plan || "basic", is_active: o.active !== false,
+    restaurant_phone: o.phone || null, plan: o.plan || "basic", addons: o.addons || [], is_active: o.active !== false,
     trial_ends_at: o.trialEndsAt || null, created_at: o.createdAt || "2026-09-01T09:00:00Z",
   });
   if (method === "GET" && path === "/admin/restaurants") {
@@ -273,10 +273,12 @@ export async function mockRequest(method, rawPath, body, token) {
   }
   if (method === "PATCH" && seg[0] === "admin" && seg[1] === "restaurants" && seg[3] === "plan") {
     adminOnly();
-    if (!SUBSCRIPTION_PLAN_IDS.includes(body.plan) && body.plan !== "trial") fail(422, "Unknown plan.");
+    const chosen = normalizePlan(body.plan, body.addons || []);
+    if (!SUBSCRIPTION_PLAN_IDS.includes(chosen.plan) && chosen.plan !== "trial") fail(422, "Unknown plan.");
     const target = owners[Number(seg[2])];
     if (!target) fail(404, "Restaurant not found.");
-    target.plan = body.plan;
+    target.plan = chosen.plan;
+    target.addons = compatibleAddons(chosen.plan, body.addons ? chosen.addons : [...(target.addons || []), ...chosen.addons]);
     return ownerRow(target, Number(seg[2]));
   }
 
@@ -284,8 +286,10 @@ export async function mockRequest(method, rawPath, body, token) {
   if (method === "PATCH" && path === "/me/plan") {
     const account = decodeToken(token);
     if (!account || account.role !== "owner") fail(401, "Session expired.");
-    if (!SUBSCRIPTION_PLAN_IDS.includes(body.plan)) fail(422, "Unknown plan.");
-    account.plan = body.plan;
+    const chosen = normalizePlan(body.plan, body.addons || []);
+    if (!SUBSCRIPTION_PLAN_IDS.includes(chosen.plan)) fail(422, "Unknown plan.");
+    account.plan = chosen.plan;
+    account.addons = compatibleAddons(chosen.plan, chosen.addons);
     return toUserPayload(account);
   }
 
