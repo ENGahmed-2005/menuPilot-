@@ -6,7 +6,7 @@ import SubscriptionPaymentsReview from "./SubscriptionPaymentsReview";
 import AddonToggles from "../../components/subscription/AddonToggles";
 import { PLAN_ORDER as plans } from "../../config/subscriptions";
 
-const labels = { basic: "Basic", pro: "Pro", trial: "Trial" };
+const labels = { basic: "Basic", pro: "Pro", delivery_only: "التوصيل فقط", trial: "Trial" };
 const date = value => value ? new Intl.DateTimeFormat("ar", { year: "numeric", month: "short", day: "numeric" }).format(new Date(value)) : "—";
 
 export default function AdminSubscriptions() {

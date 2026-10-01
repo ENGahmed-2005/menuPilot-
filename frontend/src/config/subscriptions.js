@@ -26,8 +26,20 @@ export const SUBSCRIPTION_PLANS = {
     features: [...OPERATIONS, "reports", "order-history", "smart-alerts", "branding", "background", "full-colors", "theme-presets", "presets"],
     limits: { tables: Infinity, menuItems: Infinity, themes: 4 },
   },
+  // For restaurants without tables: online ordering on its own.
+  delivery_only: {
+    id: "delivery_only",
+    name: "التوصيل فقط",
+    price: 15,
+    description: "لمطعم بلا صالة: طلبات استلام وتوصيل من رابط مطعمك، بدون طاولات.",
+    features: ["dashboard", "menu", "orders", "kitchen", "staff", "online_orders"],
+    limits: { tables: 0, menuItems: 50, themes: 0 },
+    dineIn: false,
+  },
 };
-export const PLAN_ORDER = ["basic", "pro"];
+export const PLAN_ORDER = ["basic", "pro", "delivery_only"];
+// Plans with tables and QR ordering (the two main plans).
+export const MAIN_PLANS = ["basic", "pro"];
 export const DEFAULT_PLAN = "pro";
 
 export const SUBSCRIPTION_ADDONS = {
@@ -60,11 +72,28 @@ const SERVER_GATED = new Set([
 ]);
 ["reports", "order-history", "smart-alerts"].forEach((f) => SERVER_GATED.delete(f)); // shown by plan only
 
-/** Retired plan → current plan + add-ons; keeps known add-ons in catalogue order. */
+/** Does the plan already give everything the add-on gives? (delivery on delivery_only) */
+export function addonIncluded(addonId, plan) {
+  const features = SUBSCRIPTION_ADDONS[addonId]?.features || [];
+  return features.length > 0 && features.every((f) => SUBSCRIPTION_PLANS[plan]?.features.includes(f));
+}
+
+/** Retired plan → current plan + add-ons; known add-ons in catalogue order, none the plan includes. */
 export function normalizePlan(plan, addons = []) {
   const legacy = LEGACY_PLANS[plan];
   const all = legacy ? [...addons, ...legacy.addons] : addons;
-  return { plan: legacy ? legacy.plan : plan, addons: ADDON_ORDER.filter((id) => all.includes(id)) };
+  const target = legacy ? legacy.plan : plan;
+  return { plan: target, addons: ADDON_ORDER.filter((id) => all.includes(id) && !addonIncluded(id, target)) };
+}
+
+/**
+ * Add-ons after switching plan: drops what the new plan can't take or
+ * already includes, and keeps what the old plan included as an add-on
+ * (delivery only → Basic keeps online ordering via the delivery add-on).
+ */
+export function addonsForPlan(fromPlan, toPlan, addons = []) {
+  const carried = ADDON_ORDER.filter((id) => addonIncluded(id, fromPlan));
+  return ADDON_ORDER.filter((id) => (addons.includes(id) || carried.includes(id)) && addonFits(id, toPlan) && !addonIncluded(id, toPlan));
 }
 
 export function getSubscriptionPlan(plan) {
