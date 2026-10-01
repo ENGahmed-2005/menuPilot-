@@ -58,7 +58,7 @@ class AdminAccount
             'email' => $email,
             'password' => Hash::make($password),
             'role' => 'admin',
-            'plan' => 'premium',
+            'plan' => 'pro',
             'is_active' => true,
         ]);
 

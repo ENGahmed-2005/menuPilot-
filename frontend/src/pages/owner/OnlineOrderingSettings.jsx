@@ -1,10 +1,13 @@
 /* ==========================================================================
    OnlineOrderingSettings.jsx — «الطلب أونلاين» (settings popup tab).
    Enable / pause, pickup & delivery, prep time, ordering hours, public link
-   + QR, delivery zones (fee, minimum order). Premium plan.
+   + QR, delivery zones (fee, minimum order). The «delivery» add-on, on any plan.
    ========================================================================== */
 import { useEffect, useState } from "react";
 import { Copy, Plus, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { SUBSCRIPTION_ADDONS, subscriptionOf } from "../../config/subscriptions";
+import { useAuth } from "../../context/AuthContext";
 import { getOnlineOrderingSettings, saveOnlineOrderingSettings } from "../../api/outsideOrders";
 import { errorText } from "../../utils/errors";
 import Alert from "../../components/ui/Alert";
@@ -24,6 +27,8 @@ function Toggle({ label, hint, checked, onChange }) {
 
 export default function OnlineOrderingSettings() {
   const toast = useToast();
+  const { user } = useAuth();
+  const planId = subscriptionOf(user).plan;
   const [data, setData] = useState(null);
   const [s, setS] = useState(null);
   const [zones, setZones] = useState([]);
@@ -50,7 +55,12 @@ export default function OnlineOrderingSettings() {
   return (
     <form onSubmit={save} className="space-y-5">
       <div><h2 className="text-xl font-extrabold">الطلب أونلاين (استلام وتوصيل)</h2><p className="mt-1 text-sm text-muted">شارك رابط مطعمك ليطلب الزبائن من البيت، بلا أي عمولة.</p></div>
-      {!data.plan_allows && <Alert tone="warning" title="ميزة الخطة المميزة">فعّل الخطة المميزة ليستقبل مطعمك طلبات الاستلام والتوصيل. يمكنك تجهيز الإعدادات الآن.</Alert>}
+      {!data.plan_allows && (
+        <Alert tone="warning" title={`إضافة «${SUBSCRIPTION_ADDONS.delivery.name}»`}>
+          أضفها لاشتراكك بـ ${SUBSCRIPTION_ADDONS.delivery.price} شهريًا مع أي خطة ليستقبل مطعمك طلبات الاستلام والتوصيل. يمكنك تجهيز الإعدادات الآن.{" "}
+          <Link to={`/owner/subscription/${planId}`} state={{ requiredAddon: "delivery" }} className="font-bold underline">أضف التوصيل</Link>
+        </Alert>
+      )}
 
       <div className="rounded-xl bg-surface-2 p-4">
         <p className="text-xs font-bold text-muted">رابط الطلب</p>

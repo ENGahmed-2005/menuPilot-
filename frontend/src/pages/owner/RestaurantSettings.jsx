@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Building2, ChevronLeft, Mail, Palette, MapPin, Phone, Save, CreditCard, WalletCards } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getSubscriptionPlan } from "../../config/subscriptions";
+import { getSubscriptionPlan, subscriptionOf } from "../../config/subscriptions";
 import { getRestaurant, updateRestaurant } from "../../api/restaurant";
 import Card from "../../components/dashboard/Card";
 import PageHeader from "../../components/dashboard/PageHeader";
@@ -14,7 +14,7 @@ const emptyPayments = { cash: { enabled: true, note: "" }, bank: { enabled: fals
 
 export default function RestaurantSettings() {
   const { user } = useAuth();
-  const plan = getSubscriptionPlan(user?.plan);
+  const plan = getSubscriptionPlan(subscriptionOf(user).plan);
   const [form, setForm] = useState({ restaurant_name: "", restaurant_phone: "", restaurant_description: "", restaurant_address: "", latitude: "", longitude: "", payment_timing: "before", payment_methods: emptyPayments });
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [message, setMessage] = useState(""), [error, setError] = useState("");
 

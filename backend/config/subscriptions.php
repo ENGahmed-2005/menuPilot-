@@ -15,16 +15,49 @@ return [
     'grace_days' => (int) env('TRIAL_GRACE_DAYS', 3),
     // Days-remaining milestones that fire a notification event once each.
     'notify_days' => [7, 3, 1],
-    'paid_plans' => ['basic', 'pro', 'premium'],
+    // Two plans + paid add-ons (Oct 2026). A restaurant pays its plan plus the
+    // add-ons it picks; nothing it doesn't use.
+    'paid_plans' => ['basic', 'pro'],
 
     // Prices are decided here (the client never sends an amount). Monthly.
     'currency' => env('SUBSCRIPTION_CURRENCY', 'USD'),
-    'prices' => ['basic' => 15, 'pro' => 29, 'premium' => 49], // approved Sep 2026 (competitor review)
+    'prices' => ['basic' => 15, 'pro' => 29], // approved Sep 2026 (competitor review)
     // Paying 12 months at once: 2 months free (pay 10).
     'annual_free_months' => 2,
     // Display-only shekel equivalent next to USD prices.
     'display_ils_rate' => (float) env('SUBSCRIPTION_ILS_RATE', 3.65),
-    'plan_names' => ['basic' => 'الأساسية', 'pro' => 'الاحترافية', 'premium' => 'المميزة'],
+    'plan_names' => ['basic' => 'الأساسية', 'pro' => 'الاحترافية'],
+
+    // Gated features each plan unlocks (operations — menu, tables, QR, orders,
+    // kitchen, cashier, staff — are in every plan and are not gated here).
+    'plan_features' => [
+        'basic' => [],
+        'pro' => ['branding', 'background', 'full-colors', 'theme-presets', 'presets'],
+    ],
+
+    // Monthly add-ons on top of a plan. `plans` = the plans it can be added to.
+    // Pro + both add-ons = 49, the old Premium price, with the same features.
+    'addons' => [
+        'delivery' => [
+            'name' => 'التوصيل والطلب أونلاين',
+            'description' => 'استقبل طلبات الاستلام والتوصيل من رابط ورمز QR خاص بمطعمك، مع مناطق ورسوم توصيل.',
+            'price' => 15,
+            'plans' => ['basic', 'pro'],
+            'features' => ['online_orders'],
+        ],
+        'brand_plus' => [
+            'name' => 'الهوية الكاملة',
+            'description' => 'خط مخصص للمنيو، وألوان لوحة تحكم مخصصة، وإخفاء شعار menuPilot.',
+            'price' => 5,
+            'plans' => ['pro'],
+            'features' => ['custom-font', 'remove-branding', 'custom-theme'],
+        ],
+    ],
+
+    // Retired plans still accepted from old clients and mapped to plan + add-ons.
+    'legacy_plans' => [
+        'premium' => ['plan' => 'pro', 'addons' => ['delivery', 'brand_plus']],
+    ],
     'periods' => [1, 3, 6, 12], // months the owner can pay for at once
 
     // Manual bank transfer (Bank of Palestine). Set the real details in the

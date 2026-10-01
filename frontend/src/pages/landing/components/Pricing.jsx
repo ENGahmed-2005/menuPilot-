@@ -7,15 +7,16 @@
    ما نضطر نحدّث نصوص هالقسم يدويًا كل مرة.
    ========================================================================== */
 import { useState } from "react";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
-import { SUBSCRIPTION_PLANS } from "../../../config/subscriptions";
+import { Bike, Check, ChevronDown, ChevronUp, Palette } from "lucide-react";
+import { ADDON_ORDER, PLAN_ORDER, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS } from "../../../config/subscriptions";
 import Reveal from "./Reveal";
 
 const COLLAPSED_COUNT = 4;
 
-const PLAN_ORDER = ["basic", "pro", "premium"];
+const ADDON_ICONS = { delivery: Bike, brand_plus: Palette };
 
 const FEATURE_LABELS = {
+  "everything-basic": "كل ما في الأساسية",
   online_orders: "طلب أونلاين: استلام وتوصيل بلا عمولة",
   dashboard: "لوحة تحكم موحّدة",
   tables: "إدارة الطاولات",
@@ -24,16 +25,26 @@ const FEATURE_LABELS = {
   kitchen: "لوحة المطبخ",
   cashier: "الكاشير والفواتير",
   waiter: "لوحة النادل",
+  staff: "الفريق والصلاحيات",
   reports: "تقارير المبيعات",
-  "advanced-reports": "تقارير متقدمة",
-  analytics: "تحليلات أداء",
-  "priority-support": "دعم فني بأولوية",
-  "theme-presets": "ثيمات جاهزة للتخصيص",
-  "custom-theme": "تخصيص لوني كامل",
+  "order-history": "سجل الطلبات",
+  "smart-alerts": "تنبيهات ذكية",
+  branding: "شعار وهوية خاصة للمنيو",
+  background: "خلفية مخصصة للمنيو",
+  "full-colors": "ألوان المنيو بالكامل",
+  presets: "قوالب جاهزة لتصميم المنيو",
+  "theme-presets": "ثيمات جاهزة للوحة التحكم",
 };
 
-function formatLimit(value) {
-  return value === Infinity ? "بلا حدود" : value;
+// Pro lists only what it adds on top of Basic.
+function featuresFor(id) {
+  if (id === "basic") return SUBSCRIPTION_PLANS.basic.features;
+  return ["everything-basic", ...SUBSCRIPTION_PLANS[id].features.filter((f) => !SUBSCRIPTION_PLANS.basic.features.includes(f))];
+}
+
+
+function limitText(value, unit, plural) {
+  return value === Infinity ? `${plural} بلا حدود` : `حتى ${value} ${unit}`;
 }
 
 // Annual billing: pay 10 months, get 12 (server applies the same rule).
@@ -41,7 +52,7 @@ const ANNUAL_PAID_MONTHS = 10;
 
 function PlanCard({ id, plan, popular, delay, annual }) {
   const [expanded, setExpanded] = useState(false);
-  const features = plan.features;
+  const features = featuresFor(id);
   const hidden = features.length > COLLAPSED_COUNT;
   const visible = expanded ? features : features.slice(0, COLLAPSED_COUNT);
 
@@ -74,10 +85,10 @@ function PlanCard({ id, plan, popular, delay, annual }) {
 
         <div className="mt-4 flex flex-wrap gap-1.5 text-[11px] text-[#F3EFE5]/70">
           <span className="rounded-full bg-[#F3EFE5]/[.06] px-2.5 py-0.5">
-            حتى {formatLimit(plan.limits.tables)} طاولة
+            {limitText(plan.limits.tables, "طاولة", "طاولات")}
           </span>
           <span className="rounded-full bg-[#F3EFE5]/[.06] px-2.5 py-0.5">
-            حتى {formatLimit(plan.limits.menuItems)} صنف
+            {limitText(plan.limits.menuItems, "صنف", "أصناف")}
           </span>
         </div>
 
@@ -146,7 +157,7 @@ export default function Pricing() {
         </div>
       </Reveal>
 
-      <div className="mt-10 grid gap-4 lg:grid-cols-3">
+      <div className="mx-auto mt-10 grid max-w-4xl gap-4 md:grid-cols-2">
         {PLAN_ORDER.map((id, i) => (
           <PlanCard
             key={id}
@@ -159,8 +170,33 @@ export default function Pricing() {
         ))}
       </div>
 
+      <Reveal delay={160} className="mx-auto mt-10 max-w-4xl">
+        <h3 className="text-center text-lg font-black">أضف ما يحتاجه مطعمك فقط</h3>
+        <p className="mt-2 text-center text-sm leading-6 text-[#F3EFE5]/70">إضافات شهرية تُضاف إلى أي خطة تناسبها، وتلغيها متى شئت.</p>
+        <ul className="mt-5 grid gap-3 md:grid-cols-2">
+          {ADDON_ORDER.map((addonId) => {
+            const addon = SUBSCRIPTION_ADDONS[addonId];
+            const Icon = ADDON_ICONS[addonId];
+            const anyPlan = addon.plans.length === PLAN_ORDER.length;
+            return (
+              <li key={addonId} className="flex gap-3 rounded-2xl border border-[#F3EFE5]/10 bg-[#F3EFE5]/[.02] p-4">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEA122]/15 text-[#EEA122]"><Icon size={18} aria-hidden="true" /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h4 className="text-sm font-black">{addon.name}</h4>
+                    <span className="text-sm font-black">+${annual ? addon.price * ANNUAL_PAID_MONTHS : addon.price}<span className="text-[11px] font-medium text-[#F3EFE5]/70">{annual ? " / سنويًا" : " / شهريًا"}</span></span>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-[#F3EFE5]/70">{addon.description}</p>
+                  <p className="mt-2 text-[11px] font-bold text-[#EEA122]/90">{anyPlan ? "مع أي خطة" : `مع ${addon.plans.map((p) => SUBSCRIPTION_PLANS[p].name).join(" أو ")} فقط`}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </Reveal>
+
       <p className="mt-8 text-center text-xs leading-6 text-[#F3EFE5]/70">
-        جميع الباقات تشمل: طلب عبر QR، ومتابعة حية للطلبات، ولوحات للمطبخ والكاشير والنادل. الباقة المميزة تضيف الطلب أونلاين. بلا عمولة على الطلبات، وبلا عقود، وإلغاء في أي وقت.
+        جميع الخطط تشمل: طلب عبر QR، ومتابعة حية للطلبات، ولوحات للمطبخ والكاشير والنادل. بلا عمولة على الطلبات، وبلا عقود، وإلغاء في أي وقت.
       </p>
     </section>
   );

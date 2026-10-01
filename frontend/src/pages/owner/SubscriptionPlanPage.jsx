@@ -1,14 +1,16 @@
 /* ==========================================================================
    SubscriptionPlanPage.jsx — choose a plan and pay by bank transfer
    (route /owner/subscription/:planId).
-   1) pick plan + months → 2) transfer to Bank of Palestine with the payment
+   1) pick plan + add-ons + months → 2) transfer to Bank of Palestine with the payment
    code → 3) report it (name, date, reference, optional receipt photo) →
    4) send the invoice on WhatsApp. The platform verifies and activates.
-   Prices and bank details come from GET /api/subscription.
+   Prices, add-ons and bank details come from GET /api/subscription; the
+   server prices the payment itself (the total here is for display).
    ========================================================================== */
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { CheckCircle2, Clock3, Copy, Landmark, MessageCircle, Printer, XCircle } from "lucide-react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Bike, Check, CheckCircle2, Clock3, Copy, Landmark, Lock, MessageCircle, Palette, Printer, Sparkles, XCircle } from "lucide-react";
+import { ADDON_ORDER, DEFAULT_PLAN, PLAN_ORDER, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS, addonFits, compatibleAddons, hasPlanFeature, normalizePlan, subscriptionOf } from "../../config/subscriptions";
 import { getSubscription, reportTransfer } from "../../api/subscription";
 import { useAuth } from "../../context/AuthContext";
 import { fetchCurrentUser } from "../../api/auth";
@@ -26,6 +28,27 @@ import { useToast } from "../../components/ui/Toast";
 const STATUS = { pending: ["بانتظار التحقق", "warning", Clock3], verified: ["مؤكدة ومفعّلة", "success", CheckCircle2], rejected: ["مرفوضة", "danger", XCircle] };
 const monthsText = (n) => (n === 1 ? "شهر واحد" : n === 2 ? "شهران" : `${n} ${n <= 10 ? "أشهر" : "شهرًا"}`);
 const money = (v, c) => `${Number(v || 0).toLocaleString("en-US")} ${c === "USD" ? "$" : c}`;
+const ADDON_ICONS = { delivery: Bike, brand_plus: Palette };
+
+/**
+ * First selection: the plan in the URL (premium → pro + both add-ons), the
+ * add-on a locked page asked for (FeatureProtectedRoute / "أضف" links), and
+ * otherwise the restaurant's current add-ons so a renewal is one click.
+ */
+function initialChoice(planId, user, state) {
+  const current = subscriptionOf(user);
+  const fromRoute = normalizePlan(planId === "current" ? current.plan : planId);
+  let plan = PLAN_ORDER.includes(fromRoute.plan) ? fromRoute.plan : PLAN_ORDER.includes(current.plan) ? current.plan : DEFAULT_PLAN;
+  let addons = fromRoute.addons.length ? fromRoute.addons : plan === current.plan ? current.addons : [];
+  const wanted = state?.requiredAddon;
+  if (wanted && SUBSCRIPTION_ADDONS[wanted]) {
+    if (!addonFits(wanted, plan)) plan = SUBSCRIPTION_ADDONS[wanted].plans.at(-1);
+    addons = [...addons, wanted];
+  } else if (state?.requiredFeature && !hasPlanFeature(plan, state.requiredFeature) && hasPlanFeature("pro", state.requiredFeature)) {
+    plan = "pro";
+  }
+  return { plan, addons: compatibleAddons(plan, normalizePlan(plan, addons).addons) };
+}
 
 function CopyRow({ label, value, onCopy }) {
   if (!value) return null;
@@ -46,7 +69,7 @@ function Invoice({ p, restaurant }) {
       <div className="flex items-center justify-between"><p className="font-extrabold">فاتورة اشتراك</p><span dir="ltr" className="num font-bold">{p.invoice_number}</span></div>
       <dl className="mt-3 space-y-1.5">
         <div className="flex justify-between"><dt className="text-muted">المطعم</dt><dd className="font-bold">{restaurant}</dd></div>
-        <div className="flex justify-between"><dt className="text-muted">الخطة</dt><dd className="font-bold">{p.plan_name} · {monthsText(p.months)}</dd></div>
+        <div className="flex justify-between gap-3"><dt className="text-muted">الخطة</dt><dd className="text-left font-bold">{p.plan_label || p.plan_name} · {monthsText(p.months)}</dd></div>
         <div className="flex justify-between"><dt className="text-muted">المبلغ</dt><dd className="num font-extrabold">{money(p.amount, p.currency)}</dd></div>
         <div className="flex justify-between"><dt className="text-muted">طريقة الدفع</dt><dd>تحويل بنكي · {p.bank}</dd></div>
         <div className="flex justify-between"><dt className="text-muted">رمز الدفع</dt><dd dir="ltr" className="num">{p.reference_code}</dd></div>
@@ -59,12 +82,15 @@ function Invoice({ p, restaurant }) {
 
 export default function SubscriptionPlanPage() {
   const { planId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
   const { user, updateUser } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [plan, setPlan] = useState(["basic", "pro", "premium"].includes(planId) ? planId : "pro");
+  const [choice] = useState(() => initialChoice(planId, user, location.state));
+  const [plan, setPlanId] = useState(choice.plan);
+  const [addons, setAddons] = useState(choice.addons);
   const [months, setMonths] = useState(1);
   const [form, setForm] = useState({ payer_name: "", transfer_date: new Date().toISOString().slice(0, 10), transfer_reference: "", note: "", proof: "" });
   const [saving, setSaving] = useState(false);
@@ -74,9 +100,27 @@ export default function SubscriptionPlanPage() {
   useEffect(() => { load(); }, []);
 
   const selected = data?.plans?.find((p) => p.id === plan);
-  // Same rule as the server: 12 months → pay 12 − annual_free_months.
+  // Older API without add-ons: fall back to the local catalogue.
+  const catalogue = data?.addons ?? ADDON_ORDER.map((id) => SUBSCRIPTION_ADDONS[id]);
+  const chosen = catalogue.filter((a) => addons.includes(a.id));
+  // Same rule as the server: (plan + add-ons) per month; 12 months → pay 12 − annual_free_months.
+  const monthly = (selected?.price || 0) + chosen.reduce((sum, a) => sum + Number(a.price || 0), 0);
   const payable = months === 12 ? 12 - (data?.annual_free_months || 0) : months;
-  const amount = (selected?.price || 0) * payable;
+  const amount = monthly * payable;
+  const live = data?.subscription?.status === "ACTIVE" ? data.subscription : null;
+  const planName = (id) => data?.plans?.find((p) => p.id === id)?.name || SUBSCRIPTION_PLANS[id]?.name || id;
+
+  // Switching plan drops the add-ons it can't take (they show as locked).
+  function setPlan(id) {
+    setPlanId(id);
+    setAddons((list) => list.filter((a) => catalogue.find((x) => x.id === a)?.plans.includes(id)));
+  }
+  // Picking an add-on the plan can't take moves to the plan that can.
+  function toggleAddon(addon) {
+    if (addons.includes(addon.id)) return setAddons((list) => list.filter((a) => a !== addon.id));
+    if (!addon.plans.includes(plan)) setPlanId(addon.plans.at(-1));
+    setAddons((list) => ADDON_ORDER.filter((id) => id === addon.id || list.includes(id)));
+  }
   const ils = (v) => (data?.ils_rate ? `≈ ${Math.round(v * data.ils_rate)} ₪` : "");
   const pending = data?.payments?.find((p) => p.status === "pending");
   const lastRejected = data?.payments?.[0]?.status === "rejected" ? data.payments[0] : null;
@@ -96,7 +140,7 @@ export default function SubscriptionPlanPage() {
     event.preventDefault();
     setSaving(true);
     try {
-      const payment = await reportTransfer({ plan, months, ...form, proof: form.proof || undefined });
+      const payment = await reportTransfer({ plan, addons, months, ...form, proof: form.proof || undefined });
       setSent(payment);
       window.open(payment.whatsapp_url, "_blank", "noopener"); // may be blocked: the button below always works
       fetchCurrentUser().then(updateUser).catch(() => {});
@@ -148,22 +192,55 @@ export default function SubscriptionPlanPage() {
       {!pending && (
         <>
           <Card>
-            <CardHeader title="1. اختر الخطة والمدة" />
-            <div className="grid gap-3 p-5 sm:grid-cols-3">
+            <CardHeader title="1. اختر الخطة والإضافات والمدة" description="ادفع على قدر احتياجك: خطة واحدة، وأضف إليها ما يستخدمه مطعمك فقط." />
+            <div className="grid gap-3 p-5 sm:grid-cols-2">
               {data.plans.map((p) => (
                 <button key={p.id} type="button" onClick={() => setPlan(p.id)} aria-pressed={plan === p.id}
                   className={`rounded-2xl border p-4 text-right transition-colors ${plan === p.id ? "border-copper bg-copper/[0.07] ring-2 ring-copper/25" : "border-line bg-surface hover:border-ink/25"}`}>
                   <p className="font-extrabold">{p.name}</p>
                   <p className="num mt-1 text-2xl font-black">{money(p.price, data.currency)}<span className="text-xs font-medium text-muted"> / شهر</span></p>
                   <p className="num text-xs text-muted">{ils(p.price)} شهريًا</p>
-                  {user?.plan === p.id && data.subscription?.status === "ACTIVE" && <Badge tone="success" className="mt-2">خطتك الحالية</Badge>}
+                  {SUBSCRIPTION_PLANS[p.id]?.description && <p className="mt-2 text-xs leading-5 text-muted">{SUBSCRIPTION_PLANS[p.id].description}</p>}
+                  {live?.plan === p.id && <Badge tone="success" className="mt-2">خطتك الحالية</Badge>}
                 </button>
               ))}
             </div>
+            <fieldset className="border-t border-line p-5">
+              <legend className="text-sm font-extrabold">الإضافات <span className="font-medium text-muted">اختيارية، وتُضاف إلى السعر الشهري</span></legend>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {catalogue.map((a) => {
+                  const on = addons.includes(a.id);
+                  const fits = a.plans.includes(plan);
+                  const Icon = ADDON_ICONS[a.id] || Sparkles;
+                  return (
+                    <button key={a.id} type="button" onClick={() => toggleAddon(a)} aria-pressed={on}
+                      className={`flex gap-3 rounded-2xl border p-4 text-right transition-colors ${on ? "border-copper bg-copper/[0.07] ring-2 ring-copper/25" : "border-line bg-surface hover:border-ink/25"}`}>
+                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${on ? "bg-copper text-ink" : "bg-ink/[0.06] text-muted"}`}>
+                        {on ? <Check size={17} aria-hidden="true" /> : <Icon size={17} aria-hidden="true" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-baseline justify-between gap-2">
+                          <b className="text-sm">{a.name}</b>
+                          <span className="num text-sm font-black">+{money(a.price, data.currency)}<span className="text-xs font-medium text-muted"> / شهر</span></span>
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-muted">{a.description}</span>
+                        {!fits && <span className="mt-2 flex items-center gap-1 text-xs font-bold text-copper-ink"><Lock size={12} aria-hidden="true" /> تحتاج الخطة {a.plans.map(planName).join(" أو ")}، واختيارها ينقلك إليها</span>}
+                        {live?.addons?.includes(a.id) && <Badge tone="success" className="mt-2">مفعّلة الآن</Badge>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
               <SegmentedControl label="المدة" value={months} onChange={setMonths} options={data.periods.map((m) => ({ value: m, label: monthsText(m) }))} />
-              <p className="text-sm">المبلغ المطلوب: <b className="num text-lg">{money(amount, data.currency)}</b> <span className="num text-xs text-muted">{ils(amount)}</span>
-                {months === 12 && data.annual_free_months > 0 && <span className="mr-2 rounded-full bg-copper/15 px-2 py-0.5 text-xs font-bold text-copper-ink">{data.annual_free_months} شهر مجانًا</span>}</p>
+              <div className="text-left">
+                <p className="text-sm">المبلغ المطلوب: <b className="num text-lg">{money(amount, data.currency)}</b> <span className="num text-xs text-muted">{ils(amount)}</span>
+                  {months === 12 && data.annual_free_months > 0 && <span className="mr-2 rounded-full bg-copper/15 px-2 py-0.5 text-xs font-bold text-copper-ink">{data.annual_free_months} شهر مجانًا</span>}</p>
+                <p className="num mt-1 text-xs text-muted">
+                  {[`${selected?.name || planName(plan)} ${money(selected?.price, data.currency)}`, ...chosen.map((a) => `${a.name} ${money(a.price, data.currency)}`)].join(" + ")} = {money(monthly, data.currency)} شهريًا
+                </p>
+              </div>
             </div>
           </Card>
 
@@ -210,7 +287,7 @@ export default function SubscriptionPlanPage() {
             {data.payments.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
                 <span dir="ltr" className="num font-bold">{p.invoice_number}</span>
-                <span>{p.plan_name} · {monthsText(p.months)}</span>
+                <span>{p.plan_label || p.plan_name} · {monthsText(p.months)}</span>
                 <span className="num font-bold">{money(p.amount, p.currency)}</span>
                 <Badge tone={STATUS[p.status]?.[1]} icon={STATUS[p.status]?.[2]}>{STATUS[p.status]?.[0]}</Badge>
               </li>

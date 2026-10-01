@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Support\Audit;
 use App\Support\SubscriptionAccess;
+use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -44,17 +46,29 @@ class AdminController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $v = $r->validate(['plan' => 'required|in:basic,pro,premium']);
+        $v = $r->validate([
+            'plan' => ['required', Rule::in(SubscriptionPlans::acceptedPlans())],
+            'addons' => ['sometimes', 'array', 'max:10'],
+            'addons.*' => ['string', 'distinct', Rule::in(array_keys(SubscriptionPlans::addons()))],
+        ]);
         $u = User::where('role', 'owner')->findOrFail($id);
-        $before = $u->plan;
+        $explicit = array_key_exists('addons', $v);
+        [$plan, $addons] = SubscriptionPlans::normalize($v['plan'], $explicit ? $v['addons'] : ($u->addons ?? []));
+        if (! $explicit) {
+            // Plan changed alone: keep the add-ons the new plan can still take.
+            $addons = array_values(array_filter($addons, fn ($a) => ! SubscriptionPlans::incompatibility($plan, [$a])));
+        } elseif ($conflict = SubscriptionPlans::incompatibility($plan, $addons)) {
+            return response()->json(['message' => $conflict, 'errors' => ['addons' => [$conflict]], 'code' => 'ADDON_NOT_AVAILABLE'], 422);
+        }
+        $before = ['plan' => $u->plan, 'addons' => array_values($u->addons ?? [])];
         // Manual activation after payment: full access is restored immediately.
         $u->forceFill([
-            'plan' => $v['plan'], 'subscription_started_at' => now(), 'subscription_ends_at' => null,
-            'subscription_cancelled_at' => null, 'requested_plan' => null, 'plan_requested_at' => null,
+            'plan' => $plan, 'addons' => $addons, 'subscription_started_at' => now(), 'subscription_ends_at' => null,
+            'subscription_cancelled_at' => null, 'requested_plan' => null, 'requested_addons' => null, 'plan_requested_at' => null,
             'subscription_status' => SubscriptionAccess::ACTIVE,
         ])->save();
-        Audit::log($r, 'admin.plan_changed', 'restaurant', $u->id, ['from' => $before, 'to' => $v['plan']], $u->id);
-        SubscriptionAccess::event('subscription_activated', $u->id, ['plan' => $v['plan'], 'by' => $r->user()->id]);
+        Audit::log($r, 'admin.plan_changed', 'restaurant', $u->id, ['from' => $before['plan'], 'to' => $plan, 'addons_from' => $before['addons'], 'addons_to' => $addons], $u->id);
+        SubscriptionAccess::event('subscription_activated', $u->id, ['plan' => $plan, 'addons' => $addons, 'by' => $r->user()->id]);
 
         return response()->json(['data' => $u->fresh()]);
     }
@@ -114,10 +128,17 @@ class AdminController extends Controller
             'email' => 'required|email|max:255|unique:users,email',
             'restaurant_name' => 'required|string|max:255',
             'restaurant_phone' => 'nullable|string|max:50',
-            'plan' => 'nullable|in:trial,basic,pro,premium',
+            'plan' => ['nullable', Rule::in(['trial', ...SubscriptionPlans::acceptedPlans()])],
+            'addons' => ['sometimes', 'array', 'max:10'],
+            'addons.*' => ['string', 'distinct', Rule::in(array_keys(SubscriptionPlans::addons()))],
             'password' => 'nullable|string|min:8',
         ]);
-        $plan = $v['plan'] ?? 'trial';
+        [$plan, $addons] = SubscriptionPlans::normalize($v['plan'] ?? 'trial', $v['addons'] ?? []);
+        if ($plan === 'trial') {
+            $addons = []; // a trial already includes everything
+        } elseif ($conflict = SubscriptionPlans::incompatibility($plan, $addons)) {
+            return response()->json(['message' => $conflict, 'errors' => ['addons' => [$conflict]], 'code' => 'ADDON_NOT_AVAILABLE'], 422);
+        }
         $password = $v['password'] ?? 'MP-'.Str::upper(Str::random(6)).'-'.random_int(100, 999);
         $now = now();
 
@@ -134,7 +155,10 @@ class AdminController extends Controller
             'trial_ends_at' => $plan === 'trial' ? $now->copy()->addDays(14) : null,
             'subscription_started_at' => $plan === 'trial' ? null : $now,
         ]);
-        Audit::log($r, 'admin.restaurant_created', 'restaurant', $owner->id, ['restaurant' => $owner->restaurant_name, 'plan' => $plan], $owner->id);
+        if ($addons) {
+            $owner->forceFill(['addons' => $addons])->save();
+        }
+        Audit::log($r, 'admin.restaurant_created', 'restaurant', $owner->id, ['restaurant' => $owner->restaurant_name, 'plan' => $plan, 'addons' => $addons], $owner->id);
 
         return response()->json(['data' => ['restaurant' => $owner->fresh(), 'generated_password' => isset($v['password']) ? null : $password]], 201);
     }
@@ -237,13 +261,13 @@ class AdminController extends Controller
         $totalRestaurants = (clone $owners)->count();
         $activeRestaurants = (clone $owners)
             ->where(function ($q) {
-                $q->whereIn('plan', ['basic', 'pro', 'premium'])
+                $q->whereIn('plan', SubscriptionPlans::plans())
                     ->orWhere(function ($trial) {
                         $trial->where('plan', 'trial')->where('trial_ends_at', '>', now());
                     });
             })->count();
         $trialRestaurants = (clone $owners)->where('plan', 'trial')->count();
-        $paidRestaurants = (clone $owners)->whereIn('plan', ['basic', 'pro', 'premium'])->count();
+        $paidRestaurants = (clone $owners)->whereIn('plan', SubscriptionPlans::plans())->count();
 
         $ordersQuery = DB::table('orders')->where('orders.created_at', '>=', $from);
         $totalOrders = (clone $ordersQuery)->count();

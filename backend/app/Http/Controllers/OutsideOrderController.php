@@ -16,7 +16,8 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
- * Ordering from outside the restaurant — pickup and delivery (Premium).
+ * Ordering from outside the restaurant — pickup and delivery (the `delivery`
+ * add-on, on any plan; feature key `online_orders`).
  *
  *   customer: /r/{slug} → cart → checkout (cash on pickup/delivery, or bank
  *             transfer with receipt) → tracking link (order token)
@@ -48,7 +49,7 @@ class OutsideOrderController extends Controller
         return DB::table('online_ordering_settings')->where('user_id', $restaurantId)->first();
     }
 
-    /** Premium (or trial) and not in restricted mode. */
+    /** Delivery add-on (or trial) and not in restricted mode. */
     private function planAllows(User $owner): bool
     {
         return SubscriptionAccess::forOwner($owner)->canOperate() && $owner->hasFeature('online_orders');

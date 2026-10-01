@@ -12,7 +12,7 @@ import { money } from "../../utils/format";
 import { Link as RouterLink } from "react-router-dom";
 import { errorText } from "../../utils/errors";
 import { useAuth } from "../../context/AuthContext";
-import { getSubscriptionPlan } from "../../config/subscriptions";
+import { getSubscriptionPlan, subscriptionOf } from "../../config/subscriptions";
 import Spinner from "../../components/ui/Spinner";
 import Button from "../../components/ui/Button";
 import PageHeader from "../../components/dashboard/PageHeader";
@@ -26,7 +26,7 @@ const fieldClass = "w-full rounded-lg border border-ink/15 px-3 py-2 text-sm tex
 export default function Tables() {
   const [confirm, confirmDialog] = useConfirm();
   const { user } = useAuth();
-  const plan = getSubscriptionPlan(user?.plan);
+  const plan = getSubscriptionPlan(subscriptionOf(user).plan);
   const [tables, setTables] = useState([]);
   const { canOperate } = useSubscription();
   const [statusBusy, setStatusBusy] = useState(null);

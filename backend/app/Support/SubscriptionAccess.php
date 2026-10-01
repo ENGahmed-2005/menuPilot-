@@ -189,7 +189,13 @@ class SubscriptionAccess
             'status' => $this->status(),
             'phase' => $this->phase(),
             'plan' => $o?->plan,
+            'addons' => array_values($o?->addons ?? []),
+            // Gated features usable right now (trial = all). The UI hides what
+            // isn't here; the API checks the same list (User::hasFeature).
+            'features' => $o?->features() ?? [],
+            'monthly_price' => $o && in_array($o->plan, SubscriptionPlans::plans(), true) ? SubscriptionPlans::monthlyPrice($o->plan, $o->addons ?? []) : null,
             'requested_plan' => $o?->requested_plan,
+            'requested_addons' => array_values($o?->requested_addons ?? []),
             'payment_pending' => $o ? DB::table('subscription_payments')->where('user_id', $o->id)->where('status', 'pending')->exists() : false,
             'trial_started_at' => $o?->trial_started_at?->toIso8601String(),
             'trial_ends_at' => $o?->trial_ends_at?->toIso8601String(),

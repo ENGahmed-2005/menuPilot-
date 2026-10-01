@@ -7,7 +7,7 @@ import { ImagePlus, Pencil, Plus, Trash2, UtensilsCrossed, X, Check, Crown } fro
 import { Link } from "react-router-dom";
 import { createMenuItem, deleteMenuItem, getMenuItems, updateMenuItem } from "../../api/menu";
 import { useAuth } from "../../context/AuthContext";
-import { getSubscriptionPlan } from "../../config/subscriptions";
+import { getSubscriptionPlan, subscriptionOf } from "../../config/subscriptions";
 import Input from "../../components/ui/Input";
 import Alert from "../../components/ui/Alert";
 import { SkeletonCards } from "../../components/ui/Skeleton";
@@ -44,7 +44,7 @@ export default function MenuManagement() {
   const { canOperate } = useSubscription();
   const [notice, setNotice] = useState("");
   const { user } = useAuth();
-  const plan = getSubscriptionPlan(user?.plan);
+  const plan = getSubscriptionPlan(subscriptionOf(user).plan);
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);

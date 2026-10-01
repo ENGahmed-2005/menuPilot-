@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Support\SubscriptionAccess;
+use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
@@ -60,14 +62,22 @@ class AccountController extends Controller
 
     public function plan(Request $request)
     {
-        $v = $request->validate(['plan' => 'required|in:basic,pro,premium']);
+        $v = $request->validate([
+            'plan' => ['required', Rule::in(SubscriptionPlans::acceptedPlans())],
+            'addons' => ['sometimes', 'array', 'max:10'],
+            'addons.*' => ['string', 'distinct', Rule::in(array_keys(SubscriptionPlans::addons()))],
+        ]);
+        [$plan, $addons] = SubscriptionPlans::normalize($v['plan'], $v['addons'] ?? []);
+        if ($conflict = SubscriptionPlans::incompatibility($plan, $addons)) {
+            return response()->json(['message' => $conflict, 'errors' => ['addons' => [$conflict]], 'code' => 'ADDON_NOT_AVAILABLE'], 422);
+        }
         $user = $request->user();
 
         // The owner can't switch plans by themselves (that used to activate a
         // paid plan without payment). The choice is recorded; the platform
         // activates it once the payment is confirmed (admin → plan).
-        $user->forceFill(['requested_plan' => $v['plan'], 'plan_requested_at' => now()])->save();
-        SubscriptionAccess::event('subscription_requested', $user->id, ['plan' => $v['plan']]);
+        $user->forceFill(['requested_plan' => $plan, 'requested_addons' => $addons, 'plan_requested_at' => now()])->save();
+        SubscriptionAccess::event('subscription_requested', $user->id, ['plan' => $plan, 'addons' => $addons]);
 
         $fresh = $user->fresh();
         $fresh->setAttribute('subscription', SubscriptionAccess::for($fresh)->toArray());
@@ -107,8 +117,8 @@ class AccountController extends Controller
         if (! $user->hasFeature($requiredFeature)) {
             return response()->json([
                 'message' => $preset === 'custom'
-                    ? 'Custom themes require Premium or an active Trial.'
-                    : 'Theme presets require Pro, Premium, or an active Trial.',
+                    ? 'الألوان المخصصة تحتاج إضافة «الهوية الكاملة» مع الخطة الاحترافية، أو تجربة مجانية سارية.'
+                    : 'الثيمات الجاهزة تحتاج الخطة الاحترافية، أو تجربة مجانية سارية.',
             ], 403);
         }
 

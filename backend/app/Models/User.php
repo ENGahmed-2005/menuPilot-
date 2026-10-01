@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\SubscriptionAccess;
+use App\Support\SubscriptionPlans;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -31,6 +32,8 @@ class User extends Authenticatable
             'subscription_cancelled_at' => 'datetime',
             'plan_requested_at' => 'datetime',
             'subscription_notices' => 'array',
+            'addons' => 'array',
+            'requested_addons' => 'array',
             'password' => 'hashed',
             'theme' => 'array',
             'payment_methods' => 'array',
@@ -95,27 +98,28 @@ class User extends Authenticatable
 
     public function subscriptionActive(): bool
     {
-        return in_array($this->plan, ['basic', 'pro', 'premium'], true)
+        return in_array($this->plan, SubscriptionPlans::plans(), true)
             && (! $this->subscription_ends_at || now()->lt($this->subscription_ends_at));
+    }
+
+    /**
+     * Gated features this restaurant can use right now: everything during a
+     * trial, the plan's and add-ons' features while the subscription runs
+     * (config/subscriptions.php), nothing otherwise.
+     *
+     * @return list<string>
+     */
+    public function features(): array
+    {
+        if ($this->role === 'admin' || $this->trialActive()) {
+            return SubscriptionPlans::allFeatures();
+        }
+
+        return $this->subscriptionActive() ? SubscriptionPlans::features($this->plan, $this->addons ?? []) : [];
     }
 
     public function hasFeature(string $feature): bool
     {
-        if ($this->role === 'admin' || $this->trialActive()) {
-            return true;
-        }
-
-        return match ($feature) {
-            'branding' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
-            'online_orders' => $this->plan === 'premium' && $this->subscriptionActive(),
-            'background' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
-            'full-colors' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
-            'custom-font' => $this->plan === 'premium' && $this->subscriptionActive(),
-            'remove-branding' => $this->plan === 'premium' && $this->subscriptionActive(),
-            'theme-presets' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
-            'custom-theme' => $this->plan === 'premium' && $this->subscriptionActive(),
-            'presets' => in_array($this->plan, ['pro', 'premium'], true) && $this->subscriptionActive(),
-            default => false,
-        };
+        return in_array($feature, $this->features(), true);
     }
 }
