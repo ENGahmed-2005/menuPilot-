@@ -60,7 +60,7 @@ Route::middleware('session.token')->group(function () {
     Route::post('sessions/{id}/request-bill', [BillingController::class, 'request'])->middleware('throttle:10,1');
 });
 
-// Ordering from outside the restaurant (pickup / delivery) — Premium.
+// Ordering from outside the restaurant (pickup / delivery) — delivery add-on.
 Route::get('public/restaurants/{slug}', [OutsideOrderController::class, 'restaurant'])->where('slug', '[a-z0-9-]+');
 Route::post('public/restaurants/{slug}/orders', [OutsideOrderController::class, 'place'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1');
 Route::get('public/outside-orders/{id}', [OutsideOrderController::class, 'track'])->middleware('throttle:60,1');

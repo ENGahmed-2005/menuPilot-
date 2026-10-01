@@ -6,25 +6,40 @@ use App\Models\User;
 use App\Support\Audit;
 use App\Support\MediaStore;
 use App\Support\SubscriptionAccess;
+use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
  * Paying for a plan by bank transfer (Bank of Palestine):
- *   owner picks plan + months → transfers → reports it here (pending) →
- *   is sent to WhatsApp with the invoice → admin verifies → plan ACTIVE
- *   for the paid months. Amounts come from config, never from the client.
+ *   owner picks plan + add-ons + months → transfers → reports it here
+ *   (pending) → is sent to WhatsApp with the invoice → admin verifies → plan
+ *   and add-ons ACTIVE for the paid months. Amounts come from config
+ *   (SubscriptionPlans), never from the client.
  */
 class SubscriptionPaymentController extends Controller
 {
+    /** JSON column from a query-builder row (string) or a model (array). */
+    private static function addonsOf(object $row, string $column = 'addons'): array
+    {
+        $value = $row->{$column} ?? null;
+
+        return array_values(is_string($value) ? (json_decode($value, true) ?: []) : (array) $value);
+    }
+
     private function present(object $p): array
     {
+        $addons = self::addonsOf($p);
+
         return [
             'id' => $p->id,
             'invoice_number' => $p->invoice_number,
             'plan' => $p->plan,
-            'plan_name' => config("subscriptions.plan_names.{$p->plan}", $p->plan),
+            'plan_name' => SubscriptionPlans::planName($p->plan),
+            'addons' => $addons,
+            'addon_names' => SubscriptionPlans::addonNames($addons),
+            'plan_label' => SubscriptionPlans::label($p->plan, $addons),
             'months' => (int) $p->months,
             'amount' => (float) $p->amount,
             'currency' => $p->currency,
@@ -61,7 +76,7 @@ class SubscriptionPaymentController extends Controller
             'أرسلت تحويلًا بنكيًا لتفعيل الاشتراك، هذه تفاصيله:',
             'الفاتورة: '.$p['invoice_number'],
             'المطعم: '.($owner->restaurant_name ?: $owner->name).' (#'.$owner->id.')',
-            'الخطة: '.$p['plan_name'].' — '.$p['months'].($p['months'] === 1 ? ' شهر' : ' أشهر'),
+            'الخطة: '.$p['plan_label'].' — '.$p['months'].($p['months'] === 1 ? ' شهر' : ' أشهر'),
             'المبلغ: '.rtrim(rtrim(number_format($p['amount'], 2, '.', ''), '0'), '.').' '.$p['currency'],
             'البنك: '.$p['bank'],
             'رمز الدفع: '.$p['reference_code'],
@@ -84,7 +99,7 @@ class SubscriptionPaymentController extends Controller
 
         return response()->json(['data' => [
             'subscription' => SubscriptionAccess::for($owner)->sync()->toArray(),
-            'plans' => collect(config('subscriptions.prices'))->map(fn ($price, $id) => ['id' => $id, 'name' => config("subscriptions.plan_names.$id"), 'price' => $price])->values(),
+            ...SubscriptionPlans::catalogue(), // plans + addons
             'currency' => config('subscriptions.currency'),
             'periods' => config('subscriptions.periods'),
             'annual_free_months' => (int) config('subscriptions.annual_free_months', 0),
@@ -102,7 +117,9 @@ class SubscriptionPaymentController extends Controller
     {
         $owner = $request->user();
         $v = $request->validate([
-            'plan' => ['required', Rule::in(config('subscriptions.paid_plans'))],
+            'plan' => ['required', Rule::in(SubscriptionPlans::acceptedPlans())],
+            'addons' => ['sometimes', 'array', 'max:10'],
+            'addons.*' => ['string', 'distinct', Rule::in(array_keys(SubscriptionPlans::addons()))],
             'months' => ['sometimes', 'integer', Rule::in(config('subscriptions.periods'))],
             'transfer_reference' => 'nullable|string|max:80',
             'payer_name' => 'required|string|max:120',
@@ -113,6 +130,11 @@ class SubscriptionPaymentController extends Controller
             'payer_name.required' => 'اكتب اسم صاحب الحساب الذي حوّل المبلغ.',
             'transfer_date.required' => 'حدّد تاريخ التحويل.',
         ]);
+
+        [$plan, $addons] = SubscriptionPlans::normalize($v['plan'], $v['addons'] ?? []);
+        if ($conflict = SubscriptionPlans::incompatibility($plan, $addons)) {
+            return response()->json(['message' => $conflict, 'errors' => ['addons' => [$conflict]], 'code' => 'ADDON_NOT_AVAILABLE'], 422);
+        }
 
         if (DB::table('subscription_payments')->where('user_id', $owner->id)->where('status', 'pending')->exists()) {
             return response()->json(['message' => 'لديك دفعة قيد التحقق بالفعل. سنراجعها ونفعّل الاشتراك فور التأكد.', 'code' => 'PAYMENT_ALREADY_PENDING'], 409);
@@ -127,12 +149,13 @@ class SubscriptionPaymentController extends Controller
         }
 
         $months = (int) ($v['months'] ?? 1);
-        $id = DB::transaction(function () use ($owner, $v, $months, $proofUrl) {
+        $id = DB::transaction(function () use ($owner, $v, $plan, $addons, $months, $proofUrl) {
             $id = DB::table('subscription_payments')->insertGetId([
                 'user_id' => $owner->id,
-                'plan' => $v['plan'],
+                'plan' => $plan,
+                'addons' => json_encode($addons),
                 'months' => $months,
-                'amount' => config("subscriptions.prices.{$v['plan']}") * self::payableMonths($months), // server price
+                'amount' => SubscriptionPlans::monthlyPrice($plan, $addons) * self::payableMonths($months), // server price
                 'currency' => config('subscriptions.currency'),
                 'method' => 'bank_transfer',
                 'bank' => config('subscriptions.bank.name'),
@@ -148,13 +171,13 @@ class SubscriptionPaymentController extends Controller
             ]);
             // Stable platform invoice number derived from the row id (never changes).
             DB::table('subscription_payments')->where('id', $id)->update(['invoice_number' => 'MPS-'.now()->format('Y').'-'.str_pad((string) $id, 6, '0', STR_PAD_LEFT)]);
-            $owner->forceFill(['requested_plan' => $v['plan'], 'plan_requested_at' => now()])->save();
+            $owner->forceFill(['requested_plan' => $plan, 'requested_addons' => $addons, 'plan_requested_at' => now()])->save();
 
             return $id;
         });
 
         $payment = $this->present(DB::table('subscription_payments')->find($id));
-        SubscriptionAccess::event('subscription_payment_submitted', $owner->id, ['payment_id' => $id, 'plan' => $payment['plan'], 'months' => $months, 'amount' => $payment['amount']]);
+        SubscriptionAccess::event('subscription_payment_submitted', $owner->id, ['payment_id' => $id, 'plan' => $payment['plan'], 'addons' => $addons, 'months' => $months, 'amount' => $payment['amount']]);
 
         return response()->json(['data' => $payment + ['whatsapp_url' => $this->whatsappUrl($payment, $owner)]], 201);
     }
@@ -166,16 +189,16 @@ class SubscriptionPaymentController extends Controller
     {
         $status = $request->query('status', 'pending');
         $q = DB::table('subscription_payments as p')->join('users as u', 'u.id', '=', 'p.user_id')
-            ->select('p.*', 'u.restaurant_name', 'u.email', 'u.plan as current_plan')
+            ->select('p.*', 'u.restaurant_name', 'u.email', 'u.plan as current_plan', 'u.addons as current_addons')
             ->orderByDesc('p.id')->limit(200);
         if ($status !== 'all') {
             $q->where('p.status', $status);
         }
 
-        return response()->json(['data' => $q->get()->map(fn ($p) => $this->present($p) + ['restaurant_id' => $p->user_id, 'restaurant_name' => $p->restaurant_name, 'email' => $p->email, 'current_plan' => $p->current_plan])]);
+        return response()->json(['data' => $q->get()->map(fn ($p) => $this->present($p) + ['restaurant_id' => $p->user_id, 'restaurant_name' => $p->restaurant_name, 'email' => $p->email, 'current_plan' => $p->current_plan, 'current_addons' => self::addonsOf($p, 'current_addons')])]);
     }
 
-    /** POST /api/admin/subscription-payments/{id}/verify — activate the plan for the paid months. */
+    /** POST /api/admin/subscription-payments/{id}/verify — activate the plan and add-ons for the paid months. */
     public function verify(Request $request, $id)
     {
         $result = DB::transaction(function () use ($request, $id) {
@@ -187,20 +210,26 @@ class SubscriptionPaymentController extends Controller
                 return response()->json(['message' => 'هذه الدفعة عولجت مسبقًا.', 'code' => 'PAYMENT_ALREADY_REVIEWED'], 409);
             }
             $owner = User::where('role', 'owner')->findOrFail($p->user_id);
-            // Extend from the current paid end if it is still running, else from now.
-            $base = $owner->plan === $p->plan && $owner->subscription_ends_at && $owner->subscription_ends_at->isFuture() ? $owner->subscription_ends_at : now();
+            $addons = self::addonsOf($p);
+            // Same plan and add-ons: a renewal, extended from the current paid end
+            // if it is still running. Any change starts the paid period now.
+            $current = array_values($owner->addons ?? []);
+            $renewal = $owner->plan === $p->plan && collect($current)->sort()->values()->all() === collect($addons)->sort()->values()->all();
+            $base = $renewal && $owner->subscription_ends_at && $owner->subscription_ends_at->isFuture() ? $owner->subscription_ends_at : now();
             $owner->forceFill([
                 'plan' => $p->plan,
+                'addons' => $addons,
                 'subscription_started_at' => $owner->subscription_started_at && $owner->plan === $p->plan ? $owner->subscription_started_at : now(),
                 'subscription_ends_at' => $base->copy()->addMonthsNoOverflow((int) $p->months),
                 'subscription_cancelled_at' => null,
                 'requested_plan' => null,
+                'requested_addons' => null,
                 'plan_requested_at' => null,
                 'subscription_status' => SubscriptionAccess::ACTIVE,
             ])->save();
             DB::table('subscription_payments')->where('id', $id)->update(['status' => 'verified', 'reviewed_by' => $request->user()->id, 'reviewed_at' => now(), 'updated_at' => now()]);
-            Audit::log($request, 'admin.subscription_payment_verified', 'subscription_payment', (int) $id, ['plan' => $p->plan, 'months' => $p->months, 'amount' => $p->amount, 'ends_at' => (string) $owner->subscription_ends_at], $owner->id);
-            SubscriptionAccess::event('subscription_activated', $owner->id, ['plan' => $p->plan, 'payment_id' => (int) $id, 'ends_at' => (string) $owner->subscription_ends_at]);
+            Audit::log($request, 'admin.subscription_payment_verified', 'subscription_payment', (int) $id, ['plan' => $p->plan, 'addons' => $addons, 'months' => $p->months, 'amount' => $p->amount, 'ends_at' => (string) $owner->subscription_ends_at], $owner->id);
+            SubscriptionAccess::event('subscription_activated', $owner->id, ['plan' => $p->plan, 'addons' => $addons, 'payment_id' => (int) $id, 'ends_at' => (string) $owner->subscription_ends_at]);
 
             return null;
         });
@@ -218,7 +247,7 @@ class SubscriptionPaymentController extends Controller
             return response()->json(['message' => 'Payment not found or already reviewed.'], 409);
         }
         $p = DB::table('subscription_payments')->find($id);
-        User::where('id', $p->user_id)->update(['requested_plan' => null, 'plan_requested_at' => null]);
+        User::where('id', $p->user_id)->update(['requested_plan' => null, 'requested_addons' => null, 'plan_requested_at' => null]);
         Audit::log($request, 'admin.subscription_payment_rejected', 'subscription_payment', (int) $id, ['reason' => $v['reason']], $p->user_id);
 
         return response()->json(['data' => $this->present($p)]);

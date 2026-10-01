@@ -7,11 +7,11 @@ uses(RefreshDatabase::class);
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-/** Premium restaurant with online ordering on (pickup + delivery, one zone). */
-function onlineRestaurant($test, string $plan = 'premium'): array
+/** Basic + delivery add-on, online ordering on (pickup + delivery, one zone). */
+function onlineRestaurant($test, string $plan = 'basic', array $addons = ['delivery']): array
 {
     $owner = makeOwner('Zaytoona');
-    DB::table('users')->where('id', $owner['id'])->update(['plan' => $plan, 'subscription_started_at' => now()]);
+    DB::table('users')->where('id', $owner['id'])->update(['plan' => $plan, 'addons' => json_encode($addons), 'subscription_started_at' => now()]);
     $item = makeItem($owner['id'], 20);
     $s = $test->putJson('/api/online-ordering/settings', ['enabled' => true, 'pickup_enabled' => true, 'delivery_enabled' => true, 'slug' => 'zaytoona-'.$owner['id'],
         'zones' => [['name' => 'الرمال', 'fee' => 5, 'min_order' => 30]]], authAs($owner))->assertOk()->json('data');
@@ -99,14 +99,14 @@ it('lets the restaurant reject with a reason the customer sees', function () {
     expect($track['fulfillment_status'])->toBe('rejected')->and($track['rejection_reason'])->toBe('نفد الصنف');
 });
 
-it('only accepts orders when enabled, open, not paused and on Premium', function () {
+it('only accepts orders when enabled, open, not paused and with the delivery add-on', function () {
     $r = onlineRestaurant($this);
     $this->putJson('/api/online-ordering/settings', ['paused' => true], authAs($r))->assertOk();
     placeOrder($this, $r)->assertStatus(409)->assertJsonPath('code', 'ONLINE_ORDERING_CLOSED');
     $this->putJson('/api/online-ordering/settings', ['paused' => false], authAs($r))->assertOk();
     placeOrder($this, $r)->assertCreated();
 
-    $pro = onlineRestaurant($this, 'pro');
+    $pro = onlineRestaurant($this, 'pro', []); // a higher plan alone doesn't include it
     placeOrder($this, $pro)->assertStatus(409);
     expect($this->getJson('/api/online-ordering/settings', authAs($pro))->json('data.plan_allows'))->toBeFalse();
 });

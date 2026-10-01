@@ -119,8 +119,11 @@ it('does not let the owner activate a plan or change trial/status by themselves'
     $owner = registerOwner($this);
     $this->travel(20)->days();
 
-    $res = $this->patchJson('/api/me/plan', ['plan' => 'premium'], authAs($owner))->assertStatus(202)->assertJsonPath('meta.status', 'pending_payment');
-    expect($res->json('data.subscription.status'))->toBe('EXPIRED')->and($res->json('data.requested_plan'))->toBe('premium');
+    $res = $this->patchJson('/api/me/plan', ['plan' => 'pro', 'addons' => ['delivery']], authAs($owner))->assertStatus(202)->assertJsonPath('meta.status', 'pending_payment');
+    expect($res->json('data.subscription.status'))->toBe('EXPIRED')
+        ->and($res->json('data.requested_plan'))->toBe('pro')
+        ->and($res->json('data.requested_addons'))->toBe(['delivery'])
+        ->and($res->json('data.subscription.features'))->toBe([]); // requested ≠ active
     $this->patchJson('/api/me/restaurant', ['restaurant_name' => 'X', 'trial_ends_at' => '2099-01-01', 'plan' => 'premium', 'subscription_status' => 'ACTIVE'], authAs($owner))->assertOk();
 
     $u = User::find($owner['id']);

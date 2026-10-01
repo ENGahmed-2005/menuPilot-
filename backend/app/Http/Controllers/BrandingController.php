@@ -26,7 +26,7 @@ class BrandingController extends Controller
 
         if (! $user->hasFeature('branding')) {
             return response()->json([
-                'message' => 'Branding customization requires an active trial or paid plan.',
+                'message' => 'تخصيص هوية المنيو يحتاج الخطة الاحترافية، أو تجربة مجانية سارية.',
             ], 403);
         }
 
@@ -44,13 +44,13 @@ class BrandingController extends Controller
 
         if (array_key_exists('font_family', $validated) && $validated['font_family'] !== 'system' && ! $user->hasFeature('custom-font')) {
             return response()->json([
-                'message' => 'Custom fonts require Premium or an active Trial.',
+                'message' => 'الخط المخصص يحتاج إضافة «الهوية الكاملة» مع الخطة الاحترافية، أو تجربة مجانية سارية.',
             ], 403);
         }
 
         if (array_key_exists('show_menupilot_branding', $validated) && $validated['show_menupilot_branding'] === false && ! $user->hasFeature('remove-branding')) {
             return response()->json([
-                'message' => 'Removing menuPilot branding requires Premium or an active Trial.',
+                'message' => 'إخفاء شعار menuPilot يحتاج إضافة «الهوية الكاملة» مع الخطة الاحترافية، أو تجربة مجانية سارية.',
             ], 403);
         }
         $settings = $this->settings($user->id);

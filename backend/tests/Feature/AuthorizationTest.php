@@ -205,7 +205,7 @@ it('lets the admin manage owners, and disabling an owner locks out their staff',
     $cashier = makeStaff($owner['id'], 'cashier');
 
     $this->getJson('/api/admin/restaurants', authAs($admin))->assertOk()->assertJsonPath('data.0.id', $owner['id']);
-    $this->patchJson("/api/admin/restaurants/{$owner['id']}/plan", ['plan' => 'premium'], authAs($admin))->assertOk();
+    $this->patchJson("/api/admin/restaurants/{$owner['id']}/plan", ['plan' => 'pro', 'addons' => ['delivery']], authAs($admin))->assertOk();
     $this->patchJson("/api/admin/owners/{$owner['id']}/status", ['active' => false], authAs($admin))->assertOk();
 
     $this->getJson('/api/sessions', authAs($cashier))->assertForbidden()->assertJsonPath('code', 'ACCOUNT_DISABLED');
