@@ -16,24 +16,30 @@ return [
     // Days-remaining milestones that fire a notification event once each.
     'notify_days' => [7, 3, 1],
     // Two plans + paid add-ons (Oct 2026). A restaurant pays its plan plus the
-    // add-ons it picks; nothing it doesn't use.
-    'paid_plans' => ['basic', 'pro'],
+    // add-ons it picks; nothing it doesn't use. A restaurant without tables can
+    // take delivery on its own (delivery_only).
+    'paid_plans' => ['basic', 'pro', 'delivery_only'],
 
     // Prices are decided here (the client never sends an amount). Monthly.
     'currency' => env('SUBSCRIPTION_CURRENCY', 'USD'),
-    'prices' => ['basic' => 15, 'pro' => 29], // approved Sep 2026 (competitor review)
+    'prices' => ['basic' => 15, 'pro' => 29, 'delivery_only' => 15], // basic/pro approved Sep 2026 (competitor review)
     // Paying 12 months at once: 2 months free (pay 10).
     'annual_free_months' => 2,
     // Display-only shekel equivalent next to USD prices.
     'display_ils_rate' => (float) env('SUBSCRIPTION_ILS_RATE', 3.65),
-    'plan_names' => ['basic' => 'الأساسية', 'pro' => 'الاحترافية'],
+    'plan_names' => ['basic' => 'الأساسية', 'pro' => 'الاحترافية', 'delivery_only' => 'التوصيل فقط'],
 
     // Gated features each plan unlocks (operations — menu, tables, QR, orders,
     // kitchen, cashier, staff — are in every plan and are not gated here).
     'plan_features' => [
         'basic' => [],
         'pro' => ['branding', 'background', 'full-colors', 'theme-presets', 'presets'],
+        // Online ordering itself; no tables (see plans_without_dine_in).
+        'delivery_only' => ['online_orders'],
     ],
+
+    // Plans with no tables: no table management, no QR table sessions.
+    'plans_without_dine_in' => ['delivery_only'],
 
     // Monthly add-ons on top of a plan. `plans` = the plans it can be added to.
     // Pro + both add-ons = 49, the old Premium price, with the same features.

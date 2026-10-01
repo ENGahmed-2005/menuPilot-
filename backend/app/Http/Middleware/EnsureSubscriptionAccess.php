@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Support\SubscriptionAccess;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Blocks OPERATIONAL routes when the restaurant is in restricted mode
@@ -22,11 +21,7 @@ class EnsureSubscriptionAccess
 {
     public function handle(Request $request, Closure $next, string $source = 'user')
     {
-        $access = match ($source) {
-            'table' => ($rid = DB::table('restaurant_tables')->where('table_code', $request->route('code'))->value('user_id')) ? SubscriptionAccess::forRestaurant((int) $rid) : null,
-            'session' => ($rid = DB::table('dining_sessions')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('dining_sessions.id', $request->route('id'))->value('restaurant_tables.user_id')) ? SubscriptionAccess::forRestaurant((int) $rid) : null,
-            default => SubscriptionAccess::for($request->user()),
-        };
+        $access = SubscriptionAccess::fromRoute($request, $source);
 
         // Unknown table/session: let the controller answer 404 as usual.
         if (! $access || $access->sync()->canOperate()) {

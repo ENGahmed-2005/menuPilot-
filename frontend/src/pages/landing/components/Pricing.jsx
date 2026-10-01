@@ -8,7 +8,7 @@
    ========================================================================== */
 import { useState } from "react";
 import { Bike, Check, ChevronDown, ChevronUp, Palette } from "lucide-react";
-import { ADDON_ORDER, PLAN_ORDER, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS } from "../../../config/subscriptions";
+import { ADDON_ORDER, MAIN_PLANS, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS } from "../../../config/subscriptions";
 import Reveal from "./Reveal";
 
 const COLLAPSED_COUNT = 4;
@@ -131,6 +131,32 @@ function PlanCard({ id, plan, popular, delay, annual }) {
   );
 }
 
+// A restaurant without tables subscribes to online ordering on its own.
+function DeliveryOnly({ annual }) {
+  const plan = SUBSCRIPTION_PLANS.delivery_only;
+  const includes = ["المنيو الرقمي", "طلبات الاستلام والتوصيل من رابط مطعمك", "مناطق ورسوم توصيل وإدارة السائقين", "شاشة المطبخ والفريق"];
+  return (
+    <Reveal delay={120} className="mx-auto mt-6 max-w-4xl">
+      <article className="flex flex-col gap-5 rounded-2xl border border-[#EEA122]/25 bg-[#F3EFE5]/[.03] p-5 md:flex-row md:items-center">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#EEA122]/15 text-[#EEA122]"><Bike size={22} aria-hidden="true" /></span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base font-black">ما عندك صالة؟ اشترك في {plan.name}</h3>
+          <p className="mt-1 text-xs leading-5 text-[#F3EFE5]/70">{plan.description}</p>
+          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+            {includes.map((item) => (
+              <li key={item} className="flex items-center gap-1.5 text-xs text-[#F3EFE5]/70"><Check size={13} className="shrink-0 text-[#EEA122]" aria-hidden="true" />{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex shrink-0 items-center gap-4 md:flex-col md:items-end md:gap-2">
+          <p className="text-right"><span className="text-2xl font-black">${annual ? plan.price * ANNUAL_PAID_MONTHS : plan.price}</span><span className="text-[11px] text-[#F3EFE5]/70">{annual ? " / سنويًا" : " / شهريًا"}</span></p>
+          <a href="/register?plan=delivery_only" className="rounded-full border border-[#EEA122]/40 px-4 py-2 text-xs font-black text-[#F3EFE5] transition hover:bg-[#EEA122]/10">ابدأ تجربتك المجانية</a>
+        </div>
+      </article>
+    </Reveal>
+  );
+}
+
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
   return (
@@ -158,7 +184,7 @@ export default function Pricing() {
       </Reveal>
 
       <div className="mx-auto mt-10 grid max-w-4xl gap-4 md:grid-cols-2">
-        {PLAN_ORDER.map((id, i) => (
+        {MAIN_PLANS.map((id, i) => (
           <PlanCard
             key={id}
             id={id}
@@ -170,6 +196,8 @@ export default function Pricing() {
         ))}
       </div>
 
+      <DeliveryOnly annual={annual} />
+
       <Reveal delay={160} className="mx-auto mt-10 max-w-4xl">
         <h3 className="text-center text-lg font-black">أضف ما يحتاجه مطعمك فقط</h3>
         <p className="mt-2 text-center text-sm leading-6 text-[#F3EFE5]/70">إضافات شهرية تُضاف إلى أي خطة تناسبها، وتلغيها متى شئت.</p>
@@ -177,7 +205,7 @@ export default function Pricing() {
           {ADDON_ORDER.map((addonId) => {
             const addon = SUBSCRIPTION_ADDONS[addonId];
             const Icon = ADDON_ICONS[addonId];
-            const anyPlan = addon.plans.length === PLAN_ORDER.length;
+            const anyPlan = MAIN_PLANS.every((p) => addon.plans.includes(p));
             return (
               <li key={addonId} className="flex gap-3 rounded-2xl border border-[#F3EFE5]/10 bg-[#F3EFE5]/[.02] p-4">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEA122]/15 text-[#EEA122]"><Icon size={18} aria-hidden="true" /></span>
@@ -196,7 +224,7 @@ export default function Pricing() {
       </Reveal>
 
       <p className="mt-8 text-center text-xs leading-6 text-[#F3EFE5]/70">
-        جميع الخطط تشمل: طلب عبر QR، ومتابعة حية للطلبات، ولوحات للمطبخ والكاشير والنادل. بلا عمولة على الطلبات، وبلا عقود، وإلغاء في أي وقت.
+        الأساسية والاحترافية تشملان: طلب عبر QR من الطاولة، ومتابعة حية للطلبات، ولوحات للمطبخ والكاشير والنادل. بلا عمولة على الطلبات، وبلا عقود، وإلغاء في أي وقت.
       </p>
     </section>
   );

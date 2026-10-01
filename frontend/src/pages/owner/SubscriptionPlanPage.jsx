@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Bike, Check, CheckCircle2, Clock3, Copy, Landmark, Lock, MessageCircle, Palette, Printer, Sparkles, XCircle } from "lucide-react";
-import { ADDON_ORDER, DEFAULT_PLAN, PLAN_ORDER, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS, addonFits, compatibleAddons, hasPlanFeature, normalizePlan, subscriptionOf } from "../../config/subscriptions";
+import { ADDON_ORDER, DEFAULT_PLAN, MAIN_PLANS, PLAN_ORDER, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS, addonFits, addonIncluded, addonsForPlan, hasPlanFeature, normalizePlan, subscriptionOf } from "../../config/subscriptions";
 import { getSubscription, reportTransfer } from "../../api/subscription";
 import { useAuth } from "../../context/AuthContext";
 import { fetchCurrentUser } from "../../api/auth";
@@ -41,13 +41,15 @@ function initialChoice(planId, user, state) {
   let plan = PLAN_ORDER.includes(fromRoute.plan) ? fromRoute.plan : PLAN_ORDER.includes(current.plan) ? current.plan : DEFAULT_PLAN;
   let addons = fromRoute.addons.length ? fromRoute.addons : plan === current.plan ? current.addons : [];
   const wanted = state?.requiredAddon;
-  if (wanted && SUBSCRIPTION_ADDONS[wanted]) {
+  const from = plan;
+  if (wanted && SUBSCRIPTION_ADDONS[wanted] && !addonIncluded(wanted, plan)) {
     if (!addonFits(wanted, plan)) plan = SUBSCRIPTION_ADDONS[wanted].plans.at(-1);
     addons = [...addons, wanted];
-  } else if (state?.requiredFeature && !hasPlanFeature(plan, state.requiredFeature) && hasPlanFeature("pro", state.requiredFeature)) {
-    plan = "pro";
+  } else if (state?.requiredFeature && !hasPlanFeature(plan, state.requiredFeature)) {
+    // The cheapest main plan with the feature (tables → Basic, reports → Pro).
+    plan = MAIN_PLANS.find((p) => hasPlanFeature(p, state.requiredFeature)) || plan;
   }
-  return { plan, addons: compatibleAddons(plan, normalizePlan(plan, addons).addons) };
+  return { plan, addons: addonsForPlan(from, plan, addons) };
 }
 
 function CopyRow({ label, value, onCopy }) {
@@ -110,16 +112,19 @@ export default function SubscriptionPlanPage() {
   const live = data?.subscription?.status === "ACTIVE" ? data.subscription : null;
   const planName = (id) => data?.plans?.find((p) => p.id === id)?.name || SUBSCRIPTION_PLANS[id]?.name || id;
 
-  // Switching plan drops the add-ons it can't take (they show as locked).
+  // Switching plan drops the add-ons it can't take (they show as locked) and
+  // keeps what the old plan included (delivery only → Basic + delivery).
   function setPlan(id) {
     setPlanId(id);
-    setAddons((list) => list.filter((a) => catalogue.find((x) => x.id === a)?.plans.includes(id)));
+    setAddons((list) => addonsForPlan(plan, id, list));
   }
   // Picking an add-on the plan can't take moves to the plan that can.
   function toggleAddon(addon) {
+    if (addonIncluded(addon.id, plan)) return;
     if (addons.includes(addon.id)) return setAddons((list) => list.filter((a) => a !== addon.id));
-    if (!addon.plans.includes(plan)) setPlanId(addon.plans.at(-1));
-    setAddons((list) => ADDON_ORDER.filter((id) => id === addon.id || list.includes(id)));
+    const target = addon.plans.includes(plan) ? plan : addon.plans.at(-1);
+    setPlanId(target);
+    setAddons((list) => addonsForPlan(plan, target, [...list, addon.id]));
   }
   const ils = (v) => (data?.ils_rate ? `≈ ${Math.round(v * data.ils_rate)} ₪` : "");
   const pending = data?.payments?.find((p) => p.status === "pending");
@@ -193,7 +198,7 @@ export default function SubscriptionPlanPage() {
         <>
           <Card>
             <CardHeader title="1. اختر الخطة والإضافات والمدة" description="ادفع على قدر احتياجك: خطة واحدة، وأضف إليها ما يستخدمه مطعمك فقط." />
-            <div className="grid gap-3 p-5 sm:grid-cols-2">
+            <div className="grid gap-3 p-5 sm:grid-cols-3">
               {data.plans.map((p) => (
                 <button key={p.id} type="button" onClick={() => setPlan(p.id)} aria-pressed={plan === p.id}
                   className={`rounded-2xl border p-4 text-right transition-colors ${plan === p.id ? "border-copper bg-copper/[0.07] ring-2 ring-copper/25" : "border-line bg-surface hover:border-ink/25"}`}>
@@ -209,19 +214,22 @@ export default function SubscriptionPlanPage() {
               <legend className="text-sm font-extrabold">الإضافات <span className="font-medium text-muted">اختيارية، وتُضاف إلى السعر الشهري</span></legend>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {catalogue.map((a) => {
-                  const on = addons.includes(a.id);
-                  const fits = a.plans.includes(plan);
+                  const included = addonIncluded(a.id, plan);
+                  const on = included || addons.includes(a.id);
+                  const fits = a.plans.includes(plan) || included;
                   const Icon = ADDON_ICONS[a.id] || Sparkles;
                   return (
-                    <button key={a.id} type="button" onClick={() => toggleAddon(a)} aria-pressed={on}
-                      className={`flex gap-3 rounded-2xl border p-4 text-right transition-colors ${on ? "border-copper bg-copper/[0.07] ring-2 ring-copper/25" : "border-line bg-surface hover:border-ink/25"}`}>
+                    <button key={a.id} type="button" onClick={() => toggleAddon(a)} aria-pressed={on} disabled={included}
+                      className={`flex gap-3 rounded-2xl border p-4 text-right transition-colors disabled:cursor-default ${on ? "border-copper bg-copper/[0.07] ring-2 ring-copper/25" : "border-line bg-surface hover:border-ink/25"}`}>
                       <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${on ? "bg-copper text-ink" : "bg-ink/[0.06] text-muted"}`}>
                         {on ? <Check size={17} aria-hidden="true" /> : <Icon size={17} aria-hidden="true" />}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-baseline justify-between gap-2">
                           <b className="text-sm">{a.name}</b>
-                          <span className="num text-sm font-black">+{money(a.price, data.currency)}<span className="text-xs font-medium text-muted"> / شهر</span></span>
+                          {included
+                            ? <span className="text-xs font-bold text-copper-ink">مشمولة في «{planName(plan)}»</span>
+                            : <span className="num text-sm font-black">+{money(a.price, data.currency)}<span className="text-xs font-medium text-muted"> / شهر</span></span>}
                         </span>
                         <span className="mt-1 block text-xs leading-5 text-muted">{a.description}</span>
                         {!fits && <span className="mt-2 flex items-center gap-1 text-xs font-bold text-copper-ink"><Lock size={12} aria-hidden="true" /> تحتاج الخطة {a.plans.map(planName).join(" أو ")}، واختيارها ينقلك إليها</span>}

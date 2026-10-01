@@ -42,10 +42,11 @@ function addonReport($test, array $owner, array $body)
     return $test->postJson('/api/subscription/payments', $body + ['payer_name' => 'Ahmed', 'transfer_date' => now()->toDateString()], authAs($owner));
 }
 
-it('lists two plans and the add-ons with server prices', function () {
+it('lists the plans and the add-ons with server prices', function () {
     $data = $this->getJson('/api/subscription', authAs(addonTrialOwner($this)))->assertOk()->json('data');
 
-    expect(collect($data['plans'])->pluck('price', 'id')->all())->toBe(['basic' => 15, 'pro' => 29])
+    expect(collect($data['plans'])->pluck('price', 'id')->all())->toBe(['basic' => 15, 'pro' => 29, 'delivery_only' => 15])
+        ->and(collect($data['plans'])->pluck('dine_in', 'id')->all())->toBe(['basic' => true, 'pro' => true, 'delivery_only' => false])
         ->and(collect($data['addons'])->pluck('price', 'id')->all())->toBe(['delivery' => 15, 'brand_plus' => 5])
         ->and(collect($data['addons'])->firstWhere('id', 'brand_plus')['plans'])->toBe(['pro'])
         ->and(collect($data['addons'])->firstWhere('id', 'delivery')['plans'])->toBe(['basic', 'pro']);
@@ -183,4 +184,55 @@ it('migrates Premium restaurants to Pro + both add-ons without changing their da
     expect(User::find($staff['id'])->plan)->toBe('pro');
     expect(User::find($requested['id']))->requested_plan->toBe('pro')->requested_addons->toBe(['delivery', 'brand_plus']);
     expect(DB::table('subscription_payments')->where('plan', 'premium')->count())->toBe(0);
+});
+
+// ── Delivery only: a restaurant without tables takes online ordering alone ──
+
+it('sells delivery alone at 15 and never charges the included delivery add-on again', function () {
+    $owner = addonTrialOwner($this);
+    $p = addonReport($this, $owner, ['plan' => 'delivery_only', 'addons' => ['delivery'], 'months' => 3])->assertCreated()->json('data');
+
+    expect((float) $p['amount'])->toBe(45.0) // 15 × 3, the add-on is already included
+        ->and($p['addons'])->toBe([])
+        ->and($p['plan_label'])->toBe('التوصيل فقط');
+    addonReport($this, addonTrialOwner($this), ['plan' => 'delivery_only', 'addons' => ['brand_plus']])
+        ->assertStatus(422)->assertJsonPath('code', 'ADDON_NOT_AVAILABLE');
+});
+
+it('lets a delivery-only restaurant receive online orders', function () {
+    $owner = addonPaidOwner('delivery_only');
+    $item = makeItem($owner['id'], 20);
+    $slug = 'only-'.$owner['id'];
+    $this->putJson('/api/online-ordering/settings', ['enabled' => true, 'pickup_enabled' => true, 'delivery_enabled' => false, 'slug' => $slug], authAs($owner))->assertOk();
+
+    $sub = $this->getJson('/api/auth/me', authAs($owner))->json('data.subscription');
+    expect($sub)->toMatchArray(['plan' => 'delivery_only', 'features' => ['online_orders'], 'dine_in' => false, 'monthly_price' => 15]);
+    expect($this->getJson('/api/online-ordering/settings', authAs($owner))->json('data.plan_allows'))->toBeTrue();
+    $this->postJson("/api/public/restaurants/{$slug}/orders", ['type' => 'pickup', 'name' => 'سارة', 'phone' => '0599 123 456', 'payment_method' => 'cash',
+        'items' => [['menuItemId' => $item, 'quantity' => 1]]])->assertCreated();
+});
+
+it('blocks tables and table sessions on delivery only, but not on Basic or during a trial', function () {
+    $only = addonPaidOwner('delivery_only');
+    $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs($only))->assertForbidden()->assertJsonPath('code', 'DINE_IN_NOT_IN_PLAN');
+    // A table left from an earlier plan can't start a QR session.
+    $old = makeTable($only['id']);
+    $this->postJson("/api/public/tables/{$old->table_code}/sessions", ['name' => 'Sara', 'phone' => '0599000000', 'latitude' => 31.5, 'longitude' => 34.46])
+        ->assertForbidden()->assertJsonPath('code', 'DINE_IN_NOT_IN_PLAN');
+
+    $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs(addonPaidOwner('basic')))->assertCreated();
+    $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs(addonTrialOwner($this)))->assertCreated();
+    expect($this->getJson('/api/auth/me', authAs(addonPaidOwner('basic')))->json('data.subscription.dine_in'))->toBeTrue();
+});
+
+it('moves between delivery only and a plan with the delivery add-on', function () {
+    $admin = addonAdmin();
+    $owner = addonPaidOwner('basic', ['delivery']);
+
+    $this->patchJson("/api/admin/restaurants/{$owner['id']}/plan", ['plan' => 'delivery_only'], authAs($admin))->assertOk();
+    $u = User::find($owner['id']);
+    expect($u->plan)->toBe('delivery_only')->and($u->addons)->toBe([])->and($u->hasFeature('online_orders'))->toBeTrue();
+
+    $this->patchJson("/api/admin/restaurants/{$owner['id']}/plan", ['plan' => 'basic', 'addons' => ['delivery']], authAs($admin))->assertOk();
+    expect(User::find($owner['id']))->addons->toBe(['delivery']);
 });

@@ -37,7 +37,7 @@ Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
 // SRS-compatible public QR menu endpoint. Alias of the table-code menu route.
 Route::get('menu/{table_token}', [MenuController::class, 'publicMenu']);
 // New table sessions stop in restricted mode (trial ended / subscription stopped).
-Route::post('public/tables/{code}/sessions', [SessionController::class, 'open'])->middleware('subscription:table');
+Route::post('public/tables/{code}/sessions', [SessionController::class, 'open'])->middleware(['subscription:table', 'dine_in:table']);
 // Customer (no login) session endpoints. They require the session secret
 // issued when the QR session opens (X-Session-Token header, or ?token= for SSE).
 Route::middleware('session.token')->group(function () {
@@ -87,7 +87,8 @@ Route::middleware('api.auth')->group(function () {
         });
     });
     Route::middleware('permission:manage_tables')->group(function () {
-        Route::middleware('subscription')->group(function () {
+        // No tables on delivery_only (dine_in).
+        Route::middleware(['subscription', 'dine_in'])->group(function () {
             Route::apiResource('tables', TableController::class)->except(['show', 'create', 'index']);
             Route::get('tables/{id}/qr', [TableController::class, 'qr']);
             Route::patch('tables/{id}/status', [TableController::class, 'updateStatus']);

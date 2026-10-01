@@ -21,7 +21,7 @@ import { errorText } from "../../utils/errors";
 import AddonToggles from "../../components/subscription/AddonToggles";
 import { SUBSCRIPTION_ADDONS } from "../../config/subscriptions";
 
-const PLANS = [["trial", "تجربة مجانية"], ["basic", "Basic"], ["pro", "Pro"]];
+const PLANS = [["trial", "تجربة مجانية"], ["basic", "Basic"], ["pro", "Pro"], ["delivery_only", "التوصيل فقط"]];
 const PLAN_LABEL = Object.fromEntries(PLANS);
 const EMPTY = { name: "", email: "", restaurant_name: "", restaurant_phone: "", plan: "trial" };
 const dateLabel = (iso) => (iso ? new Date(iso).toLocaleDateString("ar-PS-u-nu-latn", { day: "numeric", month: "short", year: "numeric" }) : "—");
