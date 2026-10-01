@@ -6,9 +6,10 @@ namespace App\Support;
  * Plans and add-ons — the single source of truth for what a subscription
  * contains and costs (config/subscriptions.php, docs/SUBSCRIPTIONS.md).
  *
- *  plan     → basic | pro
+ *  plan     → basic | pro | delivery_only (online ordering alone, no tables)
  *  add-ons  → a list of ids from subscriptions.addons, each allowed only on
- *             the plans it lists (e.g. brand_plus needs pro)
+ *             the plans it lists (e.g. brand_plus needs pro); an add-on the
+ *             plan already includes (delivery on delivery_only) is dropped
  *  price    → (plan price + add-on prices) per month, decided here only
  *
  * Retired plans (premium) are mapped to plan + add-ons so old clients and old
@@ -36,7 +37,8 @@ class SubscriptionPlans
 
     /**
      * Map a retired plan to its replacement and clean the add-on list:
-     * known ids only, no duplicates, in catalogue order.
+     * known ids only, no duplicates, in catalogue order, and none the plan
+     * already includes (never charged twice).
      *
      * @return array{0: string, 1: list<string>}
      */
@@ -48,8 +50,23 @@ class SubscriptionPlans
             $addons = [...$addons, ...$legacy['addons']];
         }
         $known = array_keys(self::addons());
+        $addons = array_filter(array_intersect($known, $addons), fn ($id) => ! self::includes($plan, $id));
 
-        return [$plan, array_values(array_intersect($known, $addons))];
+        return [$plan, array_values($addons)];
+    }
+
+    /** Does the plan already contain everything the add-on gives? */
+    public static function includes(string $plan, string $addonId): bool
+    {
+        $addonFeatures = self::addons()[$addonId]['features'] ?? [];
+
+        return $addonFeatures && ! array_diff($addonFeatures, config("subscriptions.plan_features.$plan", []));
+    }
+
+    /** Tables and QR table sessions. Trials and unknown plans keep them. */
+    public static function allowsDineIn(?string $plan): bool
+    {
+        return ! in_array($plan, config('subscriptions.plans_without_dine_in', []), true);
     }
 
     /** Arabic message for the first add-on the plan can't take, or null when all fit. */
@@ -129,6 +146,7 @@ class SubscriptionPlans
                 'id' => $id,
                 'name' => self::planName($id),
                 'price' => config("subscriptions.prices.$id"),
+                'dine_in' => self::allowsDineIn($id),
             ])->values()->all(),
             'addons' => collect(self::addons())->map(fn ($a, $id) => [
                 'id' => $id,

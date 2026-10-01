@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ApiAuth;
 use App\Http\Middleware\Cors;
+use App\Http\Middleware\EnsureDineIn;
 use App\Http\Middleware\EnsureSessionToken;
 use App\Http\Middleware\EnsureSubscriptionAccess;
 use App\Http\Middleware\PermissionAccess;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionAccess::class,
             'session.token' => EnsureSessionToken::class,
             'subscription' => EnsureSubscriptionAccess::class,
+            'dine_in' => EnsureDineIn::class,
         ]);
         $middleware->append(Cors::class);
     })

@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Events\SubscriptionLifecycleEvent;
 use App\Models\Staff;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -57,6 +58,28 @@ class SubscriptionAccess
     public static function forRestaurant(int $restaurantId): self
     {
         return new self(User::where('role', 'owner')->find($restaurantId));
+    }
+
+    /**
+     * Restaurant behind a request, for route middleware:
+     *   user     the authenticated user's restaurant (owner or staff)
+     *   table    customer route with {code} (table code)
+     *   session  customer route with {id} (dining session)
+     * Null when the table/session doesn't exist (the controller answers 404).
+     */
+    public static function fromRoute(Request $request, string $source = 'user'): ?self
+    {
+        return match ($source) {
+            'table' => ($rid = DB::table('restaurant_tables')->where('table_code', $request->route('code'))->value('user_id')) ? self::forRestaurant((int) $rid) : null,
+            'session' => ($rid = DB::table('dining_sessions')->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')->where('dining_sessions.id', $request->route('id'))->value('restaurant_tables.user_id')) ? self::forRestaurant((int) $rid) : null,
+            default => self::for($request->user()),
+        };
+    }
+
+    /** Does the plan include tables and QR table sessions? (not delivery_only) */
+    public function allowsDineIn(): bool
+    {
+        return SubscriptionPlans::allowsDineIn($this->owner?->plan);
     }
 
     public function owner(): ?User
@@ -193,6 +216,7 @@ class SubscriptionAccess
             // Gated features usable right now (trial = all). The UI hides what
             // isn't here; the API checks the same list (User::hasFeature).
             'features' => $o?->features() ?? [],
+            'dine_in' => $this->allowsDineIn(),
             'monthly_price' => $o && in_array($o->plan, SubscriptionPlans::plans(), true) ? SubscriptionPlans::monthlyPrice($o->plan, $o->addons ?? []) : null,
             'requested_plan' => $o?->requested_plan,
             'requested_addons' => array_values($o?->requested_addons ?? []),
