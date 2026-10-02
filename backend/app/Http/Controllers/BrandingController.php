@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\RestaurantSetting;
 use App\Support\MediaStore;
+use App\Support\MenuStyle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class BrandingController extends Controller
 {
@@ -55,6 +57,19 @@ class BrandingController extends Controller
         }
         $settings = $this->settings($user->id);
 
+        // menu_style arrives as JSON text from a multipart form, or as an object.
+        if ($request->has('menu_style')) {
+            $raw = $request->input('menu_style');
+            $style = is_string($raw) ? json_decode($raw, true) : $raw;
+            Validator::make(['menu_style' => is_array($style) ? $style : null], MenuStyle::rules(), [
+                'menu_style.required' => 'شكل المنيو غير صالح.',
+                'menu_style.*.in' => 'هذا الخيار غير متاح لشكل المنيو.',
+                'menu_style.*.regex' => 'اللون يجب أن يكون بصيغة ‎#RRGGBB.',
+                'menu_style.tagline.max' => 'العبارة التعريفية يجب ألا تتجاوز 80 حرفاً.',
+            ])->validate();
+            $validated['menu_style'] = MenuStyle::merge($settings->menu_style, $style);
+        }
+
         foreach (['logo' => 'logo_url', 'background' => 'background_url'] as $file => $column) {
             if ($request->hasFile($file)) {
                 $old = $settings->{$column};
@@ -88,6 +103,7 @@ class BrandingController extends Controller
             'card_style' => 'rounded',
             'font_family' => 'system',
             'show_menupilot_branding' => true,
+            'menu_style' => null,
         ]);
 
         return response()->json(['data' => $settings->fresh()]);
