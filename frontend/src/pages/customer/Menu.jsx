@@ -2,12 +2,13 @@
    Menu.jsx — the customer's QR menu (route /t/:tableCode/menu).
    --------------------------------------------------------------------------
    Mobile-first, like a delivery app:
-     compact restaurant header → sticky search + category chips →
-     products grouped by category (image, name, description, price) →
+     restaurant header → sticky search + category chips (tap = jump to the
+     category, the one in view lights up) → dishes grouped by category →
      product sheet (big image, quantity, note for the kitchen) →
      floating cart bar with count and total.
-   The restaurant's branding (colours, logo, cover, card style, font) is
-   applied on top. Product images come from item.imageUrl (the API field);
+   The restaurant's branding (colours, logo, cover, card style, font) and
+   menu style (layout, header, logo shape, chips… components/menu/menuStyle)
+   are applied on top. Product images come from item.imageUrl (the API field);
    a broken or missing image falls back to a tinted placeholder.
    ========================================================================== */
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +21,8 @@ import { getThemePreset } from "../../config/themes";
 import Modal from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { money } from "../../utils/format";
+import MenuItemCard from "../../components/menu/MenuItemCard";
+import { DEFAULT_TAGLINE, cardRadius, logoRadius, resolveMenuStyle } from "../../components/menu/menuStyle";
 
 const ALL = "الكل";
 const FALLBACK = {
@@ -96,14 +99,19 @@ export default function Menu() {
     return () => { cancelled = true; };
   }, [tableCode]);
 
-  const brand = useMemo(() => ({ ...FALLBACK, ...themeColors(restaurant?.theme), ...(restaurant?.branding || {}) }), [restaurant]);
-  const radius = brand.card_style === "square" ? "10px" : brand.card_style === "soft" ? "18px" : "22px";
+  const style = useMemo(() => resolveMenuStyle(restaurant?.branding), [restaurant]);
+  const brand = useMemo(() => {
+    const b = { ...FALLBACK, ...themeColors(restaurant?.theme), ...(restaurant?.branding || {}) };
+    return style.background_color ? { ...b, background_color: style.background_color } : b;
+  }, [restaurant, style]);
+  const radius = cardRadius(brand.card_style);
 
   const categories = useMemo(() => [ALL, ...new Set(menuItems.map((i) => i.category).filter(Boolean))], [menuItems]);
+  // Search filters; categories are a table of contents (tap = jump, scroll = highlight).
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return menuItems.filter((i) => (activeCategory === ALL || i.category === activeCategory) && (!q || `${i.name} ${i.description || ""}`.toLowerCase().includes(q)));
-  }, [menuItems, query, activeCategory]);
+    return menuItems.filter((i) => !q || `${i.name} ${i.description || ""}`.toLowerCase().includes(q));
+  }, [menuItems, query]);
   // "الكل" shows the menu grouped by category, in the owner's order.
   const sections = useMemo(() => {
     const groups = new Map();
@@ -120,11 +128,36 @@ export default function Menu() {
   const withSession = (path) => `${path}${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`;
   const restaurantName = restaurant?.name || "مطعمك المفضل";
   const tableLabel = table?.label ? `طاولة ${table.label}` : "طاولتك";
+  const sectionId = (category) => `cat-${categories.indexOf(category)}`;
+  const chipsBar = useRef(null);
 
   function chooseCategory(category) {
+    const target = category === ALL ? listTop.current : document.getElementById(sectionId(category));
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    target?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
     setActiveCategory(category);
-    listTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  // The category in view lights up, and its chip scrolls into the bar.
+  useEffect(() => {
+    let frame = 0;
+    const spy = () => {
+      frame = 0;
+      const line = (chipsBar.current?.getBoundingClientRect().bottom || 0) + 12;
+      let current = ALL;
+      sections.forEach(([category]) => {
+        const el = document.getElementById(sectionId(category));
+        if (el && el.getBoundingClientRect().top <= line) current = category;
+      });
+      setActiveCategory(current);
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(spy); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", onScroll); };
+  }, [sections]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    chipsBar.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeCategory]);
 
   function quickAdd(item) {
     addItem(item, 1, "");
@@ -166,46 +199,54 @@ export default function Menu() {
     <div dir="rtl" className={`min-h-screen ${cartCount ? "pb-28" : "pb-10"}`}
       style={{ color: brand.text_color, backgroundColor: brand.background_color, fontFamily: brand.font_family && brand.font_family !== "system" ? brand.font_family : undefined }}>
 
-      {/* ── Restaurant header ─────────────────────────────────────────── */}
-      <header className="relative text-white" style={{ backgroundColor: brand.primary_color }}>
-        {brand.background_url && <img src={brand.background_url} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60" aria-hidden="true" />
-        <div className="relative mx-auto max-w-3xl px-4 pb-6 pt-4">
-          <div className="flex items-center justify-between">
-            <button onClick={() => navigate(-1)} aria-label="رجوع" className="grid h-11 w-11 place-items-center rounded-full bg-black/25 backdrop-blur"><ArrowRight size={20} aria-hidden="true" /></button>
-            <button onClick={() => navigate(withSession(`/t/${tableCode}/cart`))} aria-label={cartCount ? `السلة، ${cartCount} عناصر` : "السلة فارغة"} className="relative grid h-11 w-11 place-items-center rounded-full bg-black/25 backdrop-blur">
-              <ShoppingBag size={20} aria-hidden="true" />
-              {cartCount > 0 && <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-white px-1 text-xs font-black" style={{ color: brand.primary_color }}>{cartCount}</span>}
-            </button>
-          </div>
-          <div className="mt-8 flex items-end gap-4">
-            <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-lg">
-              {brand.logo_url ? <img src={brand.logo_url} alt={restaurantName} className="h-full w-full object-cover" /> : <Utensils size={26} style={{ color: brand.primary_color }} aria-hidden="true" />}
+      {/* ── Restaurant header: cover, solid band, or minimal ───────────── */}
+      {(() => {
+        const minimal = style.header === "minimal";
+        const cover = style.header === "cover";
+        const roundBtn = `grid h-11 w-11 place-items-center rounded-full ${minimal ? "bg-black/[0.05]" : "bg-black/25 backdrop-blur"}`;
+        return (
+          <header className={`relative ${minimal ? "" : "text-white"}`} style={minimal ? undefined : { backgroundColor: brand.primary_color }}>
+            {cover && brand.background_url && <img src={brand.background_url} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
+            {cover && <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60" aria-hidden="true" />}
+            <div className={`relative mx-auto max-w-3xl px-4 pt-4 ${cover ? "pb-6" : "pb-4"}`}>
+              <div className="flex items-center justify-between">
+                <button onClick={() => navigate(-1)} aria-label="رجوع" className={roundBtn}><ArrowRight size={20} aria-hidden="true" /></button>
+                <button onClick={() => navigate(withSession(`/t/${tableCode}/cart`))} aria-label={cartCount ? `السلة، ${cartCount} عناصر` : "السلة فارغة"} className={`relative ${roundBtn}`}>
+                  <ShoppingBag size={20} aria-hidden="true" />
+                  {cartCount > 0 && <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-black" style={minimal ? { background: brand.primary_color, color: "#fff" } : { background: "#fff", color: brand.primary_color }}>{cartCount}</span>}
+                </button>
+              </div>
+              <div className={`flex items-end gap-4 ${cover ? "mt-8" : "mt-3"}`}>
+                <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden bg-white shadow-lg" style={{ borderRadius: logoRadius(style.logo_shape) }}>
+                  {brand.logo_url ? <img src={brand.logo_url} alt={restaurantName} className="h-full w-full object-cover" /> : <Utensils size={26} style={{ color: brand.primary_color }} aria-hidden="true" />}
+                </div>
+                <div className="min-w-0 pb-0.5">
+                  <h1 className={`truncate text-2xl font-black leading-tight ${minimal ? "" : "drop-shadow-sm"}`}>{restaurantName}</h1>
+                  <p className={`mt-1 text-sm font-bold ${minimal ? "opacity-70" : "text-white/85"}`}>{tableLabel} · {style.tagline || DEFAULT_TAGLINE}</p>
+                </div>
+              </div>
             </div>
-            <div className="min-w-0 pb-0.5">
-              <h1 className="truncate text-2xl font-black leading-tight drop-shadow-sm">{restaurantName}</h1>
-              <p className="mt-1 text-sm font-bold text-white/85">{tableLabel} · اطلب من هاتفك مباشرة</p>
-            </div>
-          </div>
-        </div>
-      </header>
+          </header>
+        );
+      })()}
 
       {/* ── Sticky search + categories ────────────────────────────────── */}
-      <div className="sticky top-0 z-30 border-b border-black/5 backdrop-blur" style={{ backgroundColor: `${brand.background_color}f0` }}>
+      <div ref={chipsBar} className="sticky top-0 z-30 border-b border-black/5 backdrop-blur" style={{ backgroundColor: `${brand.background_color}f0` }}>
         <div className="mx-auto max-w-3xl px-4 pt-3">
-          <label className="flex h-12 items-center gap-3 rounded-2xl bg-white px-4 text-ink shadow-sm ring-1 ring-black/5">
+          <label className="flex h-12 items-center gap-3 rounded-2xl px-4 text-ink shadow-sm ring-1 ring-black/5" style={{ background: style.surface_color }}>
             <Search size={18} className="shrink-0 opacity-60" aria-hidden="true" />
             <span className="sr-only">ابحث في المنيو</span>
             <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث عن طبق أو مشروب…" className="min-w-0 flex-1 bg-transparent text-[15px] outline-none" />
             {query && <button onClick={() => setQuery("")} aria-label="مسح البحث" className="-m-2 grid h-9 w-9 place-items-center rounded-full"><X size={16} aria-hidden="true" /></button>}
           </label>
-          <nav aria-label="تصنيفات المنيو" className="-mx-4 flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <nav aria-label="تصنيفات المنيو" className={`-mx-4 flex overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${style.chips === "underline" ? "gap-5 pt-2" : "gap-2 py-3"}`}>
             {categories.map((category) => {
               const active = activeCategory === category;
+              const look = style.chips === "underline"
+                ? { className: "h-11 shrink-0 whitespace-nowrap border-b-[3px] text-sm font-bold transition-colors", style: { borderColor: active ? brand.primary_color : "transparent", color: active ? brand.primary_color : brand.text_color, opacity: active ? 1 : 0.75 } }
+                : { className: "h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-bold transition-colors", style: active ? { background: brand.primary_color, color: "#fff" } : { background: style.surface_color, color: brand.text_color, boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.08)" } };
               return (
-                <button key={category} onClick={() => chooseCategory(category)} aria-pressed={active}
-                  className="h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-bold transition-colors"
-                  style={active ? { background: brand.primary_color, color: "#fff" } : { background: "#fff", color: brand.text_color, boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.08)" }}>
+                <button key={category} onClick={() => chooseCategory(category)} aria-current={active ? "true" : undefined} className={look.className} style={look.style}>
                   {category}
                 </button>
               );
@@ -231,45 +272,33 @@ export default function Menu() {
         ) : visible.length === 0 ? (
           <div className="mt-10 rounded-3xl bg-white px-6 py-12 text-center shadow-sm">
             <Search className="mx-auto opacity-40" size={28} aria-hidden="true" />
-            <p className="mt-3 text-base font-bold">{query ? `لا توجد نتائج لـ «${query}»` : "لا توجد أصناف في هذا التصنيف"}</p>
-            <button onClick={() => { setQuery(""); setActiveCategory(ALL); }} className="mt-4 h-11 rounded-2xl px-5 text-sm font-bold ring-1 ring-black/10">عرض كل المنيو</button>
+            <p className="mt-3 text-base font-bold">لا توجد نتائج لـ «{query}»</p>
+            <button onClick={() => setQuery("")} className="mt-4 h-11 rounded-2xl px-5 text-sm font-bold ring-1 ring-black/10">عرض كل المنيو</button>
           </div>
         ) : (
-          sections.map(([category, list]) => (
-            <section key={category} className="mt-6" aria-labelledby={`cat-${category}`}>
-              <h2 id={`cat-${category}`} className="mb-3 flex items-baseline gap-2 text-lg font-black">
-                {category} <span className="text-xs font-bold opacity-50">{list.length}</span>
-              </h2>
-              <ul className="grid gap-3 md:grid-cols-2">
-                {list.map((item) => {
-                  const count = inCart(item.id);
-                  return (
+          sections.map(([category, list]) => {
+            const listClass = {
+              compact: "grid gap-2.5 md:grid-cols-2",
+              photo: "grid gap-4 sm:grid-cols-2",
+              grid: "grid grid-cols-2 gap-3 md:grid-cols-3",
+              text: "divide-y divide-black/[0.06] overflow-hidden shadow-sm ring-1 ring-black/5",
+            }[style.layout] || "grid gap-2.5 md:grid-cols-2";
+            return (
+              <section key={category} id={sectionId(category)} className="mt-6" style={{ scrollMarginTop: "8.5rem" }} aria-labelledby={`${sectionId(category)}-title`}>
+                <h2 id={`${sectionId(category)}-title`} className="mb-3 flex items-baseline gap-2 text-lg font-black">
+                  {category} <span className="text-xs font-bold opacity-50">{list.length}</span>
+                </h2>
+                <ul className={listClass} style={style.layout === "text" ? { background: style.surface_color, borderRadius: radius } : undefined}>
+                  {list.map((item) => (
                     <li key={item.id}>
-                      <div className="group relative flex h-full gap-3 bg-white p-3 shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md" style={{ borderRadius: radius }}>
-                        <button type="button" onClick={() => setSheet({ item, quantity: 1, note: "" })} className="absolute inset-0 z-0" style={{ borderRadius: radius }} aria-label={`تفاصيل ${item.name}`} />
-                        <div className="pointer-events-none relative shrink-0">
-                          <MenuImage src={item.imageUrl} alt={item.name} tint={brand.primary_color} className="h-28 w-28" />
-                          {count > 0 && <span className="absolute right-1.5 top-1.5 rounded-full bg-black/70 px-2 py-0.5 text-xs font-black text-white">×{count}</span>}
-                        </div>
-                        <div className="relative z-0 flex min-w-0 flex-1 flex-col pointer-events-none">
-                          <h3 className="line-clamp-2 text-[15px] font-black leading-6">{item.name}</h3>
-                          {item.description && <p className="mt-1 line-clamp-2 text-[13px] leading-5 opacity-70">{item.description}</p>}
-                          <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                            <span className="text-base font-black tabular-nums" style={{ color: brand.primary_color }}>{money(item.price)}</span>
-                          </div>
-                        </div>
-                        <button type="button" onClick={() => quickAdd(item)} aria-label={`إضافة ${item.name} إلى السلة`}
-                          className="absolute bottom-3 left-3 z-10 grid h-10 w-10 place-items-center rounded-full text-white shadow-md transition-transform active:scale-90"
-                          style={{ background: brand.button_color }}>
-                          <Plus size={20} aria-hidden="true" />
-                        </button>
-                      </div>
+                      <MenuItemCard item={item} style={style} brand={brand} radius={radius} count={inCart(item.id)}
+                        onOpen={(it) => setSheet({ item: it, quantity: 1, note: "" })} onAdd={quickAdd} />
                     </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))
+                  ))}
+                </ul>
+              </section>
+            );
+          })
         )}
 
         {brand.show_menupilot_branding && (
