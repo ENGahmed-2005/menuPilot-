@@ -5,10 +5,11 @@
    ========================================================================== */
 import { Check, Plus } from "lucide-react";
 import { ADDON_ORDER, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS, addonFits, addonIncluded } from "../../config/subscriptions";
+import { t } from "../../i18n";
 
 export default function AddonToggles({ row, disabled = false, onChange }) {
   const active = row.addons || [];
-  if (row.plan === "trial") return <span style={{ fontSize: 10, color: "#8a90b3" }}>كلها ضمن التجربة</span>;
+  if (row.plan === "trial") return <span style={{ fontSize: 10, color: "#8a90b3" }}>{t("كلها ضمن التجربة")}</span>;
 
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -24,7 +25,7 @@ export default function AddonToggles({ row, disabled = false, onChange }) {
             type="button"
             aria-pressed={on}
             disabled={disabled || !fits}
-            title={included ? `مشمولة في «${SUBSCRIPTION_PLANS[row.plan].name}»` : fits ? (on ? `إيقاف ${addon.name}` : `تفعيل ${addon.name}`) : `تحتاج الخطة ${addon.plans.map((p) => SUBSCRIPTION_PLANS[p].name).join(" أو ")}`}
+            title={included ? t("مشمولة في «{0}»", { 0: SUBSCRIPTION_PLANS[row.plan].name }) : fits ? (on ? t("إيقاف {0}", { 0: addon.name }) : t("تفعيل {0}", { 0: addon.name })) : t("تحتاج الخطة {0}", { 0: addon.plans.map((p) => SUBSCRIPTION_PLANS[p].name).join(" أو ") })}
             onClick={() => onChange(next)}
             style={{
               display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 999, padding: "4px 9px", fontSize: 10, fontWeight: 700,

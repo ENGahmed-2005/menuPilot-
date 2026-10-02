@@ -9,47 +9,48 @@ import {
   CookingPot, Hourglass, Receipt, ShieldCheck, Utensils, XCircle,
 } from "lucide-react";
 import Badge from "./Badge";
+import { t } from "../../i18n";
 
 export const STATUS = {
   order: {
-    payment_pending: { label: "بانتظار تأكيد الدفع", tone: "info", icon: Hourglass },
+    payment_pending: { label: t("بانتظار تأكيد الدفع"), tone: "info", icon: Hourglass },
     // Outside (pickup/delivery) order not yet accepted by the restaurant.
-    on_hold: { label: "بانتظار موافقة المطعم", tone: "warning", icon: Hourglass },
-    pending: { label: "جديد", tone: "warning", icon: CircleDot },
-    preparing: { label: "قيد التحضير", tone: "info", icon: CookingPot },
-    ready: { label: "جاهز للتقديم", tone: "success", icon: BellRing },
-    served: { label: "تم التقديم", tone: "neutral", icon: CheckCheck },
-    cancelled: { label: "ملغي", tone: "danger", icon: Ban },
+    on_hold: { label: t("بانتظار موافقة المطعم"), tone: "warning", icon: Hourglass },
+    pending: { label: t("جديد"), tone: "warning", icon: CircleDot },
+    preparing: { label: t("قيد التحضير"), tone: "info", icon: CookingPot },
+    ready: { label: t("جاهز للتقديم"), tone: "success", icon: BellRing },
+    served: { label: t("تم التقديم"), tone: "neutral", icon: CheckCheck },
+    cancelled: { label: t("ملغي"), tone: "danger", icon: Ban },
   },
   table: {
-    available: { label: "متاحة", tone: "success", icon: CheckCircle2 },
-    occupied: { label: "مشغولة", tone: "warning", icon: Utensils },
-    reserved: { label: "محجوزة", tone: "info", icon: Clock3 },
-    out_of_service: { label: "خارج الخدمة", tone: "danger", icon: Ban },
+    available: { label: t("متاحة"), tone: "success", icon: CheckCircle2 },
+    occupied: { label: t("مشغولة"), tone: "warning", icon: Utensils },
+    reserved: { label: t("محجوزة"), tone: "info", icon: Clock3 },
+    out_of_service: { label: t("خارج الخدمة"), tone: "danger", icon: Ban },
   },
   session: {
-    open: { label: "جلسة جديدة", tone: "neutral", icon: CircleDashed },
-    ordering: { label: "يطلب الآن", tone: "info", icon: Utensils },
-    payment_pending: { label: "بانتظار الدفع", tone: "info", icon: Hourglass },
-    bill_requested: { label: "طلب الفاتورة", tone: "warning", icon: Receipt },
-    closed: { label: "مغلقة", tone: "neutral", icon: CheckCheck },
+    open: { label: t("جلسة جديدة"), tone: "neutral", icon: CircleDashed },
+    ordering: { label: t("يطلب الآن"), tone: "info", icon: Utensils },
+    payment_pending: { label: t("بانتظار الدفع"), tone: "info", icon: Hourglass },
+    bill_requested: { label: t("طلب الفاتورة"), tone: "warning", icon: Receipt },
+    closed: { label: t("مغلقة"), tone: "neutral", icon: CheckCheck },
   },
   // Derived by the API (SessionLifecycle) — the one source of truth for
   // where a dining session is: open → active → bill_requested →
   // payment_pending → paid → closed.
   lifecycle: {
-    open: { label: "جلسة جديدة", tone: "neutral", icon: CircleDashed },
-    active: { label: "نشطة", tone: "info", icon: Utensils },
-    bill_requested: { label: "طلبت الفاتورة", tone: "warning", icon: Receipt },
-    payment_pending: { label: "دفع بانتظار التأكيد", tone: "warning", icon: Hourglass },
-    paid: { label: "مدفوعة، جاهزة للإغلاق", tone: "success", icon: ShieldCheck },
-    closed: { label: "مغلقة", tone: "neutral", icon: CheckCheck },
+    open: { label: t("جلسة جديدة"), tone: "neutral", icon: CircleDashed },
+    active: { label: t("نشطة"), tone: "info", icon: Utensils },
+    bill_requested: { label: t("طلبت الفاتورة"), tone: "warning", icon: Receipt },
+    payment_pending: { label: t("دفع بانتظار التأكيد"), tone: "warning", icon: Hourglass },
+    paid: { label: t("مدفوعة، جاهزة للإغلاق"), tone: "success", icon: ShieldCheck },
+    closed: { label: t("مغلقة"), tone: "neutral", icon: CheckCheck },
   },
   payment: {
-    pending: { label: "بانتظار المراجعة", tone: "warning", icon: Clock3 },
-    verified: { label: "مؤكد", tone: "success", icon: ShieldCheck },
-    pending_reconciliation: { label: "بانتظار التسوية", tone: "info", icon: Hourglass },
-    rejected: { label: "مرفوض", tone: "danger", icon: XCircle },
+    pending: { label: t("بانتظار المراجعة"), tone: "warning", icon: Clock3 },
+    verified: { label: t("مؤكد"), tone: "success", icon: ShieldCheck },
+    pending_reconciliation: { label: t("بانتظار التسوية"), tone: "info", icon: Hourglass },
+    rejected: { label: t("مرفوض"), tone: "danger", icon: XCircle },
   },
 };
 

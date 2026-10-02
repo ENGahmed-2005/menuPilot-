@@ -4,6 +4,7 @@
 import { ArrowLeft, Check, QrCode, Sparkles, UtensilsCrossed } from "lucide-react";
 import { lazy, Suspense } from "react";
 import Reveal from "./Reveal";
+import { t } from "../../../i18n";
 
 // Three.js تقيلة (~500 كيلوبايت) ومطلوبة بس في صفحة الهبوط، فلو استوردناها
 // بشكل عادي هتتحمّل في كل صفحة بالتطبيق (تسجيل الدخول، لوحة التحكم...).
@@ -11,16 +12,16 @@ import Reveal from "./Reveal";
 const ShapeMosaic = lazy(() => import("./backgrounds/ShapeMosaic"));
 
 const PREVIEW_STATS = [
-  ["24", "طلب اليوم"],
-  ["18", "طاولة نشطة"],
-  ["7", "قيد التحضير"],
-  ["96%", "رضا العملاء"],
+  ["24", t("طلب اليوم")],
+  ["18", t("طاولة نشطة")],
+  ["7", t("قيد التحضير")],
+  ["12 د", t("متوسط التحضير")],
 ];
 
 const PREVIEW_ORDERS = [
-  ["طاولة 04", "برجر + بطاطا", "قيد التحضير"],
-  ["طاولة 09", "لاتيه × 2", "تم الاستلام"],
-  ["طاولة 12", "بيتزا مارجريتا", "جاهز"],
+  [t("طاولة 04"), t("برجر + بطاطا"), t("قيد التحضير")],
+  [t("طاولة 09"), t("لاتيه × 2"), t("تم الاستلام")],
+  [t("طاولة 12"), t("بيتزا مارجريتا"), t("جاهز")],
 ];
 
 export default function Hero({ onNavigate }) {
@@ -63,35 +64,35 @@ export default function Hero({ onNavigate }) {
         <Reveal>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#EEA122]/25 bg-[#EEA122]/10 px-4 py-2 text-xs font-bold text-[#EEA122]">
             <Sparkles size={14} className="animate-pulse" />
-            نظام إدارة مطاعم حديث
+            {t("نظام إدارة مطاعم حديث")}
           </div>
           <h1 className="max-w-3xl text-5xl font-black leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-            مطعمك يتحرك أسرع،
+            {t("مطعمك يتحرك أسرع،")}
             <span className="block bg-gradient-to-l from-[#EEA122] to-[#E67E22] bg-clip-text text-transparent">
-              والطلب يصبح أبسط.
+              {t("والطلب يصبح أبسط.")}
             </span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-[#F3EFE5]/65 sm:text-xl">
-            menuPilot يجمع المنيو الرقمي، الطلب عبر QR، المطبخ، الطاولات، الفواتير والتقارير في منصة واحدة مصممة لتقليل الفوضى ورفع كفاءة التشغيل.
+            {t("menuPilot يجمع المنيو الرقمي، الطلب عبر QR، المطبخ، الطاولات، الفواتير والتقارير في منصة واحدة مصممة لتقليل الفوضى ورفع كفاءة التشغيل.")}
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <button
               onClick={() => onNavigate("/register")}
               className="group pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#172331] shadow-lg shadow-[#EEA122]/20 transition hover:-translate-y-0.5 hover:bg-[#E67E22] hover:shadow-xl hover:shadow-[#EEA122]/25"
             >
-              ابدأ مع menuPilot
+              {t("ابدأ مع menuPilot")}
               <ArrowLeft size={18} className="transition group-hover:-translate-x-1" />
             </button>
             <a href="#how" className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[#F3EFE5]/15 px-7 py-4 font-bold text-[#F3EFE5]/85 transition hover:border-[#F3EFE5]/35 hover:bg-[#F3EFE5]/5">
-              اكتشف كيف يعمل
+              {t("اكتشف كيف يعمل")}
               <ArrowLeft size={18} />
             </a>
           </div>
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#F3EFE5]/70">
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> طلبات QR</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> إدارة المطبخ</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> فواتير ومدفوعات</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> تجربة مجانية 14 يومًا</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> {t("طلبات QR")}</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> {t("إدارة المطبخ")}</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> {t("فواتير ومدفوعات")}</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> {t("تجربة مجانية 14 يومًا")}</span>
           </div>
         </Reveal>
 
@@ -100,8 +101,8 @@ export default function Hero({ onNavigate }) {
           <div className="relative animate-[float_6s_ease-in-out_infinite] overflow-hidden rounded-[2rem] border border-[#F3EFE5]/10 bg-[#F3EFE5] p-5 text-[#172331] shadow-2xl sm:p-7">
             <div className="flex items-center justify-between border-b border-[#172331]/10 pb-5">
               <div>
-                <p className="text-xs font-bold text-[#5A6574]">لوحة المطعم</p>
-                <h2 className="mt-1 text-2xl font-black">مطعمك</h2>
+                <p className="text-xs font-bold text-[#5A6574]">{t("لوحة المطعم")}</p>
+                <h2 className="mt-1 text-2xl font-black">{t("مطعمك")}</h2>
               </div>
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#EEA122]"><QrCode size={25} /></span>
             </div>
@@ -115,10 +116,10 @@ export default function Hero({ onNavigate }) {
             </div>
             <div className="mt-4 rounded-2xl border border-[#172331]/10 bg-white/70 p-4">
               <div className="mb-3 flex items-center justify-between text-xs font-bold">
-                <span>الطلبات الحالية</span>
+                <span>{t("الطلبات الحالية")}</span>
                 <span className="flex items-center gap-1.5 text-[#4B6A8A]">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4B6A8A]" />
-                  مباشر
+                  {t("مباشر")}
                 </span>
               </div>
               {PREVIEW_ORDERS.map(([table, order, status], index) => (

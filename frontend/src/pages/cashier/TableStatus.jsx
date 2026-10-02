@@ -18,16 +18,17 @@ import { errorText } from "../../utils/errors";
 import CloseSessionButton from "../../components/billing/CloseSessionButton";
 import IdleHint from "../../components/billing/IdleHint";
 import { money, tableName } from "../../utils/format";
+import { t as tr } from "../../i18n";
 
 // The API returns "available" / "occupied"; older mocks used "Available".
 const isAvailable = (table) => String(table.status || "").toLowerCase() === "available";
 
 
 const FILTERS = [
-  { value: "all", label: "الكل" },
-  { value: "occupied", label: "مشغولة" },
-  { value: "available", label: "متاحة" },
-  { value: "bill", label: "طلب فاتورة" },
+  { value: "all", label: tr("الكل") },
+  { value: "occupied", label: tr("مشغولة") },
+  { value: "available", label: tr("متاحة") },
+  { value: "bill", label: tr("طلب فاتورة") },
 ];
 
 export default function TableStatus() {
@@ -131,7 +132,7 @@ export default function TableStatus() {
 
   if (loading) return (
     <div className="space-y-5">
-      <PageHeader title="الطاولات والفواتير" subtitle="تابع حالة الطاولات واستلم الفواتير من شاشة واحدة." />
+      <PageHeader title={tr("الطاولات والفواتير")} subtitle={tr("تابع حالة الطاولات واستلم الفواتير من شاشة واحدة.")} />
       <SkeletonStats />
       <SkeletonCards count={6} />
     </div>
@@ -140,32 +141,32 @@ export default function TableStatus() {
   return (
     <div className="pb-8">
       <PageHeader
-        title="الطاولات والفواتير"
-        subtitle="الطاولات التي طلبت الفاتورة تظهر أولًا. افتح الفاتورة لمراجعة الطلبات وتسجيل الدفع."
+        title={tr("الطاولات والفواتير")}
+        subtitle={tr("الطاولات التي طلبت الفاتورة تظهر أولًا. افتح الفاتورة لمراجعة الطلبات وتسجيل الدفع.")}
         meta={<LiveIndicator connected={connected} />}
-        action={<Button variant="secondary" size="sm" onClick={() => loadTables(true)} loading={refreshing}><RefreshCw size={15} aria-hidden="true" /> تحديث</Button>}
+        action={<Button variant="secondary" size="sm" onClick={() => loadTables(true)} loading={refreshing}><RefreshCw size={15} aria-hidden="true" /> {tr("تحديث")}</Button>}
       />
 
       {error && (
-        <Alert tone="danger" className="mb-4" action={<Button size="sm" variant="secondary" onClick={() => loadTables()}>إعادة المحاولة</Button>}>
-          {errorText(error, "تعذّر تحميل الطاولات.")}
+        <Alert tone="danger" className="mb-4" action={<Button size="sm" variant="secondary" onClick={() => loadTables()}>{tr("إعادة المحاولة")}</Button>}>
+          {errorText(error, tr("تعذّر تحميل الطاولات."))}
         </Alert>
       )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={LayoutGrid} label="كل الطاولات" value={counts.total} onClick={() => setFilter("all")} active={filter === "all"} />
-        <StatCard icon={CheckCircle2} tone="herb" label="متاحة" value={counts.available} onClick={() => setFilter("available")} active={filter === "available"} />
-        <StatCard icon={Utensils} tone="copper" label="مشغولة" value={counts.occupied} onClick={() => setFilter("occupied")} active={filter === "occupied"} />
-        <StatCard icon={WalletCards} tone="brick" label="طلبت الفاتورة" value={counts.bill} onClick={() => setFilter("bill")} active={filter === "bill"} emphasis={counts.bill > 0} />
+        <StatCard icon={LayoutGrid} label={tr("كل الطاولات")} value={counts.total} onClick={() => setFilter("all")} active={filter === "all"} />
+        <StatCard icon={CheckCircle2} tone="herb" label={tr("متاحة")} value={counts.available} onClick={() => setFilter("available")} active={filter === "available"} />
+        <StatCard icon={Utensils} tone="copper" label={tr("مشغولة")} value={counts.occupied} onClick={() => setFilter("occupied")} active={filter === "occupied"} />
+        <StatCard icon={WalletCards} tone="brick" label={tr("طلبت الفاتورة")} value={counts.bill} onClick={() => setFilter("bill")} active={filter === "bill"} emphasis={counts.bill > 0} />
       </div>
 
       <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <label className="relative flex-1 md:max-w-sm">
-          <span className="sr-only">ابحث عن طاولة</span>
+          <span className="sr-only">{tr("ابحث عن طاولة")}</span>
           <Search size={17} aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث باسم الطاولة أو رمزها" className="h-11 w-full rounded-[var(--radius-control)] border border-line bg-surface pr-10 pl-3 text-sm outline-none focus:border-copper focus:ring-2 focus:ring-copper/25" />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("ابحث باسم الطاولة أو رمزها")} className="h-11 w-full rounded-[var(--radius-control)] border border-line bg-surface pr-10 pl-3 text-sm outline-none focus:border-copper focus:ring-2 focus:ring-copper/25" />
         </label>
-        <SegmentedControl label="تصفية الطاولات" value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ ...f, count: { all: counts.total, occupied: counts.occupied, available: counts.available, bill: counts.bill }[f.value] }))} />
+        <SegmentedControl label={tr("تصفية الطاولات")} value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ ...f, count: { all: counts.total, occupied: counts.occupied, available: counts.available, bill: counts.bill }[f.value] }))} />
       </div>
 
       <ul className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -190,14 +191,14 @@ export default function TableStatus() {
 
                 <p className="mt-4 flex items-center gap-2 text-sm text-ink-soft">
                   <Receipt size={16} aria-hidden="true" className="text-muted" />
-                  {table.activeSessionId ? <>جلسة <span className="num">#{table.activeSessionId}</span>{session?.customerName && <span className="text-muted">، {session.customerName}</span>}</> : "لا يوجد زبائن على الطاولة"}
+                  {table.activeSessionId ? <>{tr("جلسة")} <span className="num">#{table.activeSessionId}</span>{session?.customerName && <span className="text-muted">{tr("،")} {session.customerName}</span>}</> : tr("لا يوجد زبائن على الطاولة")}
                 </p>
 
                 {session && session.billTotal > 0 && (
                   <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-                    <span>الإجمالي <b className="num text-ink">{money(session.billTotal)}</b></span>
-                    <span>المدفوع <b className="num text-herb">{money(session.paidTotal)}</b></span>
-                    <span>المتبقي <b className="num text-ink">{money(session.outstanding)}</b></span>
+                    <span>{tr("الإجمالي")} <b className="num text-ink">{money(session.billTotal)}</b></span>
+                    <span>{tr("المدفوع")} <b className="num text-herb">{money(session.paidTotal)}</b></span>
+                    <span>{tr("المتبقي")} <b className="num text-ink">{money(session.outstanding)}</b></span>
                   </p>
                 )}
 
@@ -206,7 +207,7 @@ export default function TableStatus() {
                 {session?.assistanceRequested && (
                   <div className="mt-3">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-brick/10 px-2.5 py-1 text-xs font-bold text-brick">
-                      <BellRing size={13} aria-hidden="true" /> تطلب نادلًا
+                      <BellRing size={13} aria-hidden="true" /> {tr("تطلب نادلًا")}
                     </span>
                   </div>
                 )}
@@ -214,21 +215,21 @@ export default function TableStatus() {
                 {session?.billRequested && (
                   <div className="mt-3 rounded-2xl border border-copper/25 bg-copper/5 p-4">
                     <div className="flex items-center gap-2 text-sm font-extrabold text-copper-ink">
-                      <WalletCards size={15} aria-hidden="true" /> طلبت الفاتورة
+                      <WalletCards size={15} aria-hidden="true" /> {tr("طلبت الفاتورة")}
                     </div>
                     {bill ? (
                       <div className="mt-3 space-y-1.5">
                         <div className="flex items-center justify-between text-xs text-muted">
-                          <span>عدد الأصناف</span>
+                          <span>{tr("عدد الأصناف")}</span>
                           <span className="font-bold">{bill.itemCount}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted">
-                          <span>إجمالي الفاتورة</span>
+                          <span>{tr("إجمالي الفاتورة")}</span>
                           <span className="num font-bold text-ink">{money(bill.total)}</span>
                         </div>
                         {bill.outstanding > 0 && (
                           <div className="flex items-center justify-between border-t border-copper/20 pt-1.5 text-sm font-extrabold text-ink">
-                            <span>المبلغ المستحق</span>
+                            <span>{tr("المبلغ المستحق")}</span>
                             <span className="num">{money(bill.outstanding)}</span>
                           </div>
                         )}
@@ -247,7 +248,7 @@ export default function TableStatus() {
                     className={buttonClasses({ variant: session?.billRequested ? "primary" : "secondary", block: true })}
                   >
                     <CircleDollarSign size={17} aria-hidden="true" />
-                    {session?.billRequested ? "مراجعة الفاتورة وتسجيل الدفع" : "عرض الفاتورة"}
+                    {session?.billRequested ? tr("مراجعة الفاتورة وتسجيل الدفع") : tr("عرض الفاتورة")}
                   </Link>
                   {session && <CloseSessionButton block session={{ ...session, tableLabel: table.label }} onClosed={handleClosed} />}
                 </div>
@@ -260,10 +261,10 @@ export default function TableStatus() {
       {!filteredTables.length && !error && (
         <Card className="mt-5">
           {tables.length === 0 ? (
-            <EmptyState icon={LayoutGrid} title="لا توجد طاولات بعد" description="يضيف صاحب المطعم الطاولات ورموز QR من لوحة المالك، وستظهر هنا تلقائيًا." />
+            <EmptyState icon={LayoutGrid} title={tr("لا توجد طاولات بعد")} description={tr("يضيف صاحب المطعم الطاولات ورموز QR من لوحة المالك، وستظهر هنا تلقائيًا.")} />
           ) : (
-            <EmptyState icon={Search} title="لا توجد طاولات مطابقة" description="غيّر كلمة البحث أو التصفية لعرض طاولات أخرى."
-              action={<Button variant="secondary" size="sm" onClick={() => { setQuery(""); setFilter("all"); }}>مسح البحث والتصفية</Button>} />
+            <EmptyState icon={Search} title={tr("لا توجد طاولات مطابقة")} description={tr("غيّر كلمة البحث أو التصفية لعرض طاولات أخرى.")}
+              action={<Button variant="secondary" size="sm" onClick={() => { setQuery(""); setFilter("all"); }}>{tr("مسح البحث والتصفية")}</Button>} />
           )}
         </Card>
       )}

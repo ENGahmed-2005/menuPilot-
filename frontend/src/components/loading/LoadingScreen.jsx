@@ -7,6 +7,7 @@
    Pure CSS (no canvas / three.js), ~1 KB, and static under reduced motion.
    ========================================================================== */
 import Logo from "../brand/Logo";
+import { t, dir } from "../../i18n";
 
 function Bar({ tone = "dark" }) {
   return (
@@ -16,9 +17,9 @@ function Bar({ tone = "dark" }) {
   );
 }
 
-export default function LoadingScreen({ label = "جارِ تجهيز لوحتك…" }) {
+export default function LoadingScreen({ label = t("جارِ تجهيز لوحتك…") }) {
   return (
-    <div role="status" aria-live="polite" dir="rtl" className="loader-delay fixed inset-0 z-[999] grid place-items-center bg-navy text-paper">
+    <div role="status" aria-live="polite" dir={dir} className="loader-delay fixed inset-0 z-[999] grid place-items-center bg-navy text-paper">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, #f4efe6 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
       <div className="relative flex flex-col items-center gap-7">
         <span className="loader-mark"><Logo layout="stacked" on="dark" height={132} priority alt="" /></span>
@@ -29,7 +30,7 @@ export default function LoadingScreen({ label = "جارِ تجهيز لوحتك�
   );
 }
 
-export function PageLoader({ label = "جارِ فتح الصفحة…" }) {
+export function PageLoader({ label = t("جارِ فتح الصفحة…") }) {
   return (
     <div role="status" aria-live="polite" className="loader-delay grid min-h-[60vh] place-items-center bg-paper-2">
       <div className="flex flex-col items-center gap-5">

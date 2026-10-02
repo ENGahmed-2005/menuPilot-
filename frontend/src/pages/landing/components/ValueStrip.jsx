@@ -1,10 +1,11 @@
 import { Clock3, LayoutDashboard, QrCode, ShieldCheck } from "lucide-react";
+import { t } from "../../../i18n";
 
 const ITEMS = [
-  [QrCode,          "الطلب عبر QR",    "اطلب بدون نادل"],
-  [Clock3,          "تشغيل أسرع",    "وقت أقل، إنتاج أكثر"],
-  [ShieldCheck,     "صلاحيات آمنة",  "كل دور بحدوده"],
-  [LayoutDashboard, "إدارة مركزية",  "كل شيء في مكان"],
+  [QrCode,          t("الطلب عبر QR"),    t("اطلب بدون نادل")],
+  [Clock3,          t("تشغيل أسرع"),    t("وقت أقل، إنتاج أكثر")],
+  [ShieldCheck,     t("صلاحيات آمنة"),  t("كل دور بحدوده")],
+  [LayoutDashboard, t("إدارة مركزية"),  t("كل شيء في مكان")],
 ];
 
 export default function ValueStrip() {

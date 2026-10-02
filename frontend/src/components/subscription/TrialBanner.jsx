@@ -8,9 +8,10 @@ import { AlertTriangle, Clock3, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useSubscription } from "../../hooks/useSubscription";
 import { buttonClasses } from "../ui/Button";
+import { t, locale } from "../../i18n";
 
-const fmt = (iso) => (iso ? new Date(iso).toLocaleDateString("ar-PS-u-nu-latn", { day: "numeric", month: "long", year: "numeric" }) : "—");
-const daysText = (n) => (n === 1 ? "يوم واحد" : n === 2 ? "يومان" : n <= 10 ? `${n} أيام` : `${n} يومًا`);
+const fmt = (iso) => (iso ? new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" }) : "—");
+const daysText = (n) => (n === 1 ? t("يوم واحد") : n === 2 ? t("يومان") : n <= 10 ? t("{0} أيام", { 0: n }) : t("{0} يومًا", { 0: n }));
 
 export default function TrialBanner() {
   const { role, user } = useAuth();
@@ -26,21 +27,20 @@ export default function TrialBanner() {
           <div className="flex items-start gap-3">
             <AlertTriangle size={22} className="mt-0.5 shrink-0 text-copper-ink" aria-hidden="true" />
             <div>
-              <p className="text-lg font-extrabold text-ink">{phase === "cancelled" ? "الاشتراك متوقف" : "انتهت الفترة التجريبية"}</p>
+              <p className="text-lg font-extrabold text-ink">{phase === "cancelled" ? t("الاشتراك متوقف") : t("انتهت الفترة التجريبية")}</p>
               <p className="mt-1 text-sm leading-6 text-ink-soft">
-                {phase === "cancelled" ? "أُوقف اشتراك المطعم." : `انتهت تجربتك المجانية لمدة ${trialDays} يومًا.`} بيانات مطعمك محفوظة، لكن بعض الميزات التشغيلية متوقفة
-                (الطلبات الجديدة، والطاولات، والمنيو، وإضافة الموظفين).
+                {phase === "cancelled" ? t("أُوقف اشتراك المطعم.") : t("انتهت تجربتك المجانية لمدة {0} يومًا.", { 0: trialDays })} {t("بيانات مطعمك محفوظة، لكن بعض الميزات التشغيلية متوقفة (الطلبات الجديدة، والطاولات، والمنيو، وإضافة الموظفين).")}
               </p>
               {s.payment_pending
-                ? <p className="mt-1 text-sm font-bold text-herb">استلمنا بيانات تحويلك، ونفعّل الاشتراك فور التحقق من وصوله.</p>
-                : s.requested_plan && <p className="mt-1 text-sm font-bold text-herb">طلبت خطة «{s.requested_plan}». أكمل التحويل وأبلغنا به لتفعيلها.</p>}
-              {!owner && <p className="mt-1 text-sm font-bold text-ink">تواصل مع صاحب المطعم لتجديد الاشتراك.</p>}
+                ? <p className="mt-1 text-sm font-bold text-herb">{t("استلمنا بيانات تحويلك، ونفعّل الاشتراك فور التحقق من وصوله.")}</p>
+                : s.requested_plan && <p className="mt-1 text-sm font-bold text-herb">{t("طلبت خطة «")}{s.requested_plan}{t("». أكمل التحويل وأبلغنا به لتفعيلها.")}</p>}
+              {!owner && <p className="mt-1 text-sm font-bold text-ink">{t("تواصل مع صاحب المطعم لتجديد الاشتراك.")}</p>}
             </div>
           </div>
           {owner && (
             <div className="flex flex-wrap gap-2">
-              <Link to={planPath} className={buttonClasses({ size: "sm" })}>اختيار خطة</Link>
-              <Link to={`/owner/subscription/${user?.plan === "trial" ? "basic" : user?.plan}`} className={buttonClasses({ size: "sm", variant: "secondary" })}>إدارة الاشتراك</Link>
+              <Link to={planPath} className={buttonClasses({ size: "sm" })}>{t("اختيار خطة")}</Link>
+              <Link to={`/owner/subscription/${user?.plan === "trial" ? "basic" : user?.plan}`} className={buttonClasses({ size: "sm", variant: "secondary" })}>{t("إدارة الاشتراك")}</Link>
             </div>
           )}
         </div>
@@ -52,8 +52,8 @@ export default function TrialBanner() {
     return (
       <section role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-brick/30 bg-brick/[0.07] p-4">
         <p className="flex items-center gap-2 text-sm font-bold text-brick"><AlertTriangle size={18} aria-hidden="true" />
-          انتهت تجربتك المجانية. المطعم يعمل مؤقتًا حتى {fmt(s.grace_ends_at)}، ثم تتوقف الميزات التشغيلية حتى تختار خطة.</p>
-        {owner && <Link to={planPath} className={buttonClasses({ size: "sm", variant: "danger" })}>اختيار خطة الآن</Link>}
+          {t("انتهت تجربتك المجانية. المطعم يعمل مؤقتًا حتى")} {fmt(s.grace_ends_at)}{t("، ثم تتوقف الميزات التشغيلية حتى تختار خطة.")}</p>
+        {owner && <Link to={planPath} className={buttonClasses({ size: "sm", variant: "danger" })}>{t("اختيار خطة الآن")}</Link>}
       </section>
     );
   }
@@ -67,12 +67,12 @@ export default function TrialBanner() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="flex items-center gap-2 text-sm font-bold text-ink">
           {urgent ? <Clock3 size={18} className="text-copper-ink" aria-hidden="true" /> : <ShieldCheck size={18} className="text-herb" aria-hidden="true" />}
-          {phase === "last_day" ? "اليوم هو آخر يوم في تجربتك المجانية" : `متبقي ${daysText(remainingDays)} على انتهاء تجربتك المجانية`}
-          <span className="font-medium text-muted">· تنتهي {fmt(s.trial_ends_at)}</span>
+          {phase === "last_day" ? t("اليوم هو آخر يوم في تجربتك المجانية") : t("متبقي {0} على انتهاء تجربتك المجانية", { 0: daysText(remainingDays) })}
+          <span className="font-medium text-muted">{t("· تنتهي")} {fmt(s.trial_ends_at)}</span>
         </p>
-        <Link to={planPath} className={buttonClasses({ size: "sm", variant: urgent ? "primary" : "secondary" })}>اختيار خطة</Link>
+        <Link to={planPath} className={buttonClasses({ size: "sm", variant: urgent ? "primary" : "secondary" })}>{t("اختيار خطة")}</Link>
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink/[0.07]" role="progressbar" aria-valuemin={0} aria-valuemax={trialDays} aria-valuenow={trialDays - remainingDays} aria-label="تقدّم الفترة التجريبية">
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink/[0.07]" role="progressbar" aria-valuemin={0} aria-valuemax={trialDays} aria-valuenow={trialDays - remainingDays} aria-label={t("تقدّم الفترة التجريبية")}>
         <div className={`h-full rounded-full ${urgent ? "bg-copper" : "bg-herb"}`} style={{ width: `${used}%` }} />
       </div>
     </section>

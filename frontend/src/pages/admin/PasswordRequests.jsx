@@ -16,8 +16,9 @@ import EmptyState from "../../components/dashboard/EmptyState";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import { useToast } from "../../components/ui/Toast";
+import { t as tr, locale } from "../../i18n";
 
-const STATUS = { pending: ["بانتظار الإرسال", "warning"], sent: ["أُرسل الرابط", "success"], dismissed: ["متجاهَل", "neutral"] };
+const STATUS = { pending: [tr("بانتظار الإرسال"), "warning"], sent: [tr("أُرسل الرابط"), "success"], dismissed: [tr("متجاهَل"), "neutral"] };
 
 export default function PasswordRequests() {
   const toast = useToast();
@@ -32,9 +33,9 @@ export default function PasswordRequests() {
     try {
       const d = await createPasswordLink(r.id);
       const url = `${window.location.origin}/reset-password?token=${encodeURIComponent(d.token)}&email=${encodeURIComponent(d.email)}`;
-      const text = `مرحبًا ${d.name || ""}، هذا رابط إعادة تعيين كلمة مرور حسابك في menuPilot (صالح لمدة ${d.expires_minutes} دقيقة ولمرة واحدة):\n${url}\n\nإذا لم تطلب ذلك، تجاهل هذه الرسالة.`;
+      const text = tr("مرحبًا {0}، هذا رابط إعادة تعيين كلمة مرور حسابك في menuPilot (صالح لمدة {1} دقيقة ولمرة واحدة):\n{2}\n\nإذا لم تطلب ذلك، تجاهل هذه الرسالة.", { 0: d.name || "", 1: d.expires_minutes, 2: url });
       setLinks((l) => ({ ...l, [r.id]: { url, wa: d.phone ? `https://wa.me/${whatsappNumber(d.phone)}?text=${encodeURIComponent(text)}` : null } }));
-      toast.success("أُنشئ الرابط. أرسله الآن على واتساب.");
+      toast.success(tr("أُنشئ الرابط. أرسله الآن على واتساب."));
       load();
     } catch (e) { toast.error(errorText(e)); } finally { setBusy(null); }
   }
@@ -45,8 +46,8 @@ export default function PasswordRequests() {
 
   return (
     <div>
-      <PageHeader title="استعادة كلمات المرور" subtitle="طلبات أصحاب المطاعم الذين نسوا كلمة المرور. أنشئ رابطًا لمرة واحدة وأرسله على واتساب." />
-      {!rows.length ? <Card><EmptyState icon={KeyRound} title="لا توجد طلبات" description="تظهر هنا الطلبات فور إرسالها من صفحة «نسيت كلمة المرور»." /></Card> : (
+      <PageHeader title={tr("استعادة كلمات المرور")} subtitle={tr("طلبات أصحاب المطاعم الذين نسوا كلمة المرور. أنشئ رابطًا لمرة واحدة وأرسله على واتساب.")} />
+      {!rows.length ? <Card><EmptyState icon={KeyRound} title={tr("لا توجد طلبات")} description={tr("تظهر هنا الطلبات فور إرسالها من صفحة «نسيت كلمة المرور».")} /></Card> : (
         <ul className="grid gap-3">
           {rows.map((r) => (
             <li key={r.id}>
@@ -54,22 +55,22 @@ export default function PasswordRequests() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-extrabold">{r.restaurant_name || r.name} · <span className="font-medium text-muted">{r.name}</span></p>
-                    <p className="text-sm text-muted"><span dir="ltr">{r.email}</span> · <span dir="ltr">{r.restaurant_phone || "بلا رقم هاتف"}</span></p>
-                    <p className="text-xs text-muted">طُلب {new Date(r.updated_at).toLocaleString("ar-PS-u-nu-latn")}</p>
+                    <p className="text-sm text-muted"><span dir="ltr">{r.email}</span> · <span dir="ltr">{r.restaurant_phone || tr("بلا رقم هاتف")}</span></p>
+                    <p className="text-xs text-muted">{tr("طُلب")} {new Date(r.updated_at).toLocaleString(locale)}</p>
                   </div>
                   <Badge tone={STATUS[r.status]?.[1]}>{STATUS[r.status]?.[0]}</Badge>
                 </div>
                 {links[r.id] ? (
                   <div className="flex flex-wrap gap-2 rounded-xl bg-surface-2 p-3">
                     {links[r.id].wa
-                      ? <a href={links[r.id].wa} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1f9d55] px-4 text-sm font-bold text-white"><MessageCircle size={16} /> إرسال على واتساب</a>
-                      : <span className="text-xs font-bold text-brick">لا يوجد رقم هاتف للمطعم. انسخ الرابط وأرسله بطريقة أخرى.</span>}
-                    <button type="button" onClick={() => navigator.clipboard?.writeText(links[r.id].url).then(() => toast.success("نُسخ الرابط."))} className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold ring-1 ring-line"><Copy size={15} /> نسخ الرابط</button>
+                      ? <a href={links[r.id].wa} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1f9d55] px-4 text-sm font-bold text-white"><MessageCircle size={16} /> {tr("إرسال على واتساب")}</a>
+                      : <span className="text-xs font-bold text-brick">{tr("لا يوجد رقم هاتف للمطعم. انسخ الرابط وأرسله بطريقة أخرى.")}</span>}
+                    <button type="button" onClick={() => navigator.clipboard?.writeText(links[r.id].url).then(() => toast.success(tr("نُسخ الرابط.")))} className="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold ring-1 ring-line"><Copy size={15} /> {tr("نسخ الرابط")}</button>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" loading={busy === r.id} onClick={() => makeLink(r)}><KeyRound size={15} /> {r.status === "sent" ? "إنشاء رابط جديد" : "إنشاء رابط"}</Button>
-                    {r.status === "pending" && <Button size="sm" variant="secondary" disabled={busy === r.id} onClick={() => dismiss(r)}><X size={15} /> تجاهل</Button>}
+                    <Button size="sm" loading={busy === r.id} onClick={() => makeLink(r)}><KeyRound size={15} /> {r.status === "sent" ? tr("إنشاء رابط جديد") : tr("إنشاء رابط")}</Button>
+                    {r.status === "pending" && <Button size="sm" variant="secondary" disabled={busy === r.id} onClick={() => dismiss(r)}><X size={15} /> {tr("تجاهل")}</Button>}
                   </div>
                 )}
               </Card>

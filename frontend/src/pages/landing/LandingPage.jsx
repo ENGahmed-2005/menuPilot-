@@ -21,13 +21,14 @@ import Pricing from "./components/Pricing";
 import TeamSection from "./components/TeamSection";
 import CTASection from "./components/CTASection";
 import Footer from "./components/Footer";
+import { dir } from "../../i18n";
 
 export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
     <main
-      dir="rtl"
+      dir={dir}
       className="min-h-screen scroll-smooth overflow-x-hidden bg-navy text-[#F3EFE5] [cursor:url('/cursor_eat.cur'),_auto]"
     >
       <Navbar onNavigate={navigate} />

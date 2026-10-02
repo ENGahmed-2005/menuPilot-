@@ -15,15 +15,16 @@ import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { ShieldAlert } from "lucide-react";
 import { getRoleHome } from "../utils/roleHome";
 import { useAuth } from "../context/AuthContext";
+import { t, dir } from "../i18n";
 
 function NoAccess({ home }) {
   return (
-    <main dir="rtl" className="grid min-h-screen place-items-center bg-paper-2 px-6 text-center text-ink">
+    <main dir={dir} className="grid min-h-screen place-items-center bg-paper-2 px-6 text-center text-ink">
       <div className="max-w-sm">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brick/10 text-brick"><ShieldAlert size={26} aria-hidden="true" /></span>
-        <h1 className="mt-4 text-2xl font-extrabold">ليس لديك صلاحية لفتح هذه الصفحة</h1>
-        <p className="mt-2 text-sm leading-6 text-muted">إذا كنت تحتاجها في عملك، اطلب من صاحب المطعم منحك الصلاحية المناسبة.</p>
-        <Link to={home} className="mt-6 inline-flex h-11 items-center rounded-xl bg-copper px-5 text-sm font-bold text-ink">العودة إلى لوحتي</Link>
+        <h1 className="mt-4 text-2xl font-extrabold">{t("ليس لديك صلاحية لفتح هذه الصفحة")}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">{t("إذا كنت تحتاجها في عملك، اطلب من صاحب المطعم منحك الصلاحية المناسبة.")}</p>
+        <Link to={home} className="mt-6 inline-flex h-11 items-center rounded-xl bg-copper px-5 text-sm font-bold text-ink">{t("العودة إلى لوحتي")}</Link>
       </div>
     </main>
   );

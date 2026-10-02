@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 /* ==========================================================================
    permissions.js — mirror of backend App\Support\Permissions (labels + role
    defaults). Used for the staff permission editor and as a fallback when an
@@ -5,44 +6,44 @@
    list is authoritative; GET /api/permissions returns it.
    ========================================================================== */
 export const PERMISSION_GROUPS = [
-  { title: "الطاولات والطلبات", items: ["view_dashboard", "view_tables", "manage_tables", "view_orders", "manage_orders", "cancel_orders", "reassign_orders", "handle_assistance"] },
-  { title: "الفواتير والمدفوعات", items: ["view_payments", "verify_payments", "record_payment", "adjust_bill", "close_session"] },
-  { title: "المنيو والتقارير", items: ["view_menu", "manage_menu", "view_reports"] },
-  { title: "المحاسبة والتصدير", items: ["export_reports", "export_invoices", "export_payments", "export_sales", "manage_accounting_settings"] },
-  { title: "إدارة المطعم", items: ["manage_staff", "manage_restaurant", "manage_branding", "manage_settings"] },
+  { title: t("الطاولات والطلبات"), items: ["view_dashboard", "view_tables", "manage_tables", "view_orders", "manage_orders", "cancel_orders", "reassign_orders", "handle_assistance"] },
+  { title: t("الفواتير والمدفوعات"), items: ["view_payments", "verify_payments", "record_payment", "adjust_bill", "close_session"] },
+  { title: t("المنيو والتقارير"), items: ["view_menu", "manage_menu", "view_reports"] },
+  { title: t("المحاسبة والتصدير"), items: ["export_reports", "export_invoices", "export_payments", "export_sales", "manage_accounting_settings"] },
+  { title: t("إدارة المطعم"), items: ["manage_staff", "manage_restaurant", "manage_branding", "manage_settings"] },
 ];
 
 export const PERMISSION_LABELS = {
-  view_dashboard: "عرض لوحة التحكم",
-  view_tables: "عرض الطاولات والجلسات",
-  manage_tables: "إدارة الطاولات ورموز QR",
-  view_orders: "عرض الطلبات",
-  manage_orders: "تحديث حالة الطلبات (المطبخ)",
-  cancel_orders: "إلغاء أصناف من الطلبات",
-  reassign_orders: "نقل الأصناف بين الطاولات",
-  handle_assistance: "التعامل مع طلبات النادل",
-  deliver_orders: "توصيل الطلبات الخارجية",
-  dispatch_deliveries: "توزيع طلبات التوصيل على السائقين",
-  view_menu: "عرض المنيو",
-  manage_menu: "إدارة المنيو",
-  view_payments: "عرض الفواتير والمدفوعات",
-  verify_payments: "تأكيد أو رفض المدفوعات",
-  record_payment: "تسجيل الدفع",
-  adjust_bill: "تعديل أسعار الفاتورة",
-  close_session: "إغلاق جلسة الطاولة",
-  view_reports: "عرض التقارير",
-  manage_staff: "إدارة الموظفين",
-  manage_restaurant: "تعديل بيانات المطعم",
-  manage_branding: "الهوية والألوان",
-  manage_subscription: "إدارة الاشتراك",
-  manage_settings: "إعدادات المطعم",
-  export_reports: "تصدير التقارير المحاسبية",
-  export_invoices: "تصدير الفواتير",
-  export_payments: "تصدير المدفوعات",
-  export_sales: "تصدير المبيعات والأصناف",
-  manage_accounting_settings: "إعدادات المحاسبة والحسابات",
-  manage_users: "إدارة مستخدمي المنصة",
-  manage_admin: "إدارة المنصة",
+  view_dashboard: t("عرض لوحة التحكم"),
+  view_tables: t("عرض الطاولات والجلسات"),
+  manage_tables: t("إدارة الطاولات ورموز QR"),
+  view_orders: t("عرض الطلبات"),
+  manage_orders: t("تحديث حالة الطلبات (المطبخ)"),
+  cancel_orders: t("إلغاء أصناف من الطلبات"),
+  reassign_orders: t("نقل الأصناف بين الطاولات"),
+  handle_assistance: t("التعامل مع طلبات النادل"),
+  deliver_orders: t("توصيل الطلبات الخارجية"),
+  dispatch_deliveries: t("توزيع طلبات التوصيل على السائقين"),
+  view_menu: t("عرض المنيو"),
+  manage_menu: t("إدارة المنيو"),
+  view_payments: t("عرض الفواتير والمدفوعات"),
+  verify_payments: t("تأكيد أو رفض المدفوعات"),
+  record_payment: t("تسجيل الدفع"),
+  adjust_bill: t("تعديل أسعار الفاتورة"),
+  close_session: t("إغلاق جلسة الطاولة"),
+  view_reports: t("عرض التقارير"),
+  manage_staff: t("إدارة الموظفين"),
+  manage_restaurant: t("تعديل بيانات المطعم"),
+  manage_branding: t("الهوية والألوان"),
+  manage_subscription: t("إدارة الاشتراك"),
+  manage_settings: t("إعدادات المطعم"),
+  export_reports: t("تصدير التقارير المحاسبية"),
+  export_invoices: t("تصدير الفواتير"),
+  export_payments: t("تصدير المدفوعات"),
+  export_sales: t("تصدير المبيعات والأصناف"),
+  manage_accounting_settings: t("إعدادات المحاسبة والحسابات"),
+  manage_users: t("إدارة مستخدمي المنصة"),
+  manage_admin: t("إدارة المنصة"),
 };
 
 const RESTAURANT = Object.keys(PERMISSION_LABELS).filter((p) => !["manage_users", "manage_admin"].includes(p));
@@ -62,4 +63,4 @@ export const ROLE_DEFAULTS = {
   delivery_manager: ["dispatch_deliveries", "deliver_orders"],
 };
 
-export const ROLE_LABELS = { delivery_manager: "مسؤول التوصيل", delivery: "سائق توصيل", owner: "صاحب المطعم", manager: "مدير", cashier: "كاشير", waiter: "نادل", kitchen: "مطبخ", admin: "إدارة المنصة" };
+export const ROLE_LABELS = { delivery_manager: t("مسؤول التوصيل"), delivery: t("سائق توصيل"), owner: t("صاحب المطعم"), manager: t("مدير"), cashier: t("كاشير"), waiter: t("نادل"), kitchen: t("مطبخ"), admin: t("إدارة المنصة") };

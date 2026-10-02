@@ -20,7 +20,8 @@ export async function saveBranding(values) {
       return;
     }
 
-    form.append(key, String(value));
+    // Objects (menu_style) travel as JSON text in the multipart form.
+    form.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
   });
 
   const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';

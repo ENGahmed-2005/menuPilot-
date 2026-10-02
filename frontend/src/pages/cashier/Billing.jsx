@@ -28,6 +28,7 @@ import {
   verifyPayment,
   rejectPayment,
 } from "../../api/billing";
+import { t, dir } from "../../i18n";
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
@@ -37,7 +38,7 @@ function mapBill(data, sessionId) {
   const items = (data?.items || []).map((item) => ({
     id: String(item.id),
     name: item.name,
-    code: item.order_number ? `طلب #${item.order_number}` : `#${item.order_id}`,
+    code: item.order_number ? t("طلب #{0}", { 0: item.order_number }) : `#${item.order_id}`,
     category: item.category || "—",
     quantity: Number(item.quantity),
     price: Number(item.unit_price),
@@ -51,8 +52,8 @@ function mapBill(data, sessionId) {
   return {
     id: String(session.id ?? sessionId),
     invoiceNumber: `INV-${session.id ?? sessionId}`,
-    table: session.table_label ? `طاولة ${session.table_label}` : "—",
-    customer: session.customer_name || "زبون",
+    table: session.table_label ? t("طاولة {0}", { 0: session.table_label }) : "—",
+    customer: session.customer_name || t("زبون"),
     date: (session.opened_at || "").slice(0, 10),
     sessionStatus: session.status,
     closed: !!session.closed_at,
@@ -76,15 +77,15 @@ function mapBill(data, sessionId) {
 const MOCK_BILL = {
   id: "101",
   invoiceNumber: "INV-1001",
-  table: "طاولة 01",
-  customer: "أحمد محمد",
+  table: t("طاولة 01"),
+  customer: t("أحمد محمد"),
   date: "2026-09-09",
   sessionStatus: "bill_requested",
   closed: false,
   items: [
-    { id: "1", code: "FOOD-001", name: "برغر كلاسيك", quantity: 2, price: 18, total: 36, category: "وجبات" },
-    { id: "2", code: "FOOD-014", name: "بطاطا مقلية", quantity: 1, price: 8, total: 8, category: "إضافات" },
-    { id: "3", code: "DRK-003", name: "مشروب غازي", quantity: 2, price: 5, total: 10, category: "مشروبات" },
+    { id: "1", code: "FOOD-001", name: t("برغر كلاسيك"), quantity: 2, price: 18, total: 36, category: t("وجبات") },
+    { id: "2", code: "FOOD-014", name: t("بطاطا مقلية"), quantity: 1, price: 8, total: 8, category: t("إضافات") },
+    { id: "3", code: "DRK-003", name: t("مشروب غازي"), quantity: 2, price: 5, total: 10, category: t("مشروبات") },
   ],
   subtotal: 54,
   total: 54,
@@ -102,7 +103,7 @@ function csvEscape(value) {
 }
 
 function downloadExcelCompatible(bill) {
-  const headers = ["رقم الفاتورة", "التاريخ", "الطاولة", "الصنف", "كود الصنف", "التصنيف", "الكمية", "سعر الوحدة", "الإجمالي"];
+  const headers = [t("رقم الفاتورة"), t("التاريخ"), t("الطاولة"), t("الصنف"), t("كود الصنف"), t("التصنيف"), t("الكمية"), t("سعر الوحدة"), t("الإجمالي")];
   const rows = bill.items.map((item) => [
     bill.invoiceNumber, bill.date, bill.table,
     item.name, item.code, item.category,
@@ -118,11 +119,11 @@ function downloadExcelCompatible(bill) {
   URL.revokeObjectURL(url);
 }
 
-const METHOD_LABELS = { cash: "نقدًا", electronic: "إلكتروني", ussd: "USSD" };
+const METHOD_LABELS = { cash: t("نقدًا"), electronic: t("إلكتروني"), ussd: "USSD" };
 const PAYMENT_METHODS = [
-  { value: "cash", label: "نقدًا", description: "الدفع المباشر عند الكاشير" },
-  { value: "electronic", label: "إلكتروني", description: "بطاقة أو وسيلة إلكترونية" },
-  { value: "ussd", label: "USSD", description: "قناة دفع بديلة أوفلاين" },
+  { value: "cash", label: t("نقدًا"), description: t("الدفع المباشر عند الكاشير") },
+  { value: "electronic", label: t("إلكتروني"), description: t("بطاقة أو وسيلة إلكترونية") },
+  { value: "ussd", label: "USSD", description: t("قناة دفع بديلة أوفلاين") },
 ];
 
 export default function Billing() {
@@ -152,7 +153,7 @@ export default function Billing() {
 
     getBill(sessionId)
       .then((data) => { setBill(mapBill(data, sessionId)); setNotice(null); })
-      .catch((err) => setNotice({ type: "error", text: err.message || "تعذر تحميل الفاتورة." }))
+      .catch((err) => setNotice({ type: "error", text: err.message || t("تعذر تحميل الفاتورة.") }))
       .finally(() => { setLoading(false); setRefreshing(false); });
   }
 
@@ -162,10 +163,10 @@ export default function Billing() {
     setVerifying(paymentId);
     try {
       await verifyPayment(paymentId);
-      setNotice({ type: "success", text: "تم قبول دفعة العميل بنجاح." });
+      setNotice({ type: "success", text: t("تم قبول دفعة العميل بنجاح.") });
       loadBill(true);
     } catch (err) {
-      setNotice({ type: "error", text: err.message || "تعذر قبول الدفعة." });
+      setNotice({ type: "error", text: err.message || t("تعذر قبول الدفعة.") });
     } finally {
       setVerifying(null);
     }
@@ -179,10 +180,10 @@ export default function Billing() {
     try {
       await rejectPayment(paymentId, rejectReason.trim());
       setRejectReason("");
-      setNotice({ type: "success", text: "تم رفض دفعة العميل." });
+      setNotice({ type: "success", text: t("تم رفض دفعة العميل.") });
       loadBill(true);
     } catch (err) {
-      setNotice({ type: "error", text: err.message || "تعذر رفض الدفعة." });
+      setNotice({ type: "error", text: err.message || t("تعذر رفض الدفعة.") });
     } finally {
       setVerifying(null);
     }
@@ -197,7 +198,7 @@ export default function Billing() {
     event.preventDefault();
     const newPrice = Number(adjusting.price);
     if (adjusting.price === "" || !Number.isFinite(newPrice) || newPrice < 0) {
-      setAdjusting((a) => ({ ...a, error: "أدخل سعرًا صحيحًا يساوي صفرًا أو أكثر." }));
+      setAdjusting((a) => ({ ...a, error: t("أدخل سعرًا صحيحًا يساوي صفرًا أو أكثر.") }));
       return;
     }
     setAdjusting((a) => ({ ...a, saving: true, error: "" }));
@@ -205,9 +206,9 @@ export default function Billing() {
       const data = await adjustBillItem(sessionId, adjusting.item.id, { new_price: newPrice, reason: adjusting.reason.trim() || undefined });
       setBill(mapBill(data, sessionId));
       setAdjusting(null);
-      setNotice({ type: "success", text: "تم تعديل السعر وتسجيله في سجل التدقيق." });
+      setNotice({ type: "success", text: t("تم تعديل السعر وتسجيله في سجل التدقيق.") });
     } catch (err) {
-      setAdjusting((a) => ({ ...a, saving: false, error: err.message || "تعذّر تعديل السعر." }));
+      setAdjusting((a) => ({ ...a, saving: false, error: err.message || t("تعذّر تعديل السعر.") }));
     }
   }
 
@@ -218,7 +219,7 @@ export default function Billing() {
     if (USE_MOCKS) {
       await new Promise((r) => setTimeout(r, 600));
       setBill((prev) => ({ ...prev, closed: true, paymentMethod: method }));
-      setNotice({ type: "success", text: "تم تسجيل الدفع (بيانات وهمية)." });
+      setNotice({ type: "success", text: t("تم تسجيل الدفع (بيانات وهمية).") });
       setSubmitting(false);
       return;
     }
@@ -228,28 +229,28 @@ export default function Billing() {
       setNotice({
         type: "success",
         text: payment?.status === "pending_reconciliation"
-          ? "تم تسجيل دفعة USSD وإغلاق الجلسة — بانتظار التسوية."
-          : "تم تسجيل الدفع وإغلاق الجلسة. الطاولة متاحة الآن.",
+          ? t("تم تسجيل دفعة USSD وإغلاق الجلسة — بانتظار التسوية.")
+          : t("تم تسجيل الدفع وإغلاق الجلسة. الطاولة متاحة الآن."),
       });
       loadBill(true);
     } catch (err) {
-      setNotice({ type: "error", text: err.message || "تعذر تسجيل الدفع." });
+      setNotice({ type: "error", text: err.message || t("تعذر تسجيل الدفع.") });
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading) return <Spinner label="جارِ تحميل الفاتورة…" />;
+  if (loading) return <Spinner label={t("جارِ تحميل الفاتورة…")} />;
   if (!bill) return null;
 
   const isPaid = bill.closed || bill.outstanding <= 0;
   const hasPending = bill.pendingPayments?.length > 0;
 
   return (
-    <div dir="rtl" className="mx-auto max-w-4xl pb-10">
+    <div dir={dir} className="mx-auto max-w-4xl pb-10">
       <PageHeader
-        title="مركز الفاتورة"
-        subtitle={`${bill.invoiceNumber} · ${bill.table} · جلسة #${sessionId}`}
+        title={t("مركز الفاتورة")}
+        subtitle={t("{0} · {1} · جلسة #{2}", { 0: bill.invoiceNumber, 1: bill.table, 2: sessionId })}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -257,13 +258,13 @@ export default function Billing() {
               disabled={refreshing}
               className="flex items-center gap-2 rounded-xl border border-ink/10 px-3.5 py-2 text-sm font-bold hover:bg-ink/[0.04] disabled:opacity-50"
             >
-              <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} /> تحديث
+              <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} /> {t("تحديث")}
             </button>
             <button
               onClick={() => downloadExcelCompatible(bill)}
               className="flex items-center gap-2 rounded-xl bg-herb px-3.5 py-2 text-sm font-bold text-paper"
             >
-              <Download size={15} /> تصدير Excel
+              <Download size={15} /> {t("تصدير Excel")}
             </button>
           </div>
         }
@@ -286,7 +287,7 @@ export default function Billing() {
                 <AlertTriangle size={18} />
               </span>
               <div>
-                <p className="font-bold text-copper-ink">دفعة معلّقة من العميل — يتطلب إجراء</p>
+                <p className="font-bold text-copper-ink">{t("دفعة معلّقة من العميل — يتطلب إجراء")}</p>
                 <p className="mt-0.5 text-xs text-muted">
                   {p.payer_name && <span className="ml-2">{p.payer_name}</span>}
                   {p.method && <span className="ml-2">· {METHOD_LABELS[p.method] || p.method}</span>}
@@ -301,14 +302,14 @@ export default function Billing() {
                 className="flex items-center gap-1.5 rounded-xl bg-herb px-4 py-2 text-sm font-bold text-paper disabled:opacity-60"
               >
                 {verifying === p.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                قبول
+                {t("قبول")}
               </button>
               <button
                 onClick={() => { setRejectModal({ paymentId: p.id }); setRejectReason(""); }}
                 disabled={!!verifying}
                 className="flex items-center gap-1.5 rounded-xl border border-brick/30 bg-brick/10 px-4 py-2 text-sm font-bold text-brick disabled:opacity-60"
               >
-                <X size={15} /> رفض
+                <X size={15} /> {t("رفض")}
               </button>
             </div>}
           </div>
@@ -318,13 +319,13 @@ export default function Billing() {
       {/* ── Summary cards ──────────────────────────────────────────────── */}
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         {[
-          ["الطاولة", bill.table],
-          ["العميل", bill.customer],
-          ["الحالة", isPaid ? "مدفوعة ✓" : "مفتوحة"],
+          [t("الطاولة"), bill.table],
+          [t("العميل"), bill.customer],
+          [t("الحالة"), isPaid ? t("مدفوعة ✓") : t("مفتوحة")],
         ].map(([label, value]) => (
           <Card key={label} className="p-4">
             <p className="text-xs text-muted">{label}</p>
-            <p className={`mt-1 font-bold ${label === "الحالة" && isPaid ? "text-herb" : ""}`}>{value}</p>
+            <p className={`mt-1 font-bold ${label === t("الحالة") && isPaid ? "text-herb" : ""}`}>{value}</p>
           </Card>
         ))}
       </div>
@@ -337,20 +338,20 @@ export default function Billing() {
               <Receipt size={17} />
             </span>
             <div>
-              <h2 className="text-sm font-bold">بنود الفاتورة</h2>
-              <p className="text-xs text-muted">{bill.items.length} صنف — {bill.real ? "بيانات حقيقية" : "بيانات وهمية"}</p>
+              <h2 className="text-sm font-bold">{t("بنود الفاتورة")}</h2>
+              <p className="text-xs text-muted">{bill.items.length} {t("صنف —")} {bill.real ? t("بيانات حقيقية") : t("بيانات وهمية")}</p>
             </div>
           </div>
           {!bill.real && (
             <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:bg-ink/[0.03]">
-              <Upload size={14} /> استيراد CSV
+              <Upload size={14} /> {t("استيراد CSV")}
               <input ref={importRef} type="file" accept=".csv,.txt" className="hidden" />
             </label>
           )}
         </div>
 
         {bill.items.length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-muted">لا توجد أصناف في هذه الجلسة بعد.</div>
+          <div className="px-5 py-10 text-center text-sm text-muted">{t("لا توجد أصناف في هذه الجلسة بعد.")}</div>
         ) : (
           <div className="divide-y divide-ink/[0.06]">
             {bill.items.map((item) => (
@@ -358,7 +359,7 @@ export default function Billing() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{item.name}</p>
                   <p className="mt-0.5 text-xs text-muted">
-                    {item.code} · {item.category} · {money(item.price)} للوحدة
+                    {item.code} · {item.category} · {money(item.price)} {t("للوحدة")}
                   </p>
                   {item.note && <p className="mt-0.5 text-xs text-copper">{item.note}</p>}
                 </div>
@@ -369,7 +370,7 @@ export default function Billing() {
                       onClick={() => handleAdjust(item)}
                       className="rounded-lg px-2 py-1 text-xs font-bold text-copper hover:bg-copper/10"
                     >
-                      تعديل
+                      {t("تعديل")}
                     </button>
                   )}
                   <span className="w-20 text-left text-sm font-bold">{money(item.total)}</span>
@@ -381,17 +382,17 @@ export default function Billing() {
 
         {/* Totals */}
         <div className="border-t border-ink/10 bg-paper-2 px-5 py-5 space-y-2">
-          <div className="flex justify-between text-sm text-muted"><span>المجموع الفرعي</span><span>{money(bill.subtotal)}</span></div>
+          <div className="flex justify-between text-sm text-muted"><span>{t("المجموع الفرعي")}</span><span>{money(bill.subtotal)}</span></div>
           {bill.real && bill.paidAmount > 0 && (
-            <div className="flex justify-between text-sm text-herb"><span>مدفوع مسبقًا</span><span>{money(bill.paidAmount)}</span></div>
+            <div className="flex justify-between text-sm text-herb"><span>{t("مدفوع مسبقًا")}</span><span>{money(bill.paidAmount)}</span></div>
           )}
           <div className="flex justify-between border-t border-ink/10 pt-3">
-            <strong className="text-base">الإجمالي المستحق</strong>
+            <strong className="text-base">{t("الإجمالي المستحق")}</strong>
             <strong className={`text-2xl ${isPaid ? "text-herb" : "text-copper-ink"}`}>{money(bill.outstanding)}</strong>
           </div>
           {bill.paymentStatus === "pending_reconciliation" && (
             <p className="rounded-lg bg-copper/10 px-3 py-2 text-xs font-bold text-copper-ink">
-              دفعة USSD بانتظار التسوية
+              {t("دفعة USSD بانتظار التسوية")}
             </p>
           )}
         </div>
@@ -399,13 +400,13 @@ export default function Billing() {
 
       {/* ── Payment section ────────────────────────────────────────────── */}
       {!isPaid && !can("record_payment") ? (
-        <Card className="p-5 text-sm text-muted">تسجيل الدفع يحتاج صلاحية «تسجيل الدفع». اطلبها من صاحب المطعم إذا كانت ضمن عملك.</Card>
+        <Card className="p-5 text-sm text-muted">{t("تسجيل الدفع يحتاج صلاحية «تسجيل الدفع». اطلبها من صاحب المطعم إذا كانت ضمن عملك.")}</Card>
       ) : !isPaid ? (
         <Card className="p-5">
-          <h2 className="mb-4 text-sm font-bold">تسجيل الدفع</h2>
+          <h2 className="mb-4 text-sm font-bold">{t("تسجيل الدفع")}</h2>
           {hasPending && (
             <p className="mb-4 rounded-xl border border-copper/25 bg-copper/5 px-4 py-2.5 text-xs font-semibold text-copper-ink">
-              يجب قبول أو رفض دفعة العميل أعلاه قبل تسجيل دفع جديد.
+              {t("يجب قبول أو رفض دفعة العميل أعلاه قبل تسجيل دفع جديد.")}
             </p>
           )}
           <div className="grid gap-2 sm:grid-cols-3">
@@ -436,8 +437,8 @@ export default function Billing() {
             className="mt-4 w-full justify-center"
           >
             {submitting
-              ? <span className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> جارِ تسجيل الدفع…</span>
-              : <span className="flex items-center gap-2"><CreditCard size={16} /> تأكيد الدفع · {money(bill.outstanding)}</span>}
+              ? <span className="flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> {t("جارِ تسجيل الدفع…")}</span>
+              : <span className="flex items-center gap-2"><CreditCard size={16} /> {t("تأكيد الدفع ·")} {money(bill.outstanding)}</span>}
           </Button>
         </Card>
       ) : (
@@ -445,9 +446,9 @@ export default function Billing() {
           <div className="flex items-center gap-3 text-herb">
             <CheckCircle2 size={22} aria-hidden="true" />
             <div>
-              <p className="font-bold">{bill.closed ? "دُفعت الفاتورة وأُغلقت الجلسة" : "الفاتورة مدفوعة بالكامل"}</p>
-              {bill.paymentMethod && <p className="text-xs opacity-80">طريقة الدفع: {METHOD_LABELS[bill.paymentMethod] || bill.paymentMethod}</p>}
-              {!bill.closed && <p className="mt-0.5 text-xs text-muted">أغلق الجلسة لتصبح الطاولة متاحة للزبون التالي.</p>}
+              <p className="font-bold">{bill.closed ? t("دُفعت الفاتورة وأُغلقت الجلسة") : t("الفاتورة مدفوعة بالكامل")}</p>
+              {bill.paymentMethod && <p className="text-xs opacity-80">{t("طريقة الدفع:")} {METHOD_LABELS[bill.paymentMethod] || bill.paymentMethod}</p>}
+              {!bill.closed && <p className="mt-0.5 text-xs text-muted">{t("أغلق الجلسة لتصبح الطاولة متاحة للزبون التالي.")}</p>}
             </div>
           </div>
           {bill.real && !bill.closed && (
@@ -463,19 +464,19 @@ export default function Billing() {
         onClick={() => navigate("/cashier/tables")}
         className="mt-4 flex items-center gap-2 text-sm font-bold text-ink-soft hover:text-ink"
       >
-        <ArrowRight size={15} /> العودة للطاولات
+        <ArrowRight size={15} /> {t("العودة للطاولات")}
       </button>
 
       {/* ── Reject Modal ───────────────────────────────────────────────── */}
       {rejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setRejectModal(null)}>
-          <div dir="rtl" className="w-full max-w-sm rounded-2xl bg-paper p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-1 text-base font-black">رفض دفعة العميل</h3>
-            <p className="mb-4 text-xs text-muted">سيُرفض الطلب ويُعلَم العميل. أدخل سبب الرفض.</p>
+          <div dir={dir} className="w-full max-w-sm rounded-2xl bg-paper p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-base font-black">{t("رفض دفعة العميل")}</h3>
+            <p className="mb-4 text-xs text-muted">{t("سيُرفض الطلب ويُعلَم العميل. أدخل سبب الرفض.")}</p>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="سبب الرفض…"
+              placeholder={t("سبب الرفض…")}
               rows={3}
               className="w-full rounded-xl border border-ink/15 bg-paper-2 p-3 text-sm outline-none focus:border-copper"
             />
@@ -485,13 +486,13 @@ export default function Billing() {
                 disabled={!rejectReason.trim()}
                 className="flex-1 rounded-xl bg-brick py-2.5 text-sm font-bold text-paper disabled:opacity-50"
               >
-                رفض الدفعة
+                {t("رفض الدفعة")}
               </button>
               <button
                 onClick={() => setRejectModal(null)}
                 className="flex-1 rounded-xl border border-ink/10 py-2.5 text-sm font-bold"
               >
-                إلغاء
+                {t("إلغاء")}
               </button>
             </div>
           </div>
@@ -501,19 +502,19 @@ export default function Billing() {
         open={Boolean(adjusting)}
         onClose={() => !adjusting?.saving && setAdjusting(null)}
         size="sm"
-        title={adjusting ? `تعديل سعر «${adjusting.item.name}»` : ""}
-        description="يُحفظ السعر القديم والجديد واسم الكاشير في سجل التدقيق."
+        title={adjusting ? t("تعديل سعر «{0}»", { 0: adjusting.item.name }) : ""}
+        description={t("يُحفظ السعر القديم والجديد واسم الكاشير في سجل التدقيق.")}
       >
         {adjusting && (
           <form id="adjust-form" onSubmit={submitAdjust} className="space-y-4">
-            <Input label="السعر الجديد للوحدة (₪)" type="number" inputMode="decimal" min="0" step="0.01" required value={adjusting.price}
+            <Input label={t("السعر الجديد للوحدة (₪)")} type="number" inputMode="decimal" min="0" step="0.01" required value={adjusting.price}
               onChange={(e) => setAdjusting((a) => ({ ...a, price: e.target.value, error: "" }))} error={adjusting.error}
-              hint={`السعر الحالي ${adjusting.item.price} ₪ × ${adjusting.item.quantity}`} autoFocus />
-            <Input label="سبب التعديل" placeholder="مثل: خصم ولاء، طبق بديل" maxLength={255} value={adjusting.reason}
-              onChange={(e) => setAdjusting((a) => ({ ...a, reason: e.target.value }))} hint="اختياري، لكنه يساعد عند مراجعة الحسابات." />
+              hint={t("السعر الحالي {0} ₪ × {1}", { 0: adjusting.item.price, 1: adjusting.item.quantity })} autoFocus />
+            <Input label={t("سبب التعديل")} placeholder={t("مثل: خصم ولاء، طبق بديل")} maxLength={255} value={adjusting.reason}
+              onChange={(e) => setAdjusting((a) => ({ ...a, reason: e.target.value }))} hint={t("اختياري، لكنه يساعد عند مراجعة الحسابات.")} />
             <div className="flex justify-end gap-2 pt-1">
-              <Button variant="secondary" onClick={() => setAdjusting(null)} disabled={adjusting.saving}>تراجع</Button>
-              <Button type="submit" loading={adjusting.saving}>حفظ السعر</Button>
+              <Button variant="secondary" onClick={() => setAdjusting(null)} disabled={adjusting.saving}>{t("تراجع")}</Button>
+              <Button type="submit" loading={adjusting.saving}>{t("حفظ السعر")}</Button>
             </div>
           </form>
         )}

@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ScanLine } from "lucide-react";
 import LightCurtain from "./backgrounds/LightCurtain";
+import { t } from "../../../i18n";
 
 /**
  * LightCurtain بياخد width/height كـ props مباشرة (مش بيقيس أبعاده من الـ
@@ -55,16 +56,16 @@ export default function CTASection({ onNavigate }) {
         </div>
         <div className="relative flex h-full flex-col items-center justify-center px-7 py-14 sm:px-12">
           <span className="inline-flex items-center gap-2 rounded-full bg-[#F3EFE5]/10 px-4 py-2 text-xs font-black text-[#F3EFE5]">
-            <ScanLine size={14} /> جاهز لتجربة مختلفة؟
+            <ScanLine size={14} /> {t("جاهز لتجربة مختلفة؟")}
           </span>
           <h2 className="mx-auto mt-6 max-w-3xl text-4xl font-black tracking-tight text-[#F3EFE5] sm:text-5xl">
-            خلّي فريقك يركز على الضيف، وخلي menuPilot يتولى التشغيل.
+            {t("خلّي فريقك يركز على الضيف، وخلي menuPilot يتولى التشغيل.")}
           </h2>
           <button
             onClick={() => onNavigate("/register")}
             className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#172331] transition hover:-translate-y-0.5 hover:bg-[#E67E22]"
           >
-            ابدأ الآن
+            {t("ابدأ الآن")}
             <ArrowLeft size={18} />
           </button>
         </div>

@@ -13,24 +13,25 @@ import Modal from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PERMISSION_GROUPS, PERMISSION_LABELS, ROLE_DEFAULTS } from "../../config/permissions";
+import { t, dir, locale } from "../../i18n";
 
-const dateLabel = (iso) => (iso ? new Date(iso).toLocaleDateString("ar-PS-u-nu-latn", { day: "numeric", month: "short", year: "numeric" }) : "—");
+const dateLabel = (iso) => (iso ? new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) : "—");
 const activityLabel = (iso) => {
-  if (!iso) return "لم يسجّل الدخول بعد";
+  if (!iso) return t("لم يسجّل الدخول بعد");
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 10) return "نشط الآن";
-  if (m < 60) return `آخر نشاط منذ ${m} د`;
-  if (m < 1440) return `آخر نشاط منذ ${Math.floor(m / 60)} س`;
-  return `آخر نشاط ${dateLabel(iso)}`;
+  if (m < 10) return t("نشط الآن");
+  if (m < 60) return t("آخر نشاط منذ {0} د", { 0: m });
+  if (m < 1440) return t("آخر نشاط منذ {0} س", { 0: Math.floor(m / 60) });
+  return t("آخر نشاط {0}", { 0: dateLabel(iso) });
 };
 
 const roles = [
-  { value: "kitchen", label: "المطبخ" },
-  { value: "waiter", label: "النادل" },
-  { value: "cashier", label: "الكاشير" },
-  { value: "delivery", label: "سائق توصيل" },
-  { value: "delivery_manager", label: "مسؤول التوصيل" },
-  { value: "manager", label: "مدير" },
+  { value: "kitchen", label: t("المطبخ") },
+  { value: "waiter", label: t("النادل") },
+  { value: "cashier", label: t("الكاشير") },
+  { value: "delivery", label: t("سائق توصيل") },
+  { value: "delivery_manager", label: t("مسؤول التوصيل") },
+  { value: "manager", label: t("مدير") },
 ];
 const labels = Object.fromEntries(roles.map((r) => [r.value, r.label]));
 
@@ -60,7 +61,7 @@ export default function StaffManagement() {
       const updated = await updateStaff(editing.member.id, { permissions: resetToDefaults ? null : editing.perms });
       setStaff((list) => list.map((x) => (x.id === updated.id ? updated : x)));
       setEditing(null);
-      toast.success(`حُفظت صلاحيات ${updated.name}. سيُطلب منه تسجيل الدخول من جديد.`);
+      toast.success(t("حُفظت صلاحيات {0}. سيُطلب منه تسجيل الدخول من جديد.", { 0: updated.name }));
     } catch (err) {
       setEditing((e) => ({ ...e, saving: false, error: err }));
     }
@@ -89,9 +90,9 @@ export default function StaffManagement() {
   // Owner sets a new password for an employee; the employee's current
   // session ends and the new credentials are shown once to share.
   async function changePassword(member) {
-    const pw = window.prompt(`كلمة مرور جديدة للموظف ${member.name} (6 أحرف على الأقل):`);
+    const pw = window.prompt(t("كلمة مرور جديدة للموظف {0} (6 أحرف على الأقل):", { 0: member.name }));
     if (pw == null) return;
-    if (pw.trim().length < 6) { window.alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل."); return; }
+    if (pw.trim().length < 6) { window.alert(t("كلمة المرور يجب أن تكون 6 أحرف على الأقل.")); return; }
     try {
       await updateStaff(member.id, { password: pw.trim() });
       setCredentials({ ...member, password: pw.trim() });
@@ -104,9 +105,9 @@ export default function StaffManagement() {
   async function toggle(member) {
     if (member.active) {
       const ok = await confirm({
-        title: `إيقاف حساب ${member.name}؟`,
-        description: "لن يستطيع تسجيل الدخول أو استخدام النظام حتى تعيد تفعيله. يبقى سجلّه كما هو.",
-        confirmLabel: "إيقاف الحساب",
+        title: t("إيقاف حساب {0}؟", { 0: member.name }),
+        description: t("لن يستطيع تسجيل الدخول أو استخدام النظام حتى تعيد تفعيله. يبقى سجلّه كما هو."),
+        confirmLabel: t("إيقاف الحساب"),
         tone: "danger",
       });
       if (!ok) return;
@@ -114,7 +115,7 @@ export default function StaffManagement() {
     try {
       const updated = await updateStaff(member.id, { active: !member.active });
       setStaff((s) => s.map((x) => x.id === member.id ? updated : x));
-      toast.success(updated.active ? `أُعيد تفعيل حساب ${updated.name}.` : `أُوقف حساب ${updated.name}.`);
+      toast.success(updated.active ? t("أُعيد تفعيل حساب {0}.", { 0: updated.name }) : t("أُوقف حساب {0}.", { 0: updated.name }));
     } catch (err) {
       setError(err);
     }
@@ -122,9 +123,9 @@ export default function StaffManagement() {
 
   async function remove(member) {
     const ok = await confirm({
-      title: `حذف حساب ${member.name}؟`,
-      description: "لن يتمكن هذا الموظف من تسجيل الدخول بعد الآن. لا يمكن التراجع عن الحذف.",
-      confirmLabel: "حذف الحساب",
+      title: t("حذف حساب {0}؟", { 0: member.name }),
+      description: t("لن يتمكن هذا الموظف من تسجيل الدخول بعد الآن. لا يمكن التراجع عن الحذف."),
+      confirmLabel: t("حذف الحساب"),
       tone: "danger",
     });
     if (!ok) return;
@@ -139,25 +140,25 @@ export default function StaffManagement() {
 
   async function copyCredentials() {
     if (!credentials) return;
-    await navigator.clipboard?.writeText(`menuPilot\nالبريد: ${credentials.email}\nكلمة المرور: ${credentials.password}`);
+    await navigator.clipboard?.writeText(t("menuPilot\nالبريد: {0}\nكلمة المرور: {1}", { 0: credentials.email, 1: credentials.password }));
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   }
 
-  if (loading) return <Spinner label="جارِ تحميل فريق المطعم…" />;
+  if (loading) return <Spinner label={t("جارِ تحميل فريق المطعم…")} />;
 
   return (
-    <div dir="rtl" className="space-y-6">
+    <div dir={dir} className="space-y-6">
       {confirmDialog}
-      <PageHeader title="الفريق والصلاحيات" subtitle="أنشئ حسابات الموظفين، وحدّد دور كل منهم وما يستطيع فعله. إيقاف الحساب يمنع الدخول فورًا دون حذف سجله." />
-      {error && <Alert tone="danger" onDismiss={() => setError(null)}>{errorText(error, "تعذّر حفظ التغيير.")}</Alert>}
+      <PageHeader title={t("الفريق والصلاحيات")} subtitle={t("أنشئ حسابات الموظفين، وحدّد دور كل منهم وما يستطيع فعله. إيقاف الحساب يمنع الدخول فورًا دون حذف سجله.")} />
+      {error && <Alert tone="danger" onDismiss={() => setError(null)}>{errorText(error, t("تعذّر حفظ التغيير."))}</Alert>}
 
       {credentials && (
         <Card className="border border-copper/30 bg-copper/5 p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="font-black">تم إنشاء حساب {credentials.name}</h2>
-              <p className="mt-1 text-xs text-muted">احفظ بيانات الدخول الآن، لأن كلمة المرور لا تُعرض مرة أخرى.</p>
+              <h2 className="font-black">{t("تم إنشاء حساب")} {credentials.name}</h2>
+              <p className="mt-1 text-xs text-muted">{t("احفظ بيانات الدخول الآن، لأن كلمة المرور لا تُعرض مرة أخرى.")}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="rounded-xl bg-paper px-3 py-2">{credentials.email}</span>
@@ -167,7 +168,7 @@ export default function StaffManagement() {
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </span>
-              <button type="button" onClick={copyCredentials} className="rounded-xl border border-ink/10 bg-paper p-2 hover:border-copper" title="نسخ بيانات الدخول">
+              <button type="button" onClick={copyCredentials} className="rounded-xl border border-ink/10 bg-paper p-2 hover:border-copper" title={t("نسخ بيانات الدخول")}>
                 {copied ? <Check size={16} /> : <Copy size={16} />}
               </button>
             </div>
@@ -177,29 +178,29 @@ export default function StaffManagement() {
 
       <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
         <Card className="p-5">
-          <div className="mb-5 flex items-center gap-2"><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><UserPlus size={19}/></span><div><h2 className="font-black">إضافة حساب</h2><p className="text-xs text-muted">الحساب يستطيع تسجيل الدخول مباشرة</p></div></div>
+          <div className="mb-5 flex items-center gap-2"><span className="grid h-10 w-10 place-items-center rounded-xl bg-copper/10 text-copper"><UserPlus size={19}/></span><div><h2 className="font-black">{t("إضافة حساب")}</h2><p className="text-xs text-muted">{t("الحساب يستطيع تسجيل الدخول مباشرة")}</p></div></div>
           <form onSubmit={submit} className="space-y-3" autoComplete="off">
-            <input required placeholder="اسم الموظف" value={form.name} onChange={(e)=>setForm({...form,name:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
-            <input required type="email" name="new-staff-email" autoComplete="off" placeholder="بريد الموظف لتسجيل الدخول" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
-            <input type="tel" inputMode="tel" placeholder="رقم الهاتف (اختياري)" aria-label="رقم الهاتف" value={form.phone} onChange={(e)=>setForm({...form,phone:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
+            <input required placeholder={t("اسم الموظف")} value={form.name} onChange={(e)=>setForm({...form,name:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
+            <input required type="email" name="new-staff-email" autoComplete="off" placeholder={t("بريد الموظف لتسجيل الدخول")} value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
+            <input type="tel" inputMode="tel" placeholder={t("رقم الهاتف (اختياري)")} aria-label={t("رقم الهاتف")} value={form.phone} onChange={(e)=>setForm({...form,phone:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper" />
             <select value={form.role} onChange={(e)=>setForm({...form,role:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper px-3 py-3 text-sm outline-none focus:border-copper">{roles.map(r=><option key={r.value} value={r.value}>{r.label}</option>)}</select>
-            <div className="relative"><KeyRound size={16} className="absolute right-3 top-3.5 text-muted"/><input type="password" name="new-staff-password" autoComplete="new-password" minLength={6} placeholder="كلمة مرور (اختياري: تُنشأ تلقائيًا)" value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper py-3 pr-9 pl-3 text-sm outline-none focus:border-copper" /></div>
-            <Button type="submit" disabled={saving} className="w-full">{saving ? "جارِ إنشاء الحساب…" : "إنشاء الحساب"}</Button>
+            <div className="relative"><KeyRound size={16} className="absolute right-3 top-3.5 text-muted"/><input type="password" name="new-staff-password" autoComplete="new-password" minLength={6} placeholder={t("كلمة مرور (اختياري: تُنشأ تلقائيًا)")} value={form.password} onChange={(e)=>setForm({...form,password:e.target.value})} className="w-full rounded-xl border border-ink/10 bg-paper py-3 pr-9 pl-3 text-sm outline-none focus:border-copper" /></div>
+            <Button type="submit" disabled={saving} className="w-full">{saving ? t("جارِ إنشاء الحساب…") : t("إنشاء الحساب")}</Button>
           </form>
         </Card>
 
         <Card className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4"><div><h2 className="font-black">حسابات الفريق</h2><p className="text-xs text-muted">{staff.length} حسابات مُدارة من المالك</p></div><Shield size={18} className="text-copper"/></div>
+          <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4"><div><h2 className="font-black">{t("حسابات الفريق")}</h2><p className="text-xs text-muted">{staff.length} {t("حسابات مُدارة من المالك")}</p></div><Shield size={18} className="text-copper"/></div>
           <div className="divide-y divide-ink/8">
-            {staff.length === 0 && <div className="p-8 text-center text-sm text-muted">لم تتم إضافة موظفين بعد.</div>}
+            {staff.length === 0 && <div className="p-8 text-center text-sm text-muted">{t("لم تتم إضافة موظفين بعد.")}</div>}
             {staff.map((m)=><div key={m.id} className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center">
-              <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><strong>{m.name}</strong><Badge tone={m.active ? "good" : "danger"}>{m.active ? "نشط" : "متوقف"}</Badge></div><p className="mt-1 truncate text-xs text-muted">{m.email}</p></div>
+              <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><strong>{m.name}</strong><Badge tone={m.active ? "good" : "danger"}>{m.active ? t("نشط") : t("متوقف")}</Badge></div><p className="mt-1 truncate text-xs text-muted">{m.email}</p></div>
               <div className="flex flex-col items-start gap-1 lg:items-end">
                 <Badge tone="neutral">{labels[m.role] || m.role}</Badge>
-                <span className="text-xs text-muted">{(m.permissions || []).length} صلاحية{m.custom_permissions ? "، مخصّصة" : ""}</span>
-                <span className="text-xs text-muted">{activityLabel(m.last_active_at)} · أُضيف {dateLabel(m.created_at)}</span>
+                <span className="text-xs text-muted">{(m.permissions || []).length} {t("صلاحية")}{m.custom_permissions ? t("، مخصّصة") : ""}</span>
+                <span className="text-xs text-muted">{activityLabel(m.last_active_at)} {t("· أُضيف")} {dateLabel(m.created_at)}</span>
               </div>
-              <div className="flex flex-wrap gap-2"><button onClick={()=>changePassword(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:border-copper">كلمة المرور</button><button onClick={()=>openPermissions(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:border-copper">الصلاحيات</button><button onClick={()=>toggle(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold">{m.active?"إيقاف":"تفعيل"}</button><button onClick={()=>remove(m)} className="rounded-xl border border-brick/20 p-2 text-brick hover:bg-brick/5" title="حذف الحساب"><Trash2 size={16}/></button></div>
+              <div className="flex flex-wrap gap-2"><button onClick={()=>changePassword(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:border-copper">{t("كلمة المرور")}</button><button onClick={()=>openPermissions(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold hover:border-copper">{t("الصلاحيات")}</button><button onClick={()=>toggle(m)} className="rounded-xl border border-ink/10 px-3 py-2 text-xs font-bold">{m.active?t("إيقاف"):t("تفعيل")}</button><button onClick={()=>remove(m)} className="rounded-xl border border-brick/20 p-2 text-brick hover:bg-brick/5" title={t("حذف الحساب")}><Trash2 size={16}/></button></div>
             </div>)}
           </div>
         </Card>
@@ -208,17 +209,17 @@ export default function StaffManagement() {
         open={Boolean(editing)}
         onClose={() => !editing?.saving && setEditing(null)}
         size="lg"
-        title={editing ? `صلاحيات ${editing.member.name}` : ""}
-        description={editing ? `الدور: ${labels[editing.member.role] || editing.member.role}. الصلاحيات غير المحددة مخفية عنه ومرفوضة من الخادم أيضًا.` : ""}
+        title={editing ? t("صلاحيات {0}", { 0: editing.member.name }) : ""}
+        description={editing ? t("الدور: {0}. الصلاحيات غير المحددة مخفية عنه ومرفوضة من الخادم أيضًا.", { 0: labels[editing.member.role] || editing.member.role }) : ""}
         footer={editing && <>
-          <Button variant="ghost" onClick={() => savePermissions(true)} disabled={editing.saving}>إرجاع صلاحيات الدور الافتراضية</Button>
-          <Button variant="secondary" onClick={() => setEditing(null)} disabled={editing.saving}>تراجع</Button>
-          <Button onClick={() => savePermissions(false)} loading={editing.saving}>حفظ الصلاحيات</Button>
+          <Button variant="ghost" onClick={() => savePermissions(true)} disabled={editing.saving}>{t("إرجاع صلاحيات الدور الافتراضية")}</Button>
+          <Button variant="secondary" onClick={() => setEditing(null)} disabled={editing.saving}>{t("تراجع")}</Button>
+          <Button onClick={() => savePermissions(false)} loading={editing.saving}>{t("حفظ الصلاحيات")}</Button>
         </>}
       >
         {editing && (
           <div className="space-y-5">
-            {editing.error && <Alert tone="danger">{errorText(editing.error, "تعذّر حفظ الصلاحيات.")}</Alert>}
+            {editing.error && <Alert tone="danger">{errorText(editing.error, t("تعذّر حفظ الصلاحيات."))}</Alert>}
             {PERMISSION_GROUPS.map((group) => (
               <fieldset key={group.title}>
                 <legend className="mb-2 text-sm font-extrabold text-ink">{group.title}</legend>

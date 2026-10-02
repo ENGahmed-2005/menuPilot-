@@ -21,16 +21,17 @@ import SegmentedControl from "../../components/ui/SegmentedControl";
 import StatusBadge from "../../components/ui/StatusBadge";
 import Skeleton from "../../components/ui/Skeleton";
 import { useToast } from "../../components/ui/Toast";
+import { t, locale } from "../../i18n";
 
-const NEXT = { pending: ["preparing", "ابدأ التحضير"], preparing: ["ready", "جاهز للتقديم"], ready: ["served", "تم التقديم"] };
+const NEXT = { pending: ["preparing", t("ابدأ التحضير")], preparing: ["ready", t("جاهز للتقديم")], ready: ["served", t("تم التقديم")] };
 const FILTERS = [
-  { value: "active", label: "قيد العمل" },
-  { value: "all", label: "الكل" },
-  { value: "served", label: "مُقدّمة" },
-  { value: "cancelled", label: "ملغاة" },
+  { value: "active", label: t("قيد العمل") },
+  { value: "all", label: t("الكل") },
+  { value: "served", label: t("مُقدّمة") },
+  { value: "cancelled", label: t("ملغاة") },
 ];
 const today = () => new Date().toISOString().slice(0, 10);
-const timeOf = (iso) => (iso ? new Date(iso).toLocaleTimeString("ar-PS-u-nu-latn", { hour: "2-digit", minute: "2-digit" }) : "—");
+const timeOf = (iso) => (iso ? new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "—");
 
 export default function Orders() {
   const { can } = usePermissions();
@@ -80,7 +81,7 @@ export default function Orders() {
       await setOrderStatus(order.id, next);
       setOrders((list) => list.map((o) => (o.id === order.id ? { ...o, status: next } : o)));
     } catch (err) {
-      toast.error(errorText(err, "تعذّر تحديث حالة الطلب."));
+      toast.error(errorText(err, t("تعذّر تحديث حالة الطلب.")));
       load();
     } finally {
       setBusyId(null);
@@ -100,50 +101,50 @@ export default function Orders() {
   async function confirmCancel(event) {
     event.preventDefault();
     if (cancelling.reason.trim().length < 2) {
-      setCancelling((c) => ({ ...c, error: "اكتب سببًا واضحًا للإلغاء." }));
+      setCancelling((c) => ({ ...c, error: t("اكتب سببًا واضحًا للإلغاء.") }));
       return;
     }
     setCancelling((c) => ({ ...c, saving: true, error: null }));
     try {
       await cancelOrder(cancelling.order.id, cancelling.reason.trim());
       setOrders((list) => list.map((o) => (o.id === cancelling.order.id ? { ...o, status: "cancelled" } : o)));
-      toast.success(`أُلغي الطلب ${orderNo(cancelling.order.order_number || cancelling.order.id)}.`);
+      toast.success(t("أُلغي الطلب {0}.", { 0: orderNo(cancelling.order.order_number || cancelling.order.id) }));
       setCancelling(null);
     } catch (err) {
-      setCancelling((c) => ({ ...c, saving: false, error: errorText(err, "تعذّر إلغاء الطلب.") }));
+      setCancelling((c) => ({ ...c, saving: false, error: errorText(err, t("تعذّر إلغاء الطلب.")) }));
     }
   }
 
   return (
     <div>
       <PageHeader
-        title="الطلبات"
-        subtitle="تابع طلبات اليوم وحرّكها بين المراحل، أو ألغِ طلبًا مع ذكر السبب."
-        action={<Button variant="secondary" size="sm" onClick={load}><RefreshCw size={15} aria-hidden="true" /> تحديث</Button>}
+        title={t("الطلبات")}
+        subtitle={t("تابع طلبات اليوم وحرّكها بين المراحل، أو ألغِ طلبًا مع ذكر السبب.")}
+        action={<Button variant="secondary" size="sm" onClick={load}><RefreshCw size={15} aria-hidden="true" /> {t("تحديث")}</Button>}
       />
 
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <SegmentedControl label="تصفية الطلبات" value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ ...f, count: counts[f.value] }))} />
+        <SegmentedControl label={t("تصفية الطلبات")} value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ ...f, count: counts[f.value] }))} />
         <label className="flex items-center gap-2 text-sm font-bold text-muted">
-          اليوم
+          {t("اليوم")}
           <input type="date" value={day} max={today()} onChange={(e) => setDay(e.target.value)} className="h-10 rounded-[var(--radius-control)] border border-line bg-surface px-3 text-sm text-ink" />
         </label>
       </div>
 
-      {error && <Alert tone="danger" className="mb-4" action={<Button size="sm" variant="secondary" onClick={load}>إعادة المحاولة</Button>}>{errorText(error, "تعذّر تحميل الطلبات.")}</Alert>}
+      {error && <Alert tone="danger" className="mb-4" action={<Button size="sm" variant="secondary" onClick={load}>{t("إعادة المحاولة")}</Button>}>{errorText(error, t("تعذّر تحميل الطلبات."))}</Alert>}
 
       <Card className="overflow-hidden">
         {loading ? (
           <div className="space-y-3 p-5" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-12" />)}</div>
         ) : shown.length === 0 ? (
-          <EmptyState icon={ClipboardList} title="لا توجد طلبات هنا" description="غيّر التصفية أو اليوم لعرض طلبات أخرى." />
+          <EmptyState icon={ClipboardList} title={t("لا توجد طلبات هنا")} description={t("غيّر التصفية أو اليوم لعرض طلبات أخرى.")} />
         ) : (
           <ul className="divide-y divide-line">
             {shown.map((o) => (
               <li key={o.id} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center">
                 <button type="button" onClick={() => openDetail(o)} className="min-w-0 flex-1 text-right">
                   <p className="font-extrabold text-ink"><span className="num">{orderNo(o.order_number || o.id)}</span> <span className="text-sm font-bold text-muted">{o.table_label ? tableName(o.table_label) : ""}</span></p>
-                  <p className="mt-0.5 text-xs text-muted">{timeOf(o.submitted_at)}{o.customer_name ? `، ${o.customer_name}` : ""} · <span className="num">{money(o.total)}</span></p>
+                  <p className="mt-0.5 text-xs text-muted">{timeOf(o.submitted_at)}{o.customer_name ? t("، {0}", { 0: o.customer_name }) : ""} · <span className="num">{money(o.total)}</span></p>
                 </button>
                 <StatusBadge type="order" status={o.status} />
                 <div className="flex gap-2">
@@ -151,7 +152,7 @@ export default function Orders() {
                     <Button size="sm" loading={busyId === o.id} disabled={Boolean(busyId)} onClick={() => advance(o)}>{NEXT[o.status][1]}</Button>
                   )}
                   {!["served", "cancelled"].includes(o.status) && can("cancel_orders") && (
-                    <Button size="sm" variant="ghost" className="text-brick" onClick={() => setCancelling({ order: o, reason: "", saving: false, error: null })}>إلغاء</Button>
+                    <Button size="sm" variant="ghost" className="text-brick" onClick={() => setCancelling({ order: o, reason: "", saving: false, error: null })}>{t("إلغاء")}</Button>
                   )}
                 </div>
               </li>
@@ -160,13 +161,13 @@ export default function Orders() {
         )}
       </Card>
 
-      <Modal open={Boolean(detail)} onClose={() => setDetail(null)} title={detail ? `الطلب ${orderNo(detail.order.order_number || detail.order.id)}` : ""} description={detail?.order.table_label ? tableName(detail.order.table_label) : undefined}>
+      <Modal open={Boolean(detail)} onClose={() => setDetail(null)} title={detail ? t("الطلب {0}", { 0: orderNo(detail.order.order_number || detail.order.id) }) : ""} description={detail?.order.table_label ? tableName(detail.order.table_label) : undefined}>
         {detail?.loading ? <Skeleton className="h-32" /> : detail?.error ? <Alert tone="danger">{errorText(detail.error)}</Alert> : detail && (
           <div className="space-y-4">
             <ul className="divide-y divide-line rounded-xl border border-line text-sm">
               {(detail.order.items || []).map((i) => (
                 <li key={i.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
-                  <span className={i.status === "cancelled" ? "text-muted line-through" : "font-bold"}>{i.quantity}× {i.name}{i.note && <span className="block text-xs font-medium text-copper-ink">{i.note}</span>}{i.cancel_reason && <span className="block text-xs font-medium text-brick">سبب الإلغاء: {i.cancel_reason}</span>}</span>
+                  <span className={i.status === "cancelled" ? "text-muted line-through" : "font-bold"}>{i.quantity}× {i.name}{i.note && <span className="block text-xs font-medium text-copper-ink">{i.note}</span>}{i.cancel_reason && <span className="block text-xs font-medium text-brick">{t("سبب الإلغاء:")} {i.cancel_reason}</span>}</span>
                   <span className="num shrink-0">{money(i.quantity * i.unit_price)}</span>
                 </li>
               ))}
@@ -181,15 +182,15 @@ export default function Orders() {
       </Modal>
 
       <Modal open={Boolean(cancelling)} onClose={() => !cancelling?.saving && setCancelling(null)} size="sm"
-        title={cancelling ? `إلغاء الطلب ${orderNo(cancelling.order.order_number || cancelling.order.id)}؟` : ""}
-        description="تُلغى كل أصناف الطلب ويختفي من شاشة المطبخ. يُسجَّل السبب واسمك في سجل التدقيق.">
+        title={cancelling ? t("إلغاء الطلب {0}؟", { 0: orderNo(cancelling.order.order_number || cancelling.order.id) }) : ""}
+        description={t("تُلغى كل أصناف الطلب ويختفي من شاشة المطبخ. يُسجَّل السبب واسمك في سجل التدقيق.")}>
         {cancelling && (
           <form onSubmit={confirmCancel} className="space-y-4">
-            <Input label="سبب الإلغاء" required autoFocus maxLength={500} value={cancelling.reason} error={cancelling.error}
-              onChange={(e) => setCancelling((c) => ({ ...c, reason: e.target.value, error: null }))} placeholder="مثل: الزبون غادر قبل التحضير" />
+            <Input label={t("سبب الإلغاء")} required autoFocus maxLength={500} value={cancelling.reason} error={cancelling.error}
+              onChange={(e) => setCancelling((c) => ({ ...c, reason: e.target.value, error: null }))} placeholder={t("مثل: الزبون غادر قبل التحضير")} />
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setCancelling(null)} disabled={cancelling.saving}>تراجع</Button>
-              <Button type="submit" variant="danger" loading={cancelling.saving}>إلغاء الطلب</Button>
+              <Button variant="secondary" onClick={() => setCancelling(null)} disabled={cancelling.saving}>{t("تراجع")}</Button>
+              <Button type="submit" variant="danger" loading={cancelling.saving}>{t("إلغاء الطلب")}</Button>
             </div>
           </form>
         )}

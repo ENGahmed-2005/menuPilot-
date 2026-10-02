@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import BrandLogo from "../../../components/brand/Logo";
 import { MenuSquare, X } from "lucide-react";
 import { NAV_LINKS } from "./data";
+import { t } from "../../../i18n";
+import LanguageSwitch from "../../../components/ui/LanguageSwitch";
 
 const Logo = ({ height = 34 }) => <BrandLogo on="dark" height={height} />;
 
@@ -57,7 +59,7 @@ export default function Navbar({ onNavigate }) {
               className="flex items-center"
             >
               <span className="inline-flex origin-right transition-transform duration-[450ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none" style={{ transform: scrolled ? "scale(0.8)" : "none" }}>
-                <BrandLogo on="dark" height={36} priority alt="menuPilot، العودة لأعلى الصفحة" />
+                <BrandLogo on="dark" height={36} priority alt={t("menuPilot، العودة لأعلى الصفحة")} />
               </span>
             </button>
 
@@ -76,17 +78,18 @@ export default function Navbar({ onNavigate }) {
 
             {/* CTA */}
             <div className="hidden items-center gap-3 sm:flex">
+              <LanguageSwitch tone="dark" />
               <button
                 onClick={() => go("/login")}
                 className="rounded-full px-4 py-2 text-sm font-semibold text-[#F3EFE5]/70 transition-colors duration-200 hover:text-[#F3EFE5]"
               >
-                تسجيل الدخول
+                {t("تسجيل الدخول")}
               </button>
               <button
                 onClick={() => go("/register")}
                 className="rounded-full bg-[#EEA122] px-5 py-2.5 text-sm font-black text-[#172331] transition-all duration-200 hover:bg-[#E67E22] active:scale-95"
               >
-                جرّب مجانًا 14 يومًا
+                {t("جرّب مجانًا 14 يومًا")}
               </button>
             </div>
 
@@ -94,7 +97,7 @@ export default function Navbar({ onNavigate }) {
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="grid h-10 w-10 place-items-center rounded-xl border border-[#F3EFE5]/12 transition hover:bg-[#F3EFE5]/5 md:hidden"
-              aria-label="القائمة"
+              aria-label={t("القائمة")}
             >
               {mobileOpen ? <X size={19} /> : <MenuSquare size={19} />}
             </button>
@@ -118,8 +121,9 @@ export default function Navbar({ onNavigate }) {
                 ))}
               </nav>
               <div className="mt-4 flex flex-col gap-2 border-t border-[#F3EFE5]/8 pt-4">
-                <button onClick={() => go("/login")} className="rounded-xl border border-[#F3EFE5]/12 px-4 py-3 text-sm font-semibold text-[#F3EFE5]/80 transition hover:bg-[#F3EFE5]/5">تسجيل الدخول</button>
-                <button onClick={() => go("/register")} className="rounded-xl bg-[#EEA122] px-4 py-3 text-sm font-black text-[#172331] transition hover:bg-[#E67E22]">جرّب مجانًا 14 يومًا</button>
+                <LanguageSwitch tone="dark" />
+                <button onClick={() => go("/login")} className="rounded-xl border border-[#F3EFE5]/12 px-4 py-3 text-sm font-semibold text-[#F3EFE5]/80 transition hover:bg-[#F3EFE5]/5">{t("تسجيل الدخول")}</button>
+                <button onClick={() => go("/register")} className="rounded-xl bg-[#EEA122] px-4 py-3 text-sm font-black text-[#172331] transition hover:bg-[#E67E22]">{t("جرّب مجانًا 14 يومًا")}</button>
               </div>
             </div>
           )}

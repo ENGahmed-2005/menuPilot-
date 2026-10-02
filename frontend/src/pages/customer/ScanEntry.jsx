@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { openSession } from "../../api/sessions";
+import { t, dir } from "../../i18n";
+import LanguageSwitch from "../../components/ui/LanguageSwitch";
 
 const fieldBase =
   "w-full rounded-2xl border bg-white px-12 py-3.5 text-sm text-ink outline-none transition placeholder:text-muted focus:border-copper focus:ring-4 focus:ring-copper/10";
@@ -35,12 +37,12 @@ export default function ScanEntry() {
     const trimmedPhone = phone.trim();
 
     if (trimmedName.length < 2) {
-      setError("اكتب اسمًا صحيحًا للمتابعة.");
+      setError(t("اكتب اسمًا صحيحًا للمتابعة."));
       return;
     }
 
     if (trimmedPhone.length < 7) {
-      setError("أدخل رقم جوال صحيحًا للمتابعة.");
+      setError(t("أدخل رقم جوال صحيحًا للمتابعة."));
       return;
     }
 
@@ -55,7 +57,7 @@ export default function ScanEntry() {
       });
 
       if (!session?.id) {
-        throw new Error("تم فتح الجلسة لكن لم يصل رقم الجلسة. حاول مرة أخرى.");
+        throw new Error(t("تم فتح الجلسة لكن لم يصل رقم الجلسة. حاول مرة أخرى."));
       }
 
       navigate(`/t/${tableCode}/menu?session=${encodeURIComponent(session.id)}`, {
@@ -63,17 +65,17 @@ export default function ScanEntry() {
       });
     } catch (err) {
       if (err.code === "RESTAURANT_LOCATION_NOT_CONFIGURED") {
-        setError("المطعم لم يحدد موقعه بعد. يجب على صاحب المطعم ضبط موقع المطعم من الإعدادات قبل استقبال طلبات QR.");
+        setError(t("المطعم لم يحدد موقعه بعد. يجب على صاحب المطعم ضبط موقع المطعم من الإعدادات قبل استقبال طلبات QR."));
       } else if (err.code === "LOCATION_SECURE_CONTEXT_REQUIRED") {
         setError(err.message);
       } else if (err.code === "LOCATION_REQUIRED" || err.status === 403) {
-        setError(err.message || "يجب السماح بتحديد موقعك وأن تكون داخل المطعم لفتح هذه الطاولة.");
+        setError(err.message || t("يجب السماح بتحديد موقعك وأن تكون داخل المطعم لفتح هذه الطاولة."));
       } else if (err.status === 409 || err.code === "TABLE_ALREADY_OCCUPIED") {
-        setError("هذه الطاولة مستخدمة حاليًا. اطلب مساعدة أحد أفراد الطاقم للمتابعة.");
+        setError(t("هذه الطاولة مستخدمة حاليًا. اطلب مساعدة أحد أفراد الطاقم للمتابعة."));
       } else if (err.status === 404) {
-        setError("رمز QR غير صالح أو أن هذه الطاولة لم تعد موجودة.");
+        setError(t("رمز QR غير صالح أو أن هذه الطاولة لم تعد موجودة."));
       } else {
-        setError(err.message || "تعذر بدء الجلسة. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.");
+        setError(err.message || t("تعذر بدء الجلسة. تأكد من اتصالك بالإنترنت وحاول مرة أخرى."));
       }
     } finally {
       setLoading(false);
@@ -82,7 +84,8 @@ export default function ScanEntry() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F3EFE5] text-[#1F2420]" dir="rtl">
+    <main className="min-h-screen bg-[#F3EFE5] text-[#1F2420]" dir={dir}>
+      <LanguageSwitch className="fixed end-4 top-4 z-50 bg-white shadow-sm" />
       <div className="mx-auto flex min-h-screen w-full max-w-7xl items-center px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid w-full overflow-hidden rounded-[2rem] border border-[#4B5147]/10 bg-white shadow-[0_30px_100px_rgba(31,36,32,.12)] lg:min-h-[680px] lg:grid-cols-[.92fr_1.08fr]">
           <aside className="relative hidden overflow-hidden bg-[#1F2420] p-10 text-[#F3EFE5] lg:flex lg:flex-col lg:justify-between xl:p-14">
@@ -95,22 +98,21 @@ export default function ScanEntry() {
               <div className="mt-20 max-w-md">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#EEA122]/25 bg-[#EEA122]/10 px-3 py-1.5 text-xs font-bold text-[#EEA122]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#EEA122]" />
-                  طاولة {tableCode}
+                  {t("طاولة")} {tableCode}
                 </span>
                 <h1 className="mt-6 font-[Aref_Ruqaa] text-5xl leading-tight xl:text-6xl">
-                  أهلاً بك على الطاولة.
+                  {t("أهلاً بك على الطاولة.")}
                 </h1>
                 <p className="mt-6 text-sm leading-8 text-[#F3EFE5]/60">
-                  أدخل بياناتك، نتحقق من وجودك داخل المطعم، ثم نفتح لك القائمة مباشرة.
-                  لا حسابات ولا تطبيقات إضافية.
+                  {t("أدخل بياناتك، نتحقق من وجودك داخل المطعم، ثم نفتح لك القائمة مباشرة. لا حسابات ولا تطبيقات إضافية.")}
                 </p>
               </div>
             </div>
 
             <div className="relative z-10 space-y-4 text-sm">
-              <Feature icon={MapPin} text="التحقق من موقع الطاولة" />
-              <Feature icon={ShieldCheck} text="جلسة مرتبطة بطاولتك" />
-              <Feature icon={CheckCircle2} text="الطلب مباشرة من القائمة" />
+              <Feature icon={MapPin} text={t("التحقق من موقع الطاولة")} />
+              <Feature icon={ShieldCheck} text={t("جلسة مرتبطة بطاولتك")} />
+              <Feature icon={CheckCircle2} text={t("الطلب مباشرة من القائمة")} />
             </div>
           </aside>
 
@@ -119,7 +121,7 @@ export default function ScanEntry() {
               <div className="mb-8 flex items-center justify-between lg:hidden">
                 <div dir="ltr"><BrandLogo height={32} priority /></div>
                 <span className="rounded-full bg-[#EEA122]/10 px-3 py-1.5 text-xs font-bold text-[#9A6410]">
-                  طاولة {tableCode}
+                  {t("طاولة")} {tableCode}
                 </span>
               </div>
 
@@ -128,13 +130,13 @@ export default function ScanEntry() {
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#4B6A8A]/10">
                     <Check size={14} />
                   </span>
-                  الخطوة 1 من 1
+                  {t("الخطوة 1 من 1")}
                 </div>
                 <h2 className="font-[Aref_Ruqaa] text-4xl leading-tight sm:text-5xl">
-                  ابدأ طلبك
+                  {t("ابدأ طلبك")}
                 </h2>
                 <p className="mt-3 max-w-md text-sm leading-7 text-[#4B5147]/65">
-                  نحتاج اسمك ورقم جوالك فقط لتشغيل جلسة الطلب على هذه الطاولة.
+                  {t("نحتاج اسمك ورقم جوالك فقط لتشغيل جلسة الطلب على هذه الطاولة.")}
                 </p>
               </div>
 
@@ -145,7 +147,7 @@ export default function ScanEntry() {
                 >
                   <AlertCircle className="mt-0.5 shrink-0" size={19} />
                   <div className="min-w-0">
-                    <p className="font-bold">تعذر بدء الجلسة</p>
+                    <p className="font-bold">{t("تعذر بدء الجلسة")}</p>
                     <p className="mt-1">{error}</p>
                   </div>
                 </div>
@@ -154,10 +156,10 @@ export default function ScanEntry() {
               <form onSubmit={handleSubmit} noValidate className="space-y-5">
                 <Field
                   id="customer-name"
-                  label="الاسم"
+                  label={t("الاسم")}
                   value={name}
                   onChange={setName}
-                  placeholder="مثلاً: أحمد"
+                  placeholder={t("مثلاً: أحمد")}
                   icon={UserRound}
                   autoComplete="name"
                   disabled={loading}
@@ -165,7 +167,7 @@ export default function ScanEntry() {
 
                 <Field
                   id="customer-phone"
-                  label="رقم الجوال"
+                  label={t("رقم الجوال")}
                   value={phone}
                   onChange={setPhone}
                   placeholder="05XXXXXXXX"
@@ -182,9 +184,9 @@ export default function ScanEntry() {
                       <MapPin size={18} />
                     </span>
                     <div>
-                      <p className="text-sm font-bold">تحقق سريع من موقعك</p>
+                      <p className="text-sm font-bold">{t("تحقق سريع من موقعك")}</p>
                       <p className="mt-1 text-xs leading-6 text-[#4B5147]/65">
-                        نستخدم موقع جهازك مرة واحدة للتأكد أنك داخل نطاق المطعم. لا تحتاج إلى إنشاء حساب.
+                        {t("نستخدم موقع جهازك مرة واحدة للتأكد أنك داخل نطاق المطعم. لا تحتاج إلى إنشاء حساب.")}
                       </p>
                     </div>
                   </div>
@@ -198,11 +200,11 @@ export default function ScanEntry() {
                   {loading ? (
                     <>
                       <Loader2 size={18} className="animate-spin" />
-                      {locationChecking ? "نتحقق من موقعك…" : "جاري فتح الجلسة…"}
+                      {locationChecking ? t("نتحقق من موقعك…") : t("جاري فتح الجلسة…")}
                     </>
                   ) : (
                     <>
-                      دخول إلى القائمة
+                      {t("دخول إلى القائمة")}
                       <ArrowLeft size={18} />
                     </>
                   )}
@@ -211,7 +213,7 @@ export default function ScanEntry() {
 
               <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs leading-5 text-[#4B5147]/45">
                 <ShieldCheck size={14} />
-                بياناتك تستخدم فقط لتشغيل جلسة الطلب على هذه الطاولة.
+                {t("بياناتك تستخدم فقط لتشغيل جلسة الطلب على هذه الطاولة.")}
               </p>
             </div>
           </section>
