@@ -26,6 +26,7 @@ import StatusBadge from "../../components/ui/StatusBadge";
 import Skeleton, { SkeletonStats } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
 import { money, orderNo, tableName } from "../../utils/format";
+import { AR, countAr } from "../../utils/plural";
 
 const ACTIVE = ["pending", "preparing", "ready"];
 const LATE_AFTER_MIN = 20;
@@ -125,8 +126,8 @@ export default function SubscriptionDashboard() {
 
   const attention = [
     stats.late && { tone: "danger", text: `${stats.late} ${stats.late === 1 ? "طلب تجاوز" : "طلبات تجاوزت"} ${LATE_AFTER_MIN} دقيقة في المطبخ` },
-    stats.help && { tone: "danger", text: `${stats.help} ${stats.help === 1 ? "طاولة تطلب" : "طاولات تطلب"} نادلًا الآن` },
-    stats.bills && { tone: "warning", text: `${stats.bills} ${stats.bills === 1 ? "طاولة طلبت" : "طاولات طلبت"} الفاتورة` },
+    stats.help && { tone: "danger", text: countAr(stats.help, AR.tablesAskingWaiter) },
+    stats.bills && { tone: "warning", text: countAr(stats.bills, AR.tablesAskedBill) },
   ].filter(Boolean);
 
   const firstLoad = orders.loading && !orders.data;
@@ -158,7 +159,7 @@ export default function SubscriptionDashboard() {
       {firstLoad ? <SkeletonStats /> : (
         <section aria-label="أرقام اليوم" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard icon={ClipboardList} label="طلبات اليوم" value={stats.ordersToday} />
-          <StatCard icon={CookingPot} tone="info" label="طلبات قيد العمل" value={stats.active} hint={stats.late ? `${stats.late} متأخر` : undefined} emphasis={stats.late > 0} />
+          <StatCard icon={CookingPot} tone="info" label="طلبات قيد العمل" value={stats.active} hint={stats.late ? countAr(stats.late, AR.lateOrders) : undefined} emphasis={stats.late > 0} />
           <StatCard icon={Wallet} tone="herb" label="مبيعات اليوم المؤكدة" value={sales.loading && !sales.data ? "…" : money(stats.revenueToday)} />
           <StatCard icon={LayoutGrid} tone="copper" label="طاولات مشغولة" value={tables.loading && !tables.data ? "…" : `${stats.occupied} / ${stats.tables}`} />
         </section>

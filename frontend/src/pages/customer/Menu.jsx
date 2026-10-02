@@ -22,6 +22,7 @@ import Modal from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { money } from "../../utils/format";
 import MenuItemCard from "../../components/menu/MenuItemCard";
+import { AR, countAr } from "../../utils/plural";
 import { DEFAULT_TAGLINE, cardRadius, logoRadius, resolveMenuStyle } from "../../components/menu/menuStyle";
 
 const ALL = "الكل";
@@ -211,7 +212,7 @@ export default function Menu() {
             <div className={`relative mx-auto max-w-3xl px-4 pt-4 ${cover ? "pb-6" : "pb-4"}`}>
               <div className="flex items-center justify-between">
                 <button onClick={() => navigate(-1)} aria-label="رجوع" className={roundBtn}><ArrowRight size={20} aria-hidden="true" /></button>
-                <button onClick={() => navigate(withSession(`/t/${tableCode}/cart`))} aria-label={cartCount ? `السلة، ${cartCount} عناصر` : "السلة فارغة"} className={`relative ${roundBtn}`}>
+                <button onClick={() => navigate(withSession(`/t/${tableCode}/cart`))} aria-label={cartCount ? `السلة، ${countAr(cartCount, AR.items)}` : "السلة فارغة"} className={`relative ${roundBtn}`}>
                   <ShoppingBag size={20} aria-hidden="true" />
                   {cartCount > 0 && <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-black" style={minimal ? { background: brand.primary_color, color: "#fff" } : { background: "#fff", color: brand.primary_color }}>{cartCount}</span>}
                 </button>

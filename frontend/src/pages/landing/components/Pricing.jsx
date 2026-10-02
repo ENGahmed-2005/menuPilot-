@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Bike, Check, ChevronDown, ChevronUp, Palette } from "lucide-react";
 import { ADDON_ORDER, MAIN_PLANS, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS } from "../../../config/subscriptions";
 import Reveal from "./Reveal";
+import { AR, countAr } from "../../../utils/plural";
 
 const COLLAPSED_COUNT = 4;
 
@@ -109,7 +110,7 @@ function PlanCard({ id, plan, popular, delay, annual }) {
             {expanded ? (
               <><ChevronUp size={13} /> عرض أقل</>
             ) : (
-              <><ChevronDown size={13} /> عرض {features.length - COLLAPSED_COUNT} ميزة إضافية</>
+              <><ChevronDown size={13} /> عرض {countAr(features.length - COLLAPSED_COUNT, AR.extraFeatures)}</>
             )}
           </button>
         )}
