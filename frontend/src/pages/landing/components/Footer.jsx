@@ -1,5 +1,6 @@
 import { NAV_LINKS } from "./data";
 import BrandLogo from "../../../components/brand/Logo";
+import { t } from "../../../i18n";
 
 export default function Footer() {
   return (
@@ -11,13 +12,13 @@ export default function Footer() {
           <div>
             <BrandLogo on="dark" height={32} />
             <p className="mt-4 max-w-xs text-sm leading-7 text-[#F3EFE5]/70">
-              نظام إدارة مطاعم مبني ليجعل التشغيل أبسط، الطلبات أسرع، وفريقك أكثر تنسيقًا.
+              {t("نظام إدارة مطاعم مبني ليجعل التشغيل أبسط، الطلبات أسرع، وفريقك أكثر تنسيقًا.")}
             </p>
           </div>
 
           {/* Nav */}
           <div>
-            <p className="mb-4 text-[11px] font-black tracking-[.15em] text-[#F3EFE5]/30 uppercase">الأقسام</p>
+            <p className="mb-4 text-[11px] font-black tracking-[.15em] text-[#F3EFE5]/30 uppercase">{t("الأقسام")}</p>
             <nav className="flex flex-col gap-2.5">
               {NAV_LINKS.map((link) => (
                 <a
@@ -33,8 +34,8 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-[#F3EFE5]/8 pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[#F3EFE5]/30">© {new Date().getFullYear()} menuPilot. جميع الحقوق محفوظة.</p>
-          <p className="text-xs text-[#F3EFE5]/25">تجربة مجانية 14 يومًا — بدون بطاقة ائتمانية</p>
+          <p className="text-xs text-[#F3EFE5]/30">© {new Date().getFullYear()} {t("menuPilot. جميع الحقوق محفوظة.")}</p>
+          <p className="text-xs text-[#F3EFE5]/25">{t("تجربة مجانية 14 يومًا — بدون بطاقة ائتمانية")}</p>
         </div>
       </div>
     </footer>

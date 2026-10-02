@@ -4,6 +4,7 @@
    are announced; the rest use role="status".
    ========================================================================== */
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
+import { t } from "../../i18n";
 
 const TONES = {
   info: { box: "border-info/20 bg-info/[0.07] text-info", icon: Info },
@@ -26,7 +27,7 @@ export default function Alert({ tone = "info", title, children, action, onDismis
       </div>
       {action && <div className="shrink-0">{action}</div>}
       {onDismiss && (
-        <button type="button" onClick={onDismiss} className="-m-1 rounded-lg p-1 opacity-70 hover:opacity-100" aria-label="إخفاء الرسالة">
+        <button type="button" onClick={onDismiss} className="-m-1 rounded-lg p-1 opacity-70 hover:opacity-100" aria-label={t("إخفاء الرسالة")}>
           <X size={16} aria-hidden="true" />
         </button>
       )}

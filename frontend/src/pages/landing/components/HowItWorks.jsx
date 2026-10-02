@@ -1,5 +1,6 @@
 import { STEPS } from "./data";
 import Reveal from "./Reveal";
+import { t } from "../../../i18n";
 
 export default function HowItWorks() {
   return (
@@ -10,14 +11,14 @@ export default function HowItWorks() {
           {/* Left: sticky heading */}
           <Reveal className="lg:sticky lg:top-28">
             <span className="inline-block rounded-full border border-[#E67E22]/30 bg-[#E67E22]/8 px-3 py-1 text-[11px] font-black tracking-[.18em] text-[#E67E22] uppercase">
-              كيف يعمل
+              {t("كيف يعمل")}
             </span>
             <h2 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl">
-              من الطاولة إلى المطبخ،<br />
-              <span className="text-[#E67E22]">بدون فوضى.</span>
+              {t("من الطاولة إلى المطبخ،")}<br />
+              <span className="text-[#E67E22]">{t("بدون فوضى.")}</span>
             </h2>
             <p className="mt-5 max-w-sm text-base leading-8 text-[#5A6574]">
-              تدفق بسيط يجعل كل شخص يعرف ماذا يفعل ومتى — ويقلل الخطوات اليدوية التي تضيع الوقت.
+              {t("تدفق بسيط يجعل كل شخص يعرف ماذا يفعل ومتى — ويقلل الخطوات اليدوية التي تضيع الوقت.")}
             </p>
           </Reveal>
 

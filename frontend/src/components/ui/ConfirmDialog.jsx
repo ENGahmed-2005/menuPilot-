@@ -9,6 +9,7 @@
 import { useCallback, useRef, useState } from "react";
 import Modal from "./Modal";
 import Button from "./Button";
+import { t } from "../../i18n";
 
 export function useConfirm() {
   const [options, setOptions] = useState(null);
@@ -33,8 +34,8 @@ export function useConfirm() {
       title={options?.title}
       description={options?.description}
       footer={<>
-        <Button variant="secondary" onClick={() => close(false)}>{options?.cancelLabel || "تراجع"}</Button>
-        <Button variant={options?.tone === "danger" ? "danger" : "primary"} onClick={() => close(true)}>{options?.confirmLabel || "تأكيد"}</Button>
+        <Button variant="secondary" onClick={() => close(false)}>{options?.cancelLabel || t("تراجع")}</Button>
+        <Button variant={options?.tone === "danger" ? "danger" : "primary"} onClick={() => close(true)}>{options?.confirmLabel || t("تأكيد")}</Button>
       </>}
     >
       {options?.body || null}

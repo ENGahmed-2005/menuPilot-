@@ -1,5 +1,6 @@
 import { ROLES } from "./data";
 import Reveal from "./Reveal";
+import { t } from "../../../i18n";
 
 /* One accent colour per role for visual distinction */
 const ACCENTS = ["#EEA122", "#4B6A8A", "#4A7FA5", "#8B6FB5"];
@@ -9,13 +10,13 @@ export default function Roles() {
     <section id="roles" className="mx-auto max-w-7xl scroll-mt-24 px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
       <Reveal className="text-center">
         <span className="inline-block rounded-full border border-[#EEA122]/25 bg-[#EEA122]/8 px-3 py-1 text-[11px] font-black tracking-[.18em] text-[#EEA122] uppercase">
-          الأدوار
+          {t("الأدوار")}
         </span>
         <h2 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl">
-          كل دور له مساحة عمله.
+          {t("كل دور له مساحة عمله.")}
         </h2>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#F3EFE5]/70">
-          من الإدارة إلى المطبخ والكاشير والويتر — menuPilot يربط الفريق بنفس دورة الطلب.
+          {t("من الإدارة إلى المطبخ والكاشير والويتر — menuPilot يربط الفريق بنفس دورة الطلب.")}
         </p>
       </Reveal>
 

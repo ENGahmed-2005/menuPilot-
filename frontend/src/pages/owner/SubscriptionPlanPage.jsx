@@ -24,9 +24,10 @@ import Input from "../../components/ui/Input";
 import SegmentedControl from "../../components/ui/SegmentedControl";
 import Skeleton from "../../components/ui/Skeleton";
 import { useToast } from "../../components/ui/Toast";
+import { t } from "../../i18n";
 
-const STATUS = { pending: ["بانتظار التحقق", "warning", Clock3], verified: ["مؤكدة ومفعّلة", "success", CheckCircle2], rejected: ["مرفوضة", "danger", XCircle] };
-const monthsText = (n) => (n === 1 ? "شهر واحد" : n === 2 ? "شهران" : `${n} ${n <= 10 ? "أشهر" : "شهرًا"}`);
+const STATUS = { pending: [t("بانتظار التحقق"), "warning", Clock3], verified: [t("مؤكدة ومفعّلة"), "success", CheckCircle2], rejected: [t("مرفوضة"), "danger", XCircle] };
+const monthsText = (n) => (n === 1 ? t("شهر واحد") : n === 2 ? t("شهران") : `${n} ${n <= 10 ? t("أشهر") : t("شهرًا")}`);
 const money = (v, c) => `${Number(v || 0).toLocaleString("en-US")} ${c === "USD" ? "$" : c}`;
 const ADDON_ICONS = { delivery: Bike, brand_plus: Palette };
 
@@ -59,7 +60,7 @@ function CopyRow({ label, value, onCopy }) {
       <dt className="text-sm text-muted">{label}</dt>
       <dd className="flex items-center gap-2">
         <span dir="ltr" className="num font-bold">{value}</span>
-        <button type="button" onClick={() => onCopy(value)} aria-label={`نسخ ${label}`} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-ink/[0.06]"><Copy size={15} aria-hidden="true" /></button>
+        <button type="button" onClick={() => onCopy(value)} aria-label={t("نسخ {0}", { 0: label })} className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-ink/[0.06]"><Copy size={15} aria-hidden="true" /></button>
       </dd>
     </div>
   );
@@ -68,15 +69,15 @@ function CopyRow({ label, value, onCopy }) {
 function Invoice({ p, restaurant }) {
   return (
     <div className="rounded-2xl border border-dashed border-line bg-surface-2 p-4 text-sm print:border-solid">
-      <div className="flex items-center justify-between"><p className="font-extrabold">فاتورة اشتراك</p><span dir="ltr" className="num font-bold">{p.invoice_number}</span></div>
+      <div className="flex items-center justify-between"><p className="font-extrabold">{t("فاتورة اشتراك")}</p><span dir="ltr" className="num font-bold">{p.invoice_number}</span></div>
       <dl className="mt-3 space-y-1.5">
-        <div className="flex justify-between"><dt className="text-muted">المطعم</dt><dd className="font-bold">{restaurant}</dd></div>
-        <div className="flex justify-between gap-3"><dt className="text-muted">الخطة</dt><dd className="text-left font-bold">{p.plan_label || p.plan_name} · {monthsText(p.months)}</dd></div>
-        <div className="flex justify-between"><dt className="text-muted">المبلغ</dt><dd className="num font-extrabold">{money(p.amount, p.currency)}</dd></div>
-        <div className="flex justify-between"><dt className="text-muted">طريقة الدفع</dt><dd>تحويل بنكي · {p.bank}</dd></div>
-        <div className="flex justify-between"><dt className="text-muted">رمز الدفع</dt><dd dir="ltr" className="num">{p.reference_code}</dd></div>
-        {p.transfer_reference && <div className="flex justify-between"><dt className="text-muted">رقم الحوالة</dt><dd dir="ltr" className="num">{p.transfer_reference}</dd></div>}
-        <div className="flex justify-between"><dt className="text-muted">الحالة</dt><dd><Badge tone={STATUS[p.status]?.[1]} icon={STATUS[p.status]?.[2]}>{STATUS[p.status]?.[0]}</Badge></dd></div>
+        <div className="flex justify-between"><dt className="text-muted">{t("المطعم")}</dt><dd className="font-bold">{restaurant}</dd></div>
+        <div className="flex justify-between gap-3"><dt className="text-muted">{t("الخطة")}</dt><dd className="text-left font-bold">{p.plan_label || p.plan_name} · {monthsText(p.months)}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">{t("المبلغ")}</dt><dd className="num font-extrabold">{money(p.amount, p.currency)}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">{t("طريقة الدفع")}</dt><dd>{t("تحويل بنكي ·")} {p.bank}</dd></div>
+        <div className="flex justify-between"><dt className="text-muted">{t("رمز الدفع")}</dt><dd dir="ltr" className="num">{p.reference_code}</dd></div>
+        {p.transfer_reference && <div className="flex justify-between"><dt className="text-muted">{t("رقم الحوالة")}</dt><dd dir="ltr" className="num">{p.transfer_reference}</dd></div>}
+        <div className="flex justify-between"><dt className="text-muted">{t("الحالة")}</dt><dd><Badge tone={STATUS[p.status]?.[1]} icon={STATUS[p.status]?.[2]}>{STATUS[p.status]?.[0]}</Badge></dd></div>
       </dl>
     </div>
   );
@@ -129,13 +130,13 @@ export default function SubscriptionPlanPage() {
   const ils = (v) => (data?.ils_rate ? `≈ ${Math.round(v * data.ils_rate)} ₪` : "");
   const pending = data?.payments?.find((p) => p.status === "pending");
   const lastRejected = data?.payments?.[0]?.status === "rejected" ? data.payments[0] : null;
-  const restaurant = user?.restaurant_name || user?.name || "مطعمي";
-  const copy = (v) => navigator.clipboard?.writeText(v).then(() => toast.success("نُسخ."));
+  const restaurant = user?.restaurant_name || user?.name || t("مطعمي");
+  const copy = (v) => navigator.clipboard?.writeText(v).then(() => toast.success(t("نُسخ.")));
 
   function pickProof(e) {
     const file = e.target.files?.[0];
     if (!file) return setForm((f) => ({ ...f, proof: "" }));
-    if (file.size > 5 * 1024 * 1024) { toast.error("حجم الصورة أكبر من 5MB."); e.target.value = ""; return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error(t("حجم الصورة أكبر من 5MB.")); e.target.value = ""; return; }
     const reader = new FileReader();
     reader.onload = () => setForm((f) => ({ ...f, proof: reader.result }));
     reader.readAsDataURL(file);
@@ -151,28 +152,28 @@ export default function SubscriptionPlanPage() {
       fetchCurrentUser().then(updateUser).catch(() => {});
       load();
     } catch (err) {
-      toast.error(errorText(err, "تعذّر إرسال بيانات التحويل."));
+      toast.error(errorText(err, t("تعذّر إرسال بيانات التحويل.")));
     } finally {
       setSaving(false);
     }
   }
 
-  if (error) return <Alert tone="danger">{errorText(error, "تعذّر تحميل بيانات الاشتراك.")}</Alert>;
+  if (error) return <Alert tone="danger">{errorText(error, t("تعذّر تحميل بيانات الاشتراك."))}</Alert>;
   if (!data) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-64" /></div>;
 
   // After reporting: the invoice + WhatsApp.
   if (sent) {
     return (
       <div className="mx-auto max-w-xl space-y-5">
-        <PageHeader title="استلمنا بيانات التحويل" subtitle="أرسل الفاتورة وصورة إشعار التحويل على واتساب، ونفعّل اشتراكك فور التحقق." />
+        <PageHeader title={t("استلمنا بيانات التحويل")} subtitle={t("أرسل الفاتورة وصورة إشعار التحويل على واتساب، ونفعّل اشتراكك فور التحقق.")} />
         <Card className="space-y-4 p-5">
           <Invoice p={sent} restaurant={restaurant} />
           <a href={sent.whatsapp_url} target="_blank" rel="noopener noreferrer" className="flex h-12 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[#1f9d55] text-sm font-bold text-white">
-            <MessageCircle size={18} aria-hidden="true" /> إرسال الفاتورة على واتساب <span dir="ltr">{data.whatsapp}</span>
+            <MessageCircle size={18} aria-hidden="true" /> {t("إرسال الفاتورة على واتساب")} <span dir="ltr">{data.whatsapp}</span>
           </a>
           <div className="flex gap-2">
-            <Button variant="secondary" block onClick={() => window.print()}><Printer size={16} aria-hidden="true" /> طباعة الفاتورة</Button>
-            <Button variant="ghost" block onClick={() => navigate("/owner/dashboard")}>لوحة التحكم</Button>
+            <Button variant="secondary" block onClick={() => window.print()}><Printer size={16} aria-hidden="true" /> {t("طباعة الفاتورة")}</Button>
+            <Button variant="ghost" block onClick={() => navigate("/owner/dashboard")}>{t("لوحة التحكم")}</Button>
           </div>
         </Card>
       </div>
@@ -181,37 +182,37 @@ export default function SubscriptionPlanPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="الاشتراك والدفع" subtitle="اختر خطتك وادفع بتحويل بنكي إلى بنك فلسطين. نفعّل الاشتراك يدويًا بعد التحقق من التحويل." />
+      <PageHeader title={t("الاشتراك والدفع")} subtitle={t("اختر خطتك وادفع بتحويل بنكي إلى بنك فلسطين. نفعّل الاشتراك يدويًا بعد التحقق من التحويل.")} />
 
       {pending && (
         <Card className="space-y-4 p-5">
-          <Alert tone="warning" title="دفعتك قيد التحقق">سنفعّل اشتراكك فور تأكيد وصول التحويل. إن لم ترسل الإشعار بعد، أرسله على واتساب.</Alert>
+          <Alert tone="warning" title={t("دفعتك قيد التحقق")}>{t("سنفعّل اشتراكك فور تأكيد وصول التحويل. إن لم ترسل الإشعار بعد، أرسله على واتساب.")}</Alert>
           <Invoice p={pending} restaurant={restaurant} />
-          <a href={`https://wa.me/${String(data.whatsapp).replace(/\D/g, "")}?text=${encodeURIComponent(`مرحبًا فريق menuPilot، بخصوص الفاتورة ${pending.invoice_number} (${restaurant}).`)}`} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[#1f9d55] text-sm font-bold text-white">
-            <MessageCircle size={17} aria-hidden="true" /> تواصل معنا على واتساب
+          <a href={`https://wa.me/${String(data.whatsapp).replace(/\D/g, "")}?text=${encodeURIComponent(t("مرحبًا فريق menuPilot، بخصوص الفاتورة {0} ({1}).", { 0: pending.invoice_number, 1: restaurant }))}`} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[#1f9d55] text-sm font-bold text-white">
+            <MessageCircle size={17} aria-hidden="true" /> {t("تواصل معنا على واتساب")}
           </a>
         </Card>
       )}
-      {lastRejected && !pending && <Alert tone="danger" title="رُفضت آخر دفعة">{lastRejected.rejection_reason}. يمكنك إرسال بيانات التحويل من جديد.</Alert>}
+      {lastRejected && !pending && <Alert tone="danger" title={t("رُفضت آخر دفعة")}>{lastRejected.rejection_reason}{t(". يمكنك إرسال بيانات التحويل من جديد.")}</Alert>}
 
       {!pending && (
         <>
           <Card>
-            <CardHeader title="1. اختر الخطة والإضافات والمدة" description="ادفع على قدر احتياجك: خطة واحدة، وأضف إليها ما يستخدمه مطعمك فقط." />
+            <CardHeader title={t("1. اختر الخطة والإضافات والمدة")} description={t("ادفع على قدر احتياجك: خطة واحدة، وأضف إليها ما يستخدمه مطعمك فقط.")} />
             <div className="grid gap-3 p-5 sm:grid-cols-3">
               {data.plans.map((p) => (
                 <button key={p.id} type="button" onClick={() => setPlan(p.id)} aria-pressed={plan === p.id}
                   className={`rounded-2xl border p-4 text-right transition-colors ${plan === p.id ? "border-copper bg-copper/[0.07] ring-2 ring-copper/25" : "border-line bg-surface hover:border-ink/25"}`}>
                   <p className="font-extrabold">{p.name}</p>
-                  <p className="num mt-1 text-2xl font-black">{money(p.price, data.currency)}<span className="text-xs font-medium text-muted"> / شهر</span></p>
-                  <p className="num text-xs text-muted">{ils(p.price)} شهريًا</p>
+                  <p className="num mt-1 text-2xl font-black">{money(p.price, data.currency)}<span className="text-xs font-medium text-muted"> {t("/ شهر")}</span></p>
+                  <p className="num text-xs text-muted">{ils(p.price)} {t("شهريًا")}</p>
                   {SUBSCRIPTION_PLANS[p.id]?.description && <p className="mt-2 text-xs leading-5 text-muted">{SUBSCRIPTION_PLANS[p.id].description}</p>}
-                  {live?.plan === p.id && <Badge tone="success" className="mt-2">خطتك الحالية</Badge>}
+                  {live?.plan === p.id && <Badge tone="success" className="mt-2">{t("خطتك الحالية")}</Badge>}
                 </button>
               ))}
             </div>
             <fieldset className="border-t border-line p-5">
-              <legend className="text-sm font-extrabold">الإضافات <span className="font-medium text-muted">اختيارية، وتُضاف إلى السعر الشهري</span></legend>
+              <legend className="text-sm font-extrabold">{t("الإضافات")} <span className="font-medium text-muted">{t("اختيارية، وتُضاف إلى السعر الشهري")}</span></legend>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {catalogue.map((a) => {
                   const included = addonIncluded(a.id, plan);
@@ -228,12 +229,12 @@ export default function SubscriptionPlanPage() {
                         <span className="flex flex-wrap items-baseline justify-between gap-2">
                           <b className="text-sm">{a.name}</b>
                           {included
-                            ? <span className="text-xs font-bold text-copper-ink">مشمولة في «{planName(plan)}»</span>
-                            : <span className="num text-sm font-black">+{money(a.price, data.currency)}<span className="text-xs font-medium text-muted"> / شهر</span></span>}
+                            ? <span className="text-xs font-bold text-copper-ink">{t("مشمولة في «")}{planName(plan)}»</span>
+                            : <span className="num text-sm font-black">+{money(a.price, data.currency)}<span className="text-xs font-medium text-muted"> {t("/ شهر")}</span></span>}
                         </span>
                         <span className="mt-1 block text-xs leading-5 text-muted">{a.description}</span>
-                        {!fits && <span className="mt-2 flex items-center gap-1 text-xs font-bold text-copper-ink"><Lock size={12} aria-hidden="true" /> تحتاج الخطة {a.plans.map(planName).join(" أو ")}، واختيارها ينقلك إليها</span>}
-                        {live?.addons?.includes(a.id) && <Badge tone="success" className="mt-2">مفعّلة الآن</Badge>}
+                        {!fits && <span className="mt-2 flex items-center gap-1 text-xs font-bold text-copper-ink"><Lock size={12} aria-hidden="true" /> {t("تحتاج الخطة")} {a.plans.map(planName).join(t(" أو "))}{t("، واختيارها ينقلك إليها")}</span>}
+                        {live?.addons?.includes(a.id) && <Badge tone="success" className="mt-2">{t("مفعّلة الآن")}</Badge>}
                       </span>
                     </button>
                   );
@@ -241,48 +242,48 @@ export default function SubscriptionPlanPage() {
               </div>
             </fieldset>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
-              <SegmentedControl label="المدة" value={months} onChange={setMonths} options={data.periods.map((m) => ({ value: m, label: monthsText(m) }))} />
+              <SegmentedControl label={t("المدة")} value={months} onChange={setMonths} options={data.periods.map((m) => ({ value: m, label: monthsText(m) }))} />
               <div className="text-left">
-                <p className="text-sm">المبلغ المطلوب: <b className="num text-lg">{money(amount, data.currency)}</b> <span className="num text-xs text-muted">{ils(amount)}</span>
-                  {months === 12 && data.annual_free_months > 0 && <span className="mr-2 rounded-full bg-copper/15 px-2 py-0.5 text-xs font-bold text-copper-ink">{data.annual_free_months} شهر مجانًا</span>}</p>
+                <p className="text-sm">{t("المبلغ المطلوب:")} <b className="num text-lg">{money(amount, data.currency)}</b> <span className="num text-xs text-muted">{ils(amount)}</span>
+                  {months === 12 && data.annual_free_months > 0 && <span className="mr-2 rounded-full bg-copper/15 px-2 py-0.5 text-xs font-bold text-copper-ink">{data.annual_free_months} {t("شهر مجانًا")}</span>}</p>
                 <p className="num mt-1 text-xs text-muted">
-                  {[`${selected?.name || planName(plan)} ${money(selected?.price, data.currency)}`, ...chosen.map((a) => `${a.name} ${money(a.price, data.currency)}`)].join(" + ")} = {money(monthly, data.currency)} شهريًا
+                  {[`${selected?.name || planName(plan)} ${money(selected?.price, data.currency)}`, ...chosen.map((a) => `${a.name} ${money(a.price, data.currency)}`)].join(" + ")} = {money(monthly, data.currency)} {t("شهريًا")}
                 </p>
               </div>
             </div>
           </Card>
 
           <Card>
-            <CardHeader title="2. حوّل المبلغ إلى بنك فلسطين" description="اكتب رمز الدفع في ملاحظة التحويل حتى نتعرف على دفعتك بسرعة." action={<Landmark size={20} className="text-muted" aria-hidden="true" />} />
+            <CardHeader title={t("2. حوّل المبلغ إلى بنك فلسطين")} description={t("اكتب رمز الدفع في ملاحظة التحويل حتى نتعرف على دفعتك بسرعة.")} action={<Landmark size={20} className="text-muted" aria-hidden="true" />} />
             <dl className="divide-y divide-line">
-              <CopyRow label="البنك" value={data.bank.name} onCopy={copy} />
-              <CopyRow label="اسم صاحب الحساب" value={data.bank.account_name} onCopy={copy} />
-              <CopyRow label="رقم الحساب" value={data.bank.account_number} onCopy={copy} />
+              <CopyRow label={t("البنك")} value={data.bank.name} onCopy={copy} />
+              <CopyRow label={t("اسم صاحب الحساب")} value={data.bank.account_name} onCopy={copy} />
+              <CopyRow label={t("رقم الحساب")} value={data.bank.account_number} onCopy={copy} />
               <CopyRow label="IBAN" value={data.bank.iban} onCopy={copy} />
-              <CopyRow label="الفرع" value={data.bank.branch} onCopy={copy} />
-              <CopyRow label="رمز الدفع" value={data.reference_code} onCopy={copy} />
-              <CopyRow label="المبلغ" value={money(amount, data.currency)} onCopy={copy} />
+              <CopyRow label={t("الفرع")} value={data.bank.branch} onCopy={copy} />
+              <CopyRow label={t("رمز الدفع")} value={data.reference_code} onCopy={copy} />
+              <CopyRow label={t("المبلغ")} value={money(amount, data.currency)} onCopy={copy} />
             </dl>
             {!data.bank_configured && (
-              <div className="p-5 pt-0"><Alert tone="info">سيرسل لك فريق menuPilot رقم الحساب على واتساب <span dir="ltr">{data.whatsapp}</span> عند التواصل.</Alert></div>
+              <div className="p-5 pt-0"><Alert tone="info">{t("سيرسل لك فريق menuPilot رقم الحساب على واتساب")} <span dir="ltr">{data.whatsapp}</span> {t("عند التواصل.")}</Alert></div>
             )}
           </Card>
 
           <Card as="form" onSubmit={submit}>
-            <CardHeader title="3. أبلغنا بالتحويل" description="بعد الإرسال نفتح لك واتساب مع الفاتورة جاهزة للإرسال." />
+            <CardHeader title={t("3. أبلغنا بالتحويل")} description={t("بعد الإرسال نفتح لك واتساب مع الفاتورة جاهزة للإرسال.")} />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
-              <Input label="اسم صاحب الحساب المحوِّل" required maxLength={120} value={form.payer_name} onChange={(e) => setForm((f) => ({ ...f, payer_name: e.target.value }))} />
-              <Input label="تاريخ التحويل" type="date" required max={new Date().toISOString().slice(0, 10)} value={form.transfer_date} onChange={(e) => setForm((f) => ({ ...f, transfer_date: e.target.value }))} />
-              <Input label="رقم الحوالة / المرجع (إن وُجد)" dir="ltr" maxLength={80} value={form.transfer_reference} onChange={(e) => setForm((f) => ({ ...f, transfer_reference: e.target.value }))} />
+              <Input label={t("اسم صاحب الحساب المحوِّل")} required maxLength={120} value={form.payer_name} onChange={(e) => setForm((f) => ({ ...f, payer_name: e.target.value }))} />
+              <Input label={t("تاريخ التحويل")} type="date" required max={new Date().toISOString().slice(0, 10)} value={form.transfer_date} onChange={(e) => setForm((f) => ({ ...f, transfer_date: e.target.value }))} />
+              <Input label={t("رقم الحوالة / المرجع (إن وُجد)")} dir="ltr" maxLength={80} value={form.transfer_reference} onChange={(e) => setForm((f) => ({ ...f, transfer_reference: e.target.value }))} />
               <label className="flex flex-col gap-1.5 text-sm font-bold text-ink">
-                صورة إشعار التحويل (اختياري)
+                {t("صورة إشعار التحويل (اختياري)")}
                 <input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickProof} className="text-sm font-normal file:ml-3 file:rounded-lg file:border-0 file:bg-ink/[0.07] file:px-3 file:py-2 file:font-bold" />
               </label>
-              <div className="sm:col-span-2"><Input label="ملاحظة (اختياري)" maxLength={500} value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} /></div>
+              <div className="sm:col-span-2"><Input label={t("ملاحظة (اختياري)")} maxLength={500} value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} /></div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
-              <p className="text-xs text-muted">لن نخصم أي مبلغ تلقائيًا. التفعيل يتم بعد التحقق من وصول التحويل.</p>
-              <Button type="submit" loading={saving}><MessageCircle size={16} aria-hidden="true" /> أرسلت التحويل · {money(amount, data.currency)}</Button>
+              <p className="text-xs text-muted">{t("لن نخصم أي مبلغ تلقائيًا. التفعيل يتم بعد التحقق من وصول التحويل.")}</p>
+              <Button type="submit" loading={saving}><MessageCircle size={16} aria-hidden="true" /> {t("أرسلت التحويل ·")} {money(amount, data.currency)}</Button>
             </div>
           </Card>
         </>
@@ -290,7 +291,7 @@ export default function SubscriptionPlanPage() {
 
       {data.payments.length > 0 && (
         <Card>
-          <CardHeader title="دفعاتي" />
+          <CardHeader title={t("دفعاتي")} />
           <ul className="divide-y divide-line">
             {data.payments.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">

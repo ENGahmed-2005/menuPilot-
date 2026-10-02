@@ -8,6 +8,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Modal from "../ui/Modal";
 import Skeleton from "../ui/Skeleton";
+import { t } from "../../i18n";
 
 const PAGES = {
   "/owner/settings": lazy(() => import("../../pages/owner/RestaurantSettings")),
@@ -30,9 +31,9 @@ export default function SettingsDialog({ open, onClose, items, initial }) {
 
   const Page = PAGES[active];
   return (
-    <Modal open={open} onClose={onClose} size="xl" title="الإعدادات" bodyClassName="p-0">
+    <Modal open={open} onClose={onClose} size="xl" title={t("الإعدادات")} bodyClassName="p-0">
       <div className="flex min-h-[60vh] flex-col md:flex-row">
-        <nav aria-label="أقسام الإعدادات" className="flex shrink-0 gap-1 overflow-x-auto border-b border-line p-2 md:w-56 md:flex-col md:overflow-visible md:border-b-0 md:border-l md:p-3">
+        <nav aria-label={t("أقسام الإعدادات")} className="flex shrink-0 gap-1 overflow-x-auto border-b border-line p-2 md:w-56 md:flex-col md:overflow-visible md:border-b-0 md:border-l md:p-3">
           {tabs.map(([to, label, Icon]) => (
             <button key={to} type="button" onClick={() => setActive(to)} aria-current={active === to ? "page" : undefined}
               className={`flex min-h-11 shrink-0 items-center gap-2.5 rounded-xl px-3 text-sm font-bold transition-colors ${active === to ? "bg-copper text-ink" : "text-ink-soft hover:bg-ink/[0.05]"}`}>
@@ -42,7 +43,7 @@ export default function SettingsDialog({ open, onClose, items, initial }) {
         </nav>
         <div className="min-w-0 flex-1 p-5 md:p-6">
           <Suspense fallback={<div className="space-y-3"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-40" /></div>}>
-            {Page ? <Page /> : <p className="text-sm text-muted">لا توجد إعدادات متاحة لحسابك.</p>}
+            {Page ? <Page /> : <p className="text-sm text-muted">{t("لا توجد إعدادات متاحة لحسابك.")}</p>}
           </Suspense>
         </div>
       </div>

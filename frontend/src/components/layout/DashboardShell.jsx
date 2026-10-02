@@ -9,15 +9,16 @@ import { useAuth } from "../../context/AuthContext";
 import { resolveThemeVars } from "../../config/themes";
 import Sidebar from "./Sidebar";
 import TrialBanner from "../subscription/TrialBanner";
+import { t, dir } from "../../i18n";
 
 export default function DashboardShell({ children }) {
   const { user } = useAuth();
   const themeVars = user?.role === "owner" ? resolveThemeVars(user.theme) : null;
 
   return (
-    <div dir="rtl" style={themeVars || undefined} className="min-h-screen bg-paper-2 text-ink lg:flex">
+    <div dir={dir} style={themeVars || undefined} className="min-h-screen bg-paper-2 text-ink lg:flex">
       <a href="#main-content" className="sr-only-focusable fixed right-4 top-4 z-[60] rounded-xl bg-copper px-4 py-2 text-sm font-bold text-ink">
-        تخطَّ إلى المحتوى
+        {t("تخطَّ إلى المحتوى")}
       </a>
       <Sidebar />
       <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 outline-none sm:px-6 lg:px-10 lg:py-8">

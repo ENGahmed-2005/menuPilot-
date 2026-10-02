@@ -1,21 +1,22 @@
 /* إطار مشترك لصفحات auth مع شعار menuPilot الرسمي */
 import { CheckCircle2 } from "lucide-react";
 import BrandLogo from "../brand/Logo";
+import { t, dir } from "../../i18n";
 
 const FEATURES = [
-  "طلب مباشر من الطاولة عبر QR",
-  "متابعة حية لحالة كل طلب",
-  "لوحات مخصّصة للمطبخ والكاشير والنادل",
+  t("طلب مباشر من الطاولة عبر QR"),
+  t("متابعة حية لحالة كل طلب"),
+  t("لوحات مخصّصة للمطبخ والكاشير والنادل"),
 ];
 
 export default function AuthLayout({ eyebrow, title, subtitle, children }) {
   return (
-    <div dir="rtl" className="flex min-h-screen flex-col bg-paper-2 font-body lg:flex-row">
+    <div dir={dir} className="flex min-h-screen flex-col bg-paper-2 font-body lg:flex-row">
       <aside className="relative flex flex-col justify-between overflow-hidden bg-navy px-8 py-10 text-paper lg:w-[42%] lg:px-14 lg:py-16">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, #F3EFE5 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
 
         <div className="relative">
-          <a href="/" aria-label="menuPilot، الصفحة الرئيسية" className="inline-flex"><BrandLogo on="dark" height={40} priority /></a>
+          <a href="/" aria-label={t("menuPilot، الصفحة الرئيسية")} className="inline-flex"><BrandLogo on="dark" height={40} priority /></a>
         </div>
 
         <div className="relative space-y-6">
@@ -31,7 +32,7 @@ export default function AuthLayout({ eyebrow, title, subtitle, children }) {
           </ul>
         </div>
 
-        <p className="relative text-xs text-paper/70">© {new Date().getFullYear()} منيو-بايلوت — جميع الحقوق محفوظة</p>
+        <p className="relative text-xs text-paper/70">© {new Date().getFullYear()} {t("منيو-بايلوت — جميع الحقوق محفوظة")}</p>
 
         <div aria-hidden="true" className="absolute bottom-0 right-0 top-0 hidden w-6 translate-x-1/2 lg:block" style={{ backgroundImage: "radial-gradient(circle, #F3EFE5 8px, transparent 9px)", backgroundSize: "24px 24px", backgroundRepeat: "repeat-y", backgroundPosition: "center" }} />
       </aside>

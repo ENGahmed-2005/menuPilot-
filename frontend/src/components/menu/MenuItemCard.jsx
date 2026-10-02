@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Plus, Utensils } from "lucide-react";
 import { money } from "../../utils/format";
+import { t } from "../../i18n";
 
 function Thumb({ src, alt, tint, className, iconSize = 22 }) {
   const [failed, setFailed] = useState(false);
@@ -25,13 +26,13 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
   const showDescription = style.show_descriptions && item.description;
   const surface = { background: style.surface_color, borderRadius: radius };
   const add = (
-    <button type="button" onClick={() => onAdd(item)} aria-label={`إضافة ${item.name} إلى السلة`}
+    <button type="button" onClick={() => onAdd(item)} aria-label={t("إضافة {0} إلى السلة", { 0: item.name })}
       className="pointer-events-auto relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-full text-white shadow-sm transition-transform active:scale-90"
       style={{ background: brand.button_color }}>
       <Plus size={20} aria-hidden="true" />
     </button>
   );
-  const open = <button type="button" onClick={() => onOpen(item)} className="absolute inset-0 z-0" style={{ borderRadius: radius }} aria-label={`تفاصيل ${item.name}`} />;
+  const open = <button type="button" onClick={() => onOpen(item)} className="absolute inset-0 z-0" style={{ borderRadius: radius }} aria-label={t("تفاصيل {0}", { 0: item.name })} />;
   const badge = count > 0 && <span className="absolute right-1.5 top-1.5 z-[1] rounded-full bg-black/70 px-1.5 py-0.5 text-[11px] font-black leading-none text-white">×{count}</span>;
   const price = <span className="text-[15px] font-black tabular-nums" style={{ color: priceColor }}>{money(item.price)}</span>;
 

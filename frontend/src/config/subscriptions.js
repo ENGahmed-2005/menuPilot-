@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 /* ==========================================================================
    subscriptions.js — two plans + paid add-ons (mirrors the backend's
    config/subscriptions.php; docs/SUBSCRIPTIONS.md).
@@ -12,26 +13,26 @@ const OPERATIONS = ["dashboard", "tables", "menu", "orders", "kitchen", "cashier
 export const SUBSCRIPTION_PLANS = {
   basic: {
     id: "basic",
-    name: "الأساسية",
+    name: t("الأساسية"),
     price: 15,
-    description: "كل ما يحتاجه مطعم صغير ليعمل بالكامل من المنيو والطاولات.",
+    description: t("كل ما يحتاجه مطعم صغير ليعمل بالكامل من المنيو والطاولات."),
     features: OPERATIONS,
     limits: { tables: 10, menuItems: 50, themes: 0 },
   },
   pro: {
     id: "pro",
-    name: "الاحترافية",
+    name: t("الاحترافية"),
     price: 29,
-    description: "للمطاعم المتنامية: تقارير، وهوية منيو خاصة، وبلا حدود.",
+    description: t("للمطاعم المتنامية: تقارير، وهوية منيو خاصة، وبلا حدود."),
     features: [...OPERATIONS, "reports", "order-history", "smart-alerts", "branding", "background", "full-colors", "theme-presets", "presets"],
     limits: { tables: Infinity, menuItems: Infinity, themes: 4 },
   },
   // For restaurants without tables: online ordering on its own.
   delivery_only: {
     id: "delivery_only",
-    name: "التوصيل فقط",
+    name: t("التوصيل فقط"),
     price: 15,
-    description: "لمطعم بلا صالة: طلبات استلام وتوصيل من رابط مطعمك، بدون طاولات.",
+    description: t("لمطعم بلا صالة: طلبات استلام وتوصيل من رابط مطعمك، بدون طاولات."),
     features: ["dashboard", "menu", "orders", "kitchen", "staff", "online_orders"],
     limits: { tables: 0, menuItems: 50, themes: 0 },
     dineIn: false,
@@ -45,16 +46,16 @@ export const DEFAULT_PLAN = "pro";
 export const SUBSCRIPTION_ADDONS = {
   delivery: {
     id: "delivery",
-    name: "التوصيل والطلب أونلاين",
-    description: "استقبل طلبات الاستلام والتوصيل من رابط ورمز QR خاص بمطعمك، مع مناطق ورسوم توصيل.",
+    name: t("التوصيل والطلب أونلاين"),
+    description: t("استقبل طلبات الاستلام والتوصيل من رابط ورمز QR خاص بمطعمك، مع مناطق ورسوم توصيل."),
     price: 15,
     plans: ["basic", "pro"],
     features: ["online_orders"],
   },
   brand_plus: {
     id: "brand_plus",
-    name: "الهوية الكاملة",
-    description: "خط مخصص للمنيو، وألوان لوحة تحكم مخصصة، وإخفاء شعار menuPilot.",
+    name: t("الهوية الكاملة"),
+    description: t("خط مخصص للمنيو، وألوان لوحة تحكم مخصصة، وإخفاء شعار menuPilot."),
     price: 5,
     plans: ["pro"],
     features: ["custom-font", "remove-branding", "custom-theme"],

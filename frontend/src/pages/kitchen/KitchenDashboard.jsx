@@ -22,14 +22,15 @@ import { SkeletonCards } from "../../components/ui/Skeleton";
 import { errorText } from "../../utils/errors";
 import { orderNo, tableName } from "../../utils/format";
 import { AR, countAr } from "../../utils/plural";
+import { t, locale } from "../../i18n";
 
 const FLOW = ["pending", "preparing", "ready", "served"];
-const NEXT_ACTION = { pending: "ابدأ التحضير", preparing: "جاهز للتقديم", ready: "تم التقديم" };
+const NEXT_ACTION = { pending: t("ابدأ التحضير"), preparing: t("جاهز للتقديم"), ready: t("تم التقديم") };
 const FILTERS = [
-  { value: "active", label: "قيد العمل", icon: ChefHat, tone: "ink" },
-  { value: "pending", label: "جديدة", icon: statusMeta("order", "pending").icon, tone: "copper" },
-  { value: "preparing", label: "قيد التحضير", icon: statusMeta("order", "preparing").icon, tone: "info" },
-  { value: "ready", label: "جاهزة", icon: statusMeta("order", "ready").icon, tone: "herb" },
+  { value: "active", label: t("قيد العمل"), icon: ChefHat, tone: "ink" },
+  { value: "pending", label: t("جديدة"), icon: statusMeta("order", "pending").icon, tone: "copper" },
+  { value: "preparing", label: t("قيد التحضير"), icon: statusMeta("order", "preparing").icon, tone: "info" },
+  { value: "ready", label: t("جاهزة"), icon: statusMeta("order", "ready").icon, tone: "herb" },
 ];
 const POLL_MS = 4000;
 
@@ -126,18 +127,18 @@ export default function KitchenDashboard() {
   }
 
   if (wall) {
-    const columns = [["pending", "جديدة"], ["preparing", "قيد التحضير"], ["ready", "جاهزة للتقديم"]];
+    const columns = [["pending", t("جديدة")], ["preparing", t("قيد التحضير")], ["ready", t("جاهزة للتقديم")]];
     return (
-      <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#121b25] text-paper" role="region" aria-label="شاشة المطبخ، وضع الحائط">
+      <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#121b25] text-paper" role="region" aria-label={t("شاشة المطبخ، وضع الحائط")}>
         <header className="flex flex-wrap items-center gap-3 border-b border-white/10 px-5 py-3">
           <ChefHat size={24} aria-hidden="true" />
-          <h1 className="text-xl font-extrabold">المطبخ</h1>
+          <h1 className="text-xl font-extrabold">{t("المطبخ")}</h1>
           <LiveIndicator connected={connected} />
           {counts.late > 0 && <span className="rounded-full bg-brick px-3 py-1 text-base font-extrabold text-white">{countAr(counts.late, AR.lateOrders)}</span>}
-          <span className="num ms-auto text-2xl font-extrabold tabular-nums" aria-label="الساعة">{new Date(now).toLocaleTimeString("ar-PS-u-nu-latn", { hour: "2-digit", minute: "2-digit" })}</span>
-          <Button variant="secondary" onClick={leaveWall}><Minimize2 size={16} aria-hidden="true" /> الخروج</Button>
+          <span className="num ms-auto text-2xl font-extrabold tabular-nums" aria-label={t("الساعة")}>{new Date(now).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</span>
+          <Button variant="secondary" onClick={leaveWall}><Minimize2 size={16} aria-hidden="true" /> {t("الخروج")}</Button>
         </header>
-        {error && <Alert tone="danger" className="m-4 mb-0" onDismiss={() => setError(null)}>{errorText(error, "تعذّر تحديث الطلبات.")}</Alert>}
+        {error && <Alert tone="danger" className="m-4 mb-0" onDismiss={() => setError(null)}>{errorText(error, t("تعذّر تحديث الطلبات."))}</Alert>}
         <div className="grid flex-1 gap-4 overflow-y-auto p-4 md:grid-cols-3 md:overflow-hidden">
           {columns.map(([status, label]) => {
             const list = shownAll.filter((o) => o.status === status);
@@ -148,7 +149,7 @@ export default function KitchenDashboard() {
                 </h2>
                 <ul className="flex-1 space-y-3 overflow-y-auto px-3 pb-3">
                   {list.map((o) => <li key={o.id}><Ticket o={o} busyId={busyId} onAdvance={advance} big /></li>)}
-                  {!list.length && <li className="px-1 py-6 text-center text-base text-white/50">لا طلبات هنا الآن.</li>}
+                  {!list.length && <li className="px-1 py-6 text-center text-base text-white/50">{t("لا طلبات هنا الآن.")}</li>}
                 </ul>
               </section>
             );
@@ -161,19 +162,19 @@ export default function KitchenDashboard() {
   return (
     <div>
       <PageHeader
-        title="شاشة المطبخ"
-        subtitle="الطلبات المتأخرة تظهر أولًا. اضغط الزر في كل تذكرة لنقلها إلى المرحلة التالية."
+        title={t("شاشة المطبخ")}
+        subtitle={t("الطلبات المتأخرة تظهر أولًا. اضغط الزر في كل تذكرة لنقلها إلى المرحلة التالية.")}
         meta={<LiveIndicator connected={connected} />}
         action={
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={load}><RefreshCw size={15} aria-hidden="true" /> تحديث</Button>
-            <Button onClick={enterWall}><Maximize2 size={15} aria-hidden="true" /> وضع شاشة المطبخ</Button>
+            <Button variant="secondary" onClick={load}><RefreshCw size={15} aria-hidden="true" /> {t("تحديث")}</Button>
+            <Button onClick={enterWall}><Maximize2 size={15} aria-hidden="true" /> {t("وضع شاشة المطبخ")}</Button>
           </div>
         }
       />
 
       {error && (
-        <Alert tone="danger" className="mb-4" onDismiss={() => setError(null)}>{errorText(error, "تعذّر تحديث الطلبات.")}</Alert>
+        <Alert tone="danger" className="mb-4" onDismiss={() => setError(null)}>{errorText(error, t("تعذّر تحديث الطلبات."))}</Alert>
       )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -184,14 +185,14 @@ export default function KitchenDashboard() {
       </div>
 
       {loading ? (
-        <SkeletonCards count={6} label="جارِ تحميل الطلبات…" />
+        <SkeletonCards count={6} label={t("جارِ تحميل الطلبات…")} />
       ) : shown.length === 0 ? (
         <Card>
           <EmptyState
             icon={ChefHat}
-            title={filter === "active" ? "لا توجد طلبات قيد العمل" : `لا توجد طلبات ${FILTERS.find((f) => f.value === filter)?.label}`}
-            description="تظهر الطلبات الجديدة هنا تلقائيًا خلال ثوانٍ من إرسالها."
-            action={filter !== "active" && <Button variant="secondary" size="sm" onClick={() => setFilter("active")}>عرض كل الطلبات</Button>}
+            title={filter === "active" ? t("لا توجد طلبات قيد العمل") : t("لا توجد طلبات {0}", { 0: FILTERS.find((f) => f.value === filter)?.label })}
+            description={t("تظهر الطلبات الجديدة هنا تلقائيًا خلال ثوانٍ من إرسالها.")}
+            action={filter !== "active" && <Button variant="secondary" size="sm" onClick={() => setFilter("active")}>{t("عرض كل الطلبات")}</Button>}
           />
         </Card>
       ) : (
@@ -210,15 +211,15 @@ function Ticket({ o, busyId, onAdvance, big = false }) {
       <div className="flex items-start justify-between gap-3 border-b border-line p-4">
         <div>
           <p className={`num font-extrabold leading-none text-ink ${big ? "text-3xl" : "text-2xl"}`}>{orderNo(o.orderNumber)}</p>
-          <p className={`mt-1.5 font-bold text-ink-soft ${big ? "text-base" : "text-sm"}`}>{tableName(o.tableLabel)}{o.customerName ? <span className="font-medium text-muted">، {o.customerName}</span> : null}</p>
+          <p className={`mt-1.5 font-bold text-ink-soft ${big ? "text-base" : "text-sm"}`}>{tableName(o.tableLabel)}{o.customerName ? <span className="font-medium text-muted">{t("،")} {o.customerName}</span> : null}</p>
         </div>
         <StatusBadge type="order" status={o.status} />
       </div>
       <div className={`flex items-center gap-2 px-4 pt-3 font-bold ${o.late ? "text-brick" : "text-muted"} ${big ? "text-base" : "text-sm"}`}>
         {o.late ? <AlarmClock size={16} aria-hidden="true" /> : <Clock3 size={16} aria-hidden="true" />}
         <span>
-          <span className="num">منذ {o.elapsed} د</span>
-          <span className="font-medium">{o.late ? `، تجاوز الوقت المتوقع (${o.limit} د)` : ` من ${o.limit} د متوقعة`}</span>
+          <span className="num">{t("منذ")} {o.elapsed} {t("د")}</span>
+          <span className="font-medium">{o.late ? t("، تجاوز الوقت المتوقع ({0} د)", { 0: o.limit }) : t(" من {0} د متوقعة", { 0: o.limit })}</span>
         </span>
       </div>
       <ul className="flex-1 space-y-2 px-4 py-3">

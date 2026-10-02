@@ -1,29 +1,30 @@
 import { Code2, Database, UsersRound } from "lucide-react";
+import { t } from "../../../i18n";
 
 const TEAM = [
   {
-    name: "أحمد الكحلوت",
-    role: "صاحب المشروع · قائد الفريق",
+    name: t("أحمد الكحلوت"),
+    role: t("صاحب المشروع · قائد الفريق"),
     icon: UsersRound,
   },
   {
-    name: "علي عابد",
-    role: "مطوّر الخادم (Laravel)",
+    name: t("علي عابد"),
+    role: t("مطوّر الخادم (Laravel)"),
     icon: Database,
   },
   {
-    name: "عمار يحيى عمر العرعير",
-    role: "شريك · مطوّر الخادم (Laravel)",
+    name: t("عمار يحيى عمر العرعير"),
+    role: t("شريك · مطوّر الخادم (Laravel)"),
     icon: Database,
   },
   {
-    name: "سجى سقالله",
-    role: "مطوّرة الواجهات (React)",
+    name: t("سجى سقالله"),
+    role: t("مطوّرة الواجهات (React)"),
     icon: Code2,
   },
   {
-    name: "رنين ريان",
-    role: "مطوّرة الواجهات (React)",
+    name: t("رنين ريان"),
+    role: t("مطوّرة الواجهات (React)"),
     icon: Code2,
   },
 ];
@@ -36,13 +37,13 @@ export default function TeamSection() {
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <span className="mb-4 inline-block font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#EEA122]">
-            فريق العمل
+            {t("فريق العمل")}
           </span>
           <h2 className="font-[Aref_Ruqaa] text-4xl font-normal leading-tight text-[#F3EFE5] md:text-5xl">
-            فريق menuPilot
+            {t("فريق menuPilot")}
           </h2>
           <p className="mt-5 text-sm leading-7 text-[#F3EFE5]/65 md:text-base">
-            فريق شغوف يجمع خبرات تطوير الواجهات والخلفيات لابتكار حلول رقمية ذكية تجعل إدارة المطاعم أكثر سهولة وكفاءة.
+            {t("فريق شغوف يجمع خبرات تطوير الواجهات والخلفيات لابتكار حلول رقمية ذكية تجعل إدارة المطاعم أكثر سهولة وكفاءة.")}
           </p>
         </div>
 

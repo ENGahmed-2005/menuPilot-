@@ -16,75 +16,77 @@ import { useAuth } from "../../context/AuthContext";
 import { SUBSCRIPTION_ADDONS, getSubscriptionPlan, monthlyPrice, subscriptionOf, userHasFeature } from "../../config/subscriptions";
 import SettingsDialog from "./SettingsDialog";
 import { ROLE_DEFAULTS } from "../../config/permissions";
+import { t } from "../../i18n";
+import LanguageSwitch from "../ui/LanguageSwitch";
 
 // [to, label, icon, plan feature (null = always), permission(s) "a|b" (null = any)]
 // Links are shown only when the plan includes the feature AND the user holds
 // the permission. The API enforces the same permissions on every request.
 const OPERATIONS = [
-  ["/owner/dashboard", "نظرة عامة", LayoutDashboard, "dashboard", "view_dashboard"],
-  ["/owner/orders", "الطلبات", ClipboardList, null, "view_orders"],
-  ["/owner/outside-orders", "الطلبات الخارجية", Bike, "online_orders", "view_orders"],
-  ["/owner/deliveries", "التوصيل", MapPin, "online_orders", "view_orders"],
-  ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
-  ["/waiter", "طلبات النادل", HandPlatter, "waiter", "handle_assistance"],
-  ["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"],
+  ["/owner/dashboard", t("نظرة عامة"), LayoutDashboard, "dashboard", "view_dashboard"],
+  ["/owner/orders", t("الطلبات"), ClipboardList, null, "view_orders"],
+  ["/owner/outside-orders", t("الطلبات الخارجية"), Bike, "online_orders", "view_orders"],
+  ["/owner/deliveries", t("التوصيل"), MapPin, "online_orders", "view_orders"],
+  ["/cashier/tables", t("الطاولات والفواتير"), Receipt, "cashier", "view_payments"],
+  ["/waiter", t("طلبات النادل"), HandPlatter, "waiter", "handle_assistance"],
+  ["/kitchen", t("شاشة المطبخ"), ChefHat, "kitchen", "manage_orders"],
 ];
 // Groups with a title render as collapsible menus (one open at a time), so the
 // sidebar fits the screen without scrolling. The "settings" group is not listed:
 // it opens in a popup from the settings button (SettingsDialog).
 const NAV = {
   owner: [
-    { id: "ops", title: "التشغيل", icon: LayoutDashboard, links: OPERATIONS },
-    { id: "manage", title: "الإدارة", icon: Settings2, links: [
-      ["/owner/tables", "الطاولات ورموز QR", QrCode, "tables", "manage_tables"],
-      ["/owner/menu", "المنيو", UtensilsCrossed, "menu", "manage_menu"],
-      ["/owner/staff", "الفريق والصلاحيات", Users, null, "manage_staff"],
-      ["/owner/reports", "التقارير", BarChart3, "reports", "view_reports"],
-      ["/owner/accounting", "المحاسبة والتصدير", FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
+    { id: "ops", title: t("التشغيل"), icon: LayoutDashboard, links: OPERATIONS },
+    { id: "manage", title: t("الإدارة"), icon: Settings2, links: [
+      ["/owner/tables", t("الطاولات ورموز QR"), QrCode, "tables", "manage_tables"],
+      ["/owner/menu", t("المنيو"), UtensilsCrossed, "menu", "manage_menu"],
+      ["/owner/staff", t("الفريق والصلاحيات"), Users, null, "manage_staff"],
+      ["/owner/reports", t("التقارير"), BarChart3, "reports", "view_reports"],
+      ["/owner/accounting", t("المحاسبة والتصدير"), FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
     ] },
     { id: "settings", settings: true, links: [
-      ["/owner/settings", "إعدادات المطعم", Settings, null, "manage_settings"],
-      ["/owner/online-ordering", "الطلب أونلاين", Bike, "online_orders", "manage_settings"],
-      ["/owner/branding", "تصميم المنيو", Palette, "branding", "manage_branding"],
-      ["/owner/theme", "ألوان اللوحة", Sparkles, "theme-presets", "manage_branding"],
-      ["/owner/subscription/current", "الاشتراك والدفع", Crown, null, "manage_subscription"],
+      ["/owner/settings", t("إعدادات المطعم"), Settings, null, "manage_settings"],
+      ["/owner/online-ordering", t("الطلب أونلاين"), Bike, "online_orders", "manage_settings"],
+      ["/owner/branding", t("تصميم المنيو"), Palette, "branding", "manage_branding"],
+      ["/owner/theme", t("ألوان اللوحة"), Sparkles, "theme-presets", "manage_branding"],
+      ["/owner/subscription/current", t("الاشتراك والدفع"), Crown, null, "manage_subscription"],
     ] },
   ],
   manager: [
-    { id: "ops", title: "التشغيل", icon: LayoutDashboard, links: OPERATIONS },
-    { id: "manage", title: "الإدارة", icon: Settings2, links: [
-      ["/owner/tables", "الطاولات ورموز QR", QrCode, "tables", "manage_tables"],
-      ["/owner/menu", "المنيو", UtensilsCrossed, "menu", "manage_menu"],
-      ["/owner/staff", "الفريق والصلاحيات", Users, null, "manage_staff"],
-      ["/owner/accounting", "المحاسبة والتصدير", FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
+    { id: "ops", title: t("التشغيل"), icon: LayoutDashboard, links: OPERATIONS },
+    { id: "manage", title: t("الإدارة"), icon: Settings2, links: [
+      ["/owner/tables", t("الطاولات ورموز QR"), QrCode, "tables", "manage_tables"],
+      ["/owner/menu", t("المنيو"), UtensilsCrossed, "menu", "manage_menu"],
+      ["/owner/staff", t("الفريق والصلاحيات"), Users, null, "manage_staff"],
+      ["/owner/accounting", t("المحاسبة والتصدير"), FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
     ] },
   ],
-  kitchen: [{ links: [["/kitchen", "شاشة المطبخ", ChefHat, "kitchen", "manage_orders"]] }],
-  delivery: [{ links: [["/delivery", "طلباتي للتوصيل", MapPin, null, "deliver_orders"]] }],
-  delivery_manager: [{ links: [["/delivery", "إدارة التوصيل", MapPin, null, "dispatch_deliveries"]] }],
+  kitchen: [{ links: [["/kitchen", t("شاشة المطبخ"), ChefHat, "kitchen", "manage_orders"]] }],
+  delivery: [{ links: [["/delivery", t("طلباتي للتوصيل"), MapPin, null, "deliver_orders"]] }],
+  delivery_manager: [{ links: [["/delivery", t("إدارة التوصيل"), MapPin, null, "dispatch_deliveries"]] }],
   cashier: [{ links: [
-    ["/cashier/tables", "الطاولات والفواتير", Receipt, "cashier", "view_payments"],
-    ["/cashier/reports", "تقارير المبيعات", BarChart3, "cashier", "view_reports|view_payments"],
-    ["/owner/accounting", "المحاسبة والتصدير", FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
+    ["/cashier/tables", t("الطاولات والفواتير"), Receipt, "cashier", "view_payments"],
+    ["/cashier/reports", t("تقارير المبيعات"), BarChart3, "cashier", "view_reports|view_payments"],
+    ["/owner/accounting", t("المحاسبة والتصدير"), FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
   ] }],
-  waiter: [{ links: [["/waiter", "الطاولات والطلبات", HandPlatter, "waiter", "view_tables"]] }],
+  waiter: [{ links: [["/waiter", t("الطاولات والطلبات"), HandPlatter, "waiter", "view_tables"]] }],
   admin: [
-    { id: "platform", title: "إدارة المنصة", icon: LayoutDashboard, links: [
-      ["/admin/dashboard", "نظرة عامة", LayoutDashboard, null, null],
-      ["/admin/restaurants", "المطاعم", UtensilsCrossed, null, null],
-      ["/admin/owners", "أصحاب المطاعم", Users, null, null],
-      ["/admin/password-requests", "استعادة كلمات المرور", KeyRound, null, null],
-      ["/admin/subscriptions", "الاشتراكات", Crown, null, null],
-      ["/admin/reports", "التقارير", BarChart3, null, null],
+    { id: "platform", title: t("إدارة المنصة"), icon: LayoutDashboard, links: [
+      ["/admin/dashboard", t("نظرة عامة"), LayoutDashboard, null, null],
+      ["/admin/restaurants", t("المطاعم"), UtensilsCrossed, null, null],
+      ["/admin/owners", t("أصحاب المطاعم"), Users, null, null],
+      ["/admin/password-requests", t("استعادة كلمات المرور"), KeyRound, null, null],
+      ["/admin/subscriptions", t("الاشتراكات"), Crown, null, null],
+      ["/admin/reports", t("التقارير"), BarChart3, null, null],
     ] },
-    { id: "system", title: "النظام", icon: Settings2, links: [
-      ["/admin/settings", "إعدادات النظام", Settings, null, null],
-      ["/admin/notifications", "الإشعارات", Bell, null, null],
+    { id: "system", title: t("النظام"), icon: Settings2, links: [
+      ["/admin/settings", t("إعدادات النظام"), Settings, null, null],
+      ["/admin/notifications", t("الإشعارات"), Bell, null, null],
     ] },
   ],
 };
 
-const ROLE_LABEL = { delivery_manager: "مسؤول التوصيل", delivery: "سائق توصيل", owner: "صاحب المطعم", kitchen: "المطبخ", cashier: "الكاشير", waiter: "النادل", admin: "إدارة المنصة", manager: "مدير" };
+const ROLE_LABEL = { delivery_manager: t("مسؤول التوصيل"), delivery: t("سائق توصيل"), owner: t("صاحب المطعم"), kitchen: t("المطبخ"), cashier: t("الكاشير"), waiter: t("النادل"), admin: t("إدارة المنصة"), manager: t("مدير") };
 
 function Logo({ compact = false }) {
   return <BrandLogo on="dark" height={compact ? 30 : 36} priority />;
@@ -100,24 +102,24 @@ function PlanCard({ user }) {
     return (
       <div className="mt-3 rounded-xl border border-copper/30 bg-copper/10 px-3 py-2">
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span className="flex items-center gap-1.5 text-paper/80"><Crown size={14} aria-hidden="true" />{sub.status === "CANCELLED" ? "الاشتراك متوقف" : "انتهت التجربة المجانية"}</span>
-          <b className="rounded-full bg-copper px-2 py-0.5 text-ink">{sub.in_grace ? "مهلة" : "مقيّد"}</b>
+          <span className="flex items-center gap-1.5 text-paper/80"><Crown size={14} aria-hidden="true" />{sub.status === "CANCELLED" ? t("الاشتراك متوقف") : t("انتهت التجربة المجانية")}</span>
+          <b className="rounded-full bg-copper px-2 py-0.5 text-ink">{sub.in_grace ? t("مهلة") : t("مقيّد")}</b>
         </div>
-        <p className="mt-1 text-xs font-bold">{sub.payment_pending ? "دفعتك قيد التحقق" : "اختر خطة لإعادة التفعيل"}</p>
+        <p className="mt-1 text-xs font-bold">{sub.payment_pending ? t("دفعتك قيد التحقق") : t("اختر خطة لإعادة التفعيل")}</p>
       </div>
     );
   }
   return (
     <div className="mt-3 rounded-xl border border-paper/10 bg-paper/[0.06] px-3 py-2">
       <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="flex items-center gap-1.5 text-paper/70"><Crown size={14} aria-hidden="true" />{trial ? "التجربة المجانية" : "الباقة الحالية"}</span>
-        <b className="rounded-full bg-copper px-2 py-0.5 text-ink">{trial ? "تجربة" : plan.name}</b>
+        <span className="flex items-center gap-1.5 text-paper/70"><Crown size={14} aria-hidden="true" />{trial ? t("التجربة المجانية") : t("الباقة الحالية")}</span>
+        <b className="rounded-full bg-copper px-2 py-0.5 text-ink">{trial ? t("تجربة") : plan.name}</b>
       </div>
       {trial
-        ? <p className="mt-1 text-xs font-bold">متبقٍ {trialDays} يوم، وكل الميزات مفعّلة</p>
+        ? <p className="mt-1 text-xs font-bold">{t("متبقٍ")} {trialDays} {t("يوم، وكل الميزات مفعّلة")}</p>
         : <>
-            <p className="mt-1 text-sm font-extrabold">${monthlyPrice(plan.id, addons)}<span className="text-xs font-medium text-paper/70"> / شهريًا</span></p>
-            {addons.length > 0 && <p className="mt-0.5 text-xs text-paper/70">+ {addons.map((id) => SUBSCRIPTION_ADDONS[id]?.name).join("، ")}</p>}
+            <p className="mt-1 text-sm font-extrabold">${monthlyPrice(plan.id, addons)}<span className="text-xs font-medium text-paper/70"> {t("/ شهريًا")}</span></p>
+            {addons.length > 0 && <p className="mt-0.5 text-xs text-paper/70">+ {addons.map((id) => SUBSCRIPTION_ADDONS[id]?.name).join(t("، "))}</p>}
           </>}
     </div>
   );
@@ -150,7 +152,7 @@ export default function Sidebar() {
       return true;
     });
   })();
-  const allGroups = extraLinks.length ? [...baseGroups, { id: "extra", title: "صلاحيات إضافية", icon: Sparkles, links: extraLinks }] : baseGroups;
+  const allGroups = extraLinks.length ? [...baseGroups, { id: "extra", title: t("صلاحيات إضافية"), icon: Sparkles, links: extraLinks }] : baseGroups;
   const groups = allGroups.filter((g) => !g.settings);
   const settingsItems = allGroups.find((g) => g.settings)?.links || [];
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -175,7 +177,7 @@ export default function Sidebar() {
       <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-paper/10 bg-navy px-4 py-2.5 text-paper lg:hidden">
         <Logo compact />
         <span className="min-w-0 flex-1 truncate text-center text-sm font-bold text-paper/85">{current?.[1]}</span>
-        <button type="button" onClick={() => setOpen(true)} aria-label="فتح القائمة" aria-expanded={open} aria-controls="app-sidebar" className="grid h-10 w-10 place-items-center rounded-xl hover:bg-paper/10">
+        <button type="button" onClick={() => setOpen(true)} aria-label={t("فتح القائمة")} aria-expanded={open} aria-controls="app-sidebar" className="grid h-10 w-10 place-items-center rounded-xl hover:bg-paper/10">
           <Menu size={22} aria-hidden="true" />
         </button>
       </div>
@@ -184,20 +186,20 @@ export default function Sidebar() {
 
       <aside
         id="app-sidebar"
-        aria-label="القائمة الرئيسية"
+        aria-label={t("القائمة الرئيسية")}
         className={`fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-navy text-paper shadow-2xl transition-transform duration-200 motion-reduce:transition-none lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="border-b border-paper/10 px-4 py-4">
           <div className="flex items-center justify-between">
             <Logo />
-            <button type="button" onClick={() => setOpen(false)} aria-label="إغلاق القائمة" className="grid h-9 w-9 place-items-center rounded-xl text-paper/70 hover:bg-paper/10 lg:hidden">
+            <button type="button" onClick={() => setOpen(false)} aria-label={t("إغلاق القائمة")} className="grid h-9 w-9 place-items-center rounded-xl text-paper/70 hover:bg-paper/10 lg:hidden">
               <X size={20} aria-hidden="true" />
             </button>
           </div>
           {role === "owner" && <PlanCard user={user} />}
         </div>
 
-        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-3" aria-label="التنقل">
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-3" aria-label={t("التنقل")}>
           {groups.map((group) => {
             const collapsible = Boolean(group.title) && groups.length > 1;
             const expanded = !collapsible || openGroup === group.id;
@@ -209,7 +211,7 @@ export default function Sidebar() {
                     className={`flex min-h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-extrabold transition-colors ${expanded ? "text-paper" : "text-paper/70 hover:bg-paper/[0.06] hover:text-paper"}`}>
                     {GroupIcon && <GroupIcon size={18} aria-hidden="true" className="shrink-0 text-paper/70" />}
                     <span className="flex-1 text-right">{group.title}</span>
-                    {activeGroup === group.id && !expanded && <span className="h-2 w-2 rounded-full bg-copper" aria-label="الصفحة الحالية هنا" />}
+                    {activeGroup === group.id && !expanded && <span className="h-2 w-2 rounded-full bg-copper" aria-label={t("الصفحة الحالية هنا")} />}
                     <ChevronDown size={16} aria-hidden="true" className={`shrink-0 transition-transform duration-200 motion-reduce:transition-none ${expanded ? "rotate-180" : ""}`} />
                   </button>
                 )}
@@ -238,19 +240,20 @@ export default function Sidebar() {
         <div className="border-t border-paper/10 p-3">
           <div className="flex items-center gap-2.5">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-paper/10 text-sm font-extrabold" aria-hidden="true">
-              {(user?.name || user?.email || "م").trim().charAt(0).toUpperCase()}
+              {(user?.name || user?.email || t("م")).trim().charAt(0).toUpperCase()}
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold">{user?.name || user?.email}</p>
               <p className="truncate text-xs text-paper/70">{ROLE_LABEL[role] || user?.email}</p>
             </div>
             {settingsItems.length > 0 && (
-              <button type="button" onClick={() => setSettingsOpen(true)} aria-label="الإعدادات" title="الإعدادات" aria-haspopup="dialog"
+              <button type="button" onClick={() => setSettingsOpen(true)} aria-label={t("الإعدادات")} title={t("الإعدادات")} aria-haspopup="dialog"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-paper/80 transition-colors hover:bg-paper/10 hover:text-paper">
                 <Settings size={18} aria-hidden="true" />
               </button>
             )}
-            <button type="button" onClick={logout} aria-label="تسجيل الخروج" title="تسجيل الخروج"
+            <LanguageSwitch tone="dark" className="min-h-9 px-2.5 text-xs" />
+            <button type="button" onClick={logout} aria-label={t("تسجيل الخروج")} title={t("تسجيل الخروج")}
               className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-paper/80 transition-colors hover:bg-brick/30 hover:text-paper">
               <LogOut size={18} aria-hidden="true" />
             </button>

@@ -1,21 +1,22 @@
 import { FEATURES } from "./data";
 import Reveal from "./Reveal";
+import { t } from "../../../i18n";
 
 export default function Features() {
   return (
     <section id="features" className="mx-auto max-w-7xl scroll-mt-24 px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
       <Reveal className="max-w-2xl">
         <span className="inline-block rounded-full border border-[#EEA122]/25 bg-[#EEA122]/8 px-3 py-1 text-[11px] font-black tracking-[.18em] text-[#EEA122] uppercase">
-          المميزات
+          {t("المميزات")}
         </span>
         <h2 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl">
-          كل أدوات التشغيل،{" "}
+          {t("كل أدوات التشغيل،")}{" "}
           <span className="bg-gradient-to-l from-[#EEA122] to-[#E67E22] bg-clip-text text-transparent">
-            في مكان واحد.
+            {t("في مكان واحد.")}
           </span>
         </h2>
         <p className="mt-5 text-base leading-8 text-[#F3EFE5]/70">
-          بدل أن تتوزع عمليات مطعمك بين الورق والرسائل والأنظمة المنفصلة، اجمعها في مسار عمل واحد واضح.
+          {t("بدل أن تتوزع عمليات مطعمك بين الورق والرسائل والأنظمة المنفصلة، اجمعها في مسار عمل واحد واضح.")}
         </p>
       </Reveal>
 

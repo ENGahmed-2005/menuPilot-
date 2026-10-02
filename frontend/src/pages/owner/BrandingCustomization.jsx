@@ -13,15 +13,16 @@ import { useAuth } from '../../context/AuthContext';
 import { SUBSCRIPTION_ADDONS, subscriptionOf, userHasFeature } from '../../config/subscriptions';
 import MenuItemCard from '../../components/menu/MenuItemCard';
 import { DEFAULT_TAGLINE, MENU_STYLE_DEFAULTS, MENU_STYLE_OPTIONS, cardRadius, logoRadius, resolveMenuStyle } from '../../components/menu/menuStyle';
+import { t, dir } from "../../i18n";
 
 const defaults = { primary_color: '#B8793E', secondary_color: '#4B6A8A', text_color: '#172331', button_color: '#1F2D3D', background_color: '#F7F3E9', card_style: 'rounded', font_family: 'system', show_menupilot_branding: true };
 
 // A plain plate drawing so the preview shows where photos go before any are uploaded.
 const plate = (tint) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="${tint}" fill-opacity=".14"/><circle cx="40" cy="40" r="25" fill="#fff"/><circle cx="40" cy="40" r="17" fill="${tint}" fill-opacity=".28"/></svg>`)}`;
 const sample = (tint) => [
-  { id: 's1', name: 'مقلوبة دجاج', description: 'أرز بالبهارات، دجاج، باذنجان مقلي ولوز محمّص', price: 32, imageUrl: plate(tint) },
-  { id: 's2', name: 'فتوش', description: 'خضار طازجة، خبز محمّص ودبس رمان', price: 12, imageUrl: plate(tint) },
-  { id: 's3', name: 'كنافة نابلسية', description: 'جبنة نابلسية وقطر', price: 15, imageUrl: plate(tint) },
+  { id: 's1', name: t("مقلوبة دجاج"), description: t("أرز بالبهارات، دجاج، باذنجان مقلي ولوز محمّص"), price: 32, imageUrl: plate(tint) },
+  { id: 's2', name: t("فتوش"), description: t("خضار طازجة، خبز محمّص ودبس رمان"), price: 12, imageUrl: plate(tint) },
+  { id: 's3', name: t("كنافة نابلسية"), description: t("جبنة نابلسية وقطر"), price: 15, imageUrl: plate(tint) },
 ];
 
 function Section({ title, hint, children }) {
@@ -84,8 +85,8 @@ function Preview({ settings, style, logoSrc, coverSrc }) {
   const minimal = style.header === 'minimal', cover = style.header === 'cover';
   const listClass = { compact: 'grid gap-2', photo: 'grid gap-3', grid: 'grid grid-cols-2 gap-2', text: 'divide-y divide-black/[0.06] overflow-hidden ring-1 ring-black/5' }[style.layout];
   return (
-    <div className="mx-auto w-full max-w-[340px] overflow-hidden rounded-[2.2rem] border-[9px] border-ink shadow-xl" aria-label="معاينة المنيو كما يراه الزبون">
-      <div className="h-[600px] overflow-y-auto" dir="rtl" style={{ background: brand.background_color, color: brand.text_color, fontFamily: settings.font_family !== 'system' ? settings.font_family : undefined }}>
+    <div className="mx-auto w-full max-w-[340px] overflow-hidden rounded-[2.2rem] border-[9px] border-ink shadow-xl" aria-label={t("معاينة المنيو كما يراه الزبون")}>
+      <div className="h-[600px] overflow-y-auto" dir={dir} style={{ background: brand.background_color, color: brand.text_color, fontFamily: settings.font_family !== 'system' ? settings.font_family : undefined }}>
         <div className={`relative ${minimal ? '' : 'text-white'}`} style={minimal ? undefined : { background: settings.primary_color }}>
           {cover && coverSrc && <img src={coverSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />}
           {cover && <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />}
@@ -94,24 +95,24 @@ function Preview({ settings, style, logoSrc, coverSrc }) {
               {logoSrc ? <img src={logoSrc} alt="" className="h-full w-full object-cover" /> : <Utensils size={20} style={{ color: settings.primary_color }} />}
             </span>
             <span className="min-w-0">
-              <b className="block truncate text-lg">اسم مطعمك</b>
-              <span className={`block truncate text-xs font-bold ${minimal ? 'opacity-70' : 'text-white/85'}`}>طاولة 4 · {style.tagline || DEFAULT_TAGLINE}</span>
+              <b className="block truncate text-lg">{t("اسم مطعمك")}</b>
+              <span className={`block truncate text-xs font-bold ${minimal ? 'opacity-70' : 'text-white/85'}`}>{t("طاولة 4 ·")} {style.tagline || DEFAULT_TAGLINE}</span>
             </span>
           </div>
         </div>
         <div className={`flex border-b border-black/5 px-3 ${style.chips === 'underline' ? 'gap-4 pt-1' : 'gap-1.5 py-2.5'}`}>
-          {['الكل', 'الرئيسية', 'السلطات', 'الحلويات'].map((c, i) => style.chips === 'underline'
+          {[t("الكل"), t("الرئيسية"), t("السلطات"), t("الحلويات")].map((c, i) => style.chips === 'underline'
             ? <span key={c} className="whitespace-nowrap border-b-[3px] py-2 text-xs font-bold" style={{ borderColor: i === 0 ? settings.primary_color : 'transparent', color: i === 0 ? settings.primary_color : undefined }}>{c}</span>
             : <span key={c} className="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold" style={i === 0 ? { background: settings.primary_color, color: '#fff' } : { background: style.surface_color, boxShadow: 'inset 0 0 0 1px rgb(0 0 0 / .08)' }}>{c}</span>)}
         </div>
         <div className="px-3 pb-6 pt-4">
-          <b className="mb-2 block text-sm">الأطباق</b>
+          <b className="mb-2 block text-sm">{t("الأطباق")}</b>
           <ul className={listClass} style={style.layout === 'text' ? { background: style.surface_color, borderRadius: radius } : undefined}>
             {items.map((item) => (
               <li key={item.id}><MenuItemCard item={item} style={style} brand={brand} radius={radius} onOpen={() => {}} onAdd={() => {}} /></li>
             ))}
           </ul>
-          {settings.show_menupilot_branding && <p className="mt-6 text-center text-[11px] font-bold opacity-50" dir="ltr">مدعوم من menuPilot</p>}
+          {settings.show_menupilot_branding && <p className="mt-6 text-center text-[11px] font-bold opacity-50" dir="ltr">{t("مدعوم من menuPilot")}</p>}
         </div>
       </div>
     </div>
@@ -148,18 +149,18 @@ export default function BrandingCustomization() {
     try {
       const updated = await saveBranding({ ...settings, menu_style: style, logo, background, show_menupilot_branding: hasBrandPlus ? settings.show_menupilot_branding : true });
       load(updated); setLogo(null); setBackground(null);
-      setMessage({ tone: 'ok', text: 'حُفظت هوية المنيو، ويراها الزبائن الآن.' });
-    } catch (e) { setMessage({ tone: 'error', text: e.message || 'تعذّر الحفظ. تحقق من الاتصال وحاول مرة أخرى.' }); }
+      setMessage({ tone: 'ok', text: t("حُفظت هوية المنيو، ويراها الزبائن الآن.") });
+    } catch (e) { setMessage({ tone: 'error', text: e.message || t("تعذّر الحفظ. تحقق من الاتصال وحاول مرة أخرى.") }); }
     finally { setSaving(false); }
   }
   async function reset() {
     setSaving(true); setMessage(null);
-    try { load(await resetBranding()); setLogo(null); setBackground(null); setMessage({ tone: 'ok', text: 'عاد المنيو إلى التصميم الافتراضي.' }); }
+    try { load(await resetBranding()); setLogo(null); setBackground(null); setMessage({ tone: 'ok', text: t("عاد المنيو إلى التصميم الافتراضي.") }); }
     catch (e) { setMessage({ tone: 'error', text: e.message }); }
     finally { setSaving(false); }
   }
 
-  if (loading) return <div className="p-8 text-center" role="status">جارٍ تحميل هوية المنيو…</div>;
+  if (loading) return <div className="p-8 text-center" role="status">{t("جارٍ تحميل هوية المنيو…")}</div>;
   const off = !fullAccess;
   const upload = (label, hint, file, onFile) => (
     <label className={`flex min-h-24 flex-col justify-center rounded-xl border border-dashed border-line p-4 ${off ? 'opacity-50' : 'cursor-pointer hover:border-ink/30'}`}>
@@ -171,77 +172,77 @@ export default function BrandingCustomization() {
   );
 
   return (
-    <div dir="rtl" className="space-y-6">
+    <div dir={dir} className="space-y-6">
       <header>
-        <h1 className="text-3xl font-black">هوية المنيو</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">اجعل منيو QR يشبه مطعمك: الشعار والألوان، وطريقة عرض الأطباق، ورأس الصفحة والتصنيفات. المعاينة تتغير مع كل اختيار.</p>
+        <h1 className="text-3xl font-black">{t("هوية المنيو")}</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">{t("اجعل منيو QR يشبه مطعمك: الشعار والألوان، وطريقة عرض الأطباق، ورأس الصفحة والتصنيفات. المعاينة تتغير مع كل اختيار.")}</p>
       </header>
-      {trial && <p className="rounded-2xl border border-copper/25 bg-copper/10 p-4 text-sm"><b>تجربتك المجانية تشمل كل خيارات الهوية.</b> احفظ الآن ويبقى التصميم بعد التجربة مع الخطة الاحترافية.</p>}
-      {off && <p className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4 text-sm"><Lock size={18} className="mt-0.5 shrink-0 text-copper" aria-hidden="true" /><span><b>تخصيص المنيو ضمن الخطة الاحترافية.</b> يمكنك تجربة الخيارات في المعاينة، لكن الحفظ يحتاج الخطة الاحترافية أو تجربة سارية.</span></p>}
+      {trial && <p className="rounded-2xl border border-copper/25 bg-copper/10 p-4 text-sm"><b>{t("تجربتك المجانية تشمل كل خيارات الهوية.")}</b> {t("احفظ الآن ويبقى التصميم بعد التجربة مع الخطة الاحترافية.")}</p>}
+      {off && <p className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4 text-sm"><Lock size={18} className="mt-0.5 shrink-0 text-copper" aria-hidden="true" /><span><b>{t("تخصيص المنيو ضمن الخطة الاحترافية.")}</b> {t("يمكنك تجربة الخيارات في المعاينة، لكن الحفظ يحتاج الخطة الاحترافية أو تجربة سارية.")}</span></p>}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
-          <Section title="الشعار والغلاف">
+          <Section title={t("الشعار والغلاف")}>
             <div className="grid gap-3 sm:grid-cols-2">
-              {upload('شعار المطعم', 'PNG أو JPG أو WEBP، حتى 2MB', logo, setLogo)}
-              {upload('صورة الغلاف', 'تظهر في رأس المنيو، حتى 5MB', background, setBackground)}
+              {upload(t("شعار المطعم"), t("PNG أو JPG أو WEBP، حتى 2MB"), logo, setLogo)}
+              {upload(t("صورة الغلاف"), t("تظهر في رأس المنيو، حتى 5MB"), background, setBackground)}
             </div>
           </Section>
 
-          <Section title="الألوان">
+          <Section title={t("الألوان")}>
             <div className="grid gap-4 sm:grid-cols-2">
-              <ColorField label="لون الهوية" value={settings.primary_color} onChange={set('primary_color')} disabled={off} />
-              <ColorField label="لون الأزرار" value={settings.button_color} onChange={set('button_color')} disabled={off} />
-              <ColorField label="لون النص" value={settings.text_color} onChange={set('text_color')} disabled={off} />
-              <ColorField label="لون ثانوي" value={settings.secondary_color} onChange={set('secondary_color')} disabled={off} />
-              <ColorField label="خلفية الصفحة" value={style.background_color} onChange={setS('background_color')} disabled={off} allowEmpty emptyLabel="من الثيم" />
-              <ColorField label="لون البطاقات" value={style.surface_color} onChange={setS('surface_color')} disabled={off} />
+              <ColorField label={t("لون الهوية")} value={settings.primary_color} onChange={set('primary_color')} disabled={off} />
+              <ColorField label={t("لون الأزرار")} value={settings.button_color} onChange={set('button_color')} disabled={off} />
+              <ColorField label={t("لون النص")} value={settings.text_color} onChange={set('text_color')} disabled={off} />
+              <ColorField label={t("لون ثانوي")} value={settings.secondary_color} onChange={set('secondary_color')} disabled={off} />
+              <ColorField label={t("خلفية الصفحة")} value={style.background_color} onChange={setS('background_color')} disabled={off} allowEmpty emptyLabel={t("من الثيم")} />
+              <ColorField label={t("لون البطاقات")} value={style.surface_color} onChange={setS('surface_color')} disabled={off} />
             </div>
           </Section>
 
-          <Section title="عرض الأطباق" hint="اختر الشكل الذي يناسب أطباقك وصورك.">
-            <Choice label="التخطيط" options={MENU_STYLE_OPTIONS.layout} value={style.layout} onChange={setS('layout')} disabled={off} wide />
-            {style.layout === 'compact' && <Choice label="موضع الصورة" options={MENU_STYLE_OPTIONS.image_side} value={style.image_side} onChange={setS('image_side')} disabled={off} />}
-            <Choice label="زوايا البطاقات" options={[{ value: 'rounded', label: 'مستديرة' }, { value: 'soft', label: 'ناعمة' }, { value: 'square', label: 'حادة' }]} value={settings.card_style} onChange={set('card_style')} disabled={off} />
-            <Choice label="لون السعر" options={MENU_STYLE_OPTIONS.price_color} value={style.price_color} onChange={setS('price_color')} disabled={off} />
+          <Section title={t("عرض الأطباق")} hint={t("اختر الشكل الذي يناسب أطباقك وصورك.")}>
+            <Choice label={t("التخطيط")} options={MENU_STYLE_OPTIONS.layout} value={style.layout} onChange={setS('layout')} disabled={off} wide />
+            {style.layout === 'compact' && <Choice label={t("موضع الصورة")} options={MENU_STYLE_OPTIONS.image_side} value={style.image_side} onChange={setS('image_side')} disabled={off} />}
+            <Choice label={t("زوايا البطاقات")} options={[{ value: 'rounded', label: t("مستديرة") }, { value: 'soft', label: t("ناعمة") }, { value: 'square', label: t("حادة") }]} value={settings.card_style} onChange={set('card_style')} disabled={off} />
+            <Choice label={t("لون السعر")} options={MENU_STYLE_OPTIONS.price_color} value={style.price_color} onChange={setS('price_color')} disabled={off} />
             <div className="grid gap-3 sm:grid-cols-2">
-              <Toggle label="صور الأطباق" hint={style.layout === 'text' ? 'القائمة النصية بلا صور.' : 'الطبق بلا صورة يظهر بلا مربع فارغ.'} checked={style.show_images} onChange={setS('show_images')} disabled={off || style.layout === 'text'} />
-              <Toggle label="وصف الأطباق" hint="سطر واحد في البطاقات المدمجة." checked={style.show_descriptions} onChange={setS('show_descriptions')} disabled={off} />
+              <Toggle label={t("صور الأطباق")} hint={style.layout === 'text' ? t("القائمة النصية بلا صور.") : t("الطبق بلا صورة يظهر بلا مربع فارغ.")} checked={style.show_images} onChange={setS('show_images')} disabled={off || style.layout === 'text'} />
+              <Toggle label={t("وصف الأطباق")} hint={t("سطر واحد في البطاقات المدمجة.")} checked={style.show_descriptions} onChange={setS('show_descriptions')} disabled={off} />
             </div>
           </Section>
 
-          <Section title="رأس المنيو">
-            <Choice label="الشكل" options={MENU_STYLE_OPTIONS.header} value={style.header} onChange={setS('header')} disabled={off} wide />
-            <Choice label="شكل الشعار" options={MENU_STYLE_OPTIONS.logo_shape} value={style.logo_shape} onChange={setS('logo_shape')} disabled={off} />
+          <Section title={t("رأس المنيو")}>
+            <Choice label={t("الشكل")} options={MENU_STYLE_OPTIONS.header} value={style.header} onChange={setS('header')} disabled={off} wide />
+            <Choice label={t("شكل الشعار")} options={MENU_STYLE_OPTIONS.logo_shape} value={style.logo_shape} onChange={setS('logo_shape')} disabled={off} />
             <label className="block text-sm font-bold">
-              العبارة تحت الاسم
+              {t("العبارة تحت الاسم")}
               <input disabled={off} maxLength={80} value={style.tagline || ''} onChange={(e) => setS('tagline')(e.target.value || null)} placeholder={DEFAULT_TAGLINE}
                 className="mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm font-normal outline-none focus:border-copper" />
-              <span className="mt-1 block text-xs font-normal text-muted">{(style.tagline || '').length} / 80 حرفاً. مثل: «مطبخ غزاوي منذ 1998».</span>
+              <span className="mt-1 block text-xs font-normal text-muted">{(style.tagline || '').length} {t("/ 80 حرفاً. مثل: «مطبخ غزاوي منذ 1998».")}</span>
             </label>
           </Section>
 
-          <Section title="التصنيفات والخط">
-            <Choice label="شكل التصنيفات" options={MENU_STYLE_OPTIONS.chips} value={style.chips} onChange={setS('chips')} disabled={off} />
+          <Section title={t("التصنيفات والخط")}>
+            <Choice label={t("شكل التصنيفات")} options={MENU_STYLE_OPTIONS.chips} value={style.chips} onChange={setS('chips')} disabled={off} />
             <label className="block text-sm font-bold">
-              الخط
+              {t("الخط")}
               {hasBrandPlus
-                ? <select value={settings.font_family} onChange={(e) => set('font_family')(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm"><option value="system">خط النظام</option><option value="Cairo">Cairo</option><option value="Tajawal">Tajawal</option></select>
-                : <span className="mt-2 flex min-h-11 items-center gap-2 rounded-xl border border-line px-3 text-sm font-normal text-muted"><Lock size={14} aria-hidden="true" /> الخط المخصص ضمن إضافة {brandPlus}</span>}
+                ? <select value={settings.font_family} onChange={(e) => set('font_family')(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm"><option value="system">{t("خط النظام")}</option><option value="Cairo">Cairo</option><option value="Tajawal">Tajawal</option></select>
+                : <span className="mt-2 flex min-h-11 items-center gap-2 rounded-xl border border-line px-3 text-sm font-normal text-muted"><Lock size={14} aria-hidden="true" /> {t("الخط المخصص ضمن إضافة")} {brandPlus}</span>}
             </label>
-            <Toggle label="إظهار «مدعوم من menuPilot»" hint={hasBrandPlus ? 'في أسفل المنيو.' : `يمكن إخفاؤه مع إضافة ${brandPlus}.`} checked={hasBrandPlus ? settings.show_menupilot_branding : true} onChange={set('show_menupilot_branding')} disabled={!hasBrandPlus} />
+            <Toggle label={t("إظهار «مدعوم من menuPilot»")} hint={hasBrandPlus ? t("في أسفل المنيو.") : t("يمكن إخفاؤه مع إضافة {0}.", { 0: brandPlus })} checked={hasBrandPlus ? settings.show_menupilot_branding : true} onChange={set('show_menupilot_branding')} disabled={!hasBrandPlus} />
           </Section>
 
           <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-3 border-t border-line bg-paper/95 px-1 py-3">
-            <button type="button" disabled={off || saving} onClick={save} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-ink px-5 text-sm font-bold text-paper disabled:opacity-50"><Wand2 size={16} aria-hidden="true" />{saving ? 'جارٍ الحفظ…' : 'حفظ وتطبيق'}</button>
-            <button type="button" disabled={saving} onClick={reset} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm font-bold disabled:opacity-50"><RotateCcw size={16} aria-hidden="true" />استعادة الافتراضي</button>
+            <button type="button" disabled={off || saving} onClick={save} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-ink px-5 text-sm font-bold text-paper disabled:opacity-50"><Wand2 size={16} aria-hidden="true" />{saving ? t("جارٍ الحفظ…") : t("حفظ وتطبيق")}</button>
+            <button type="button" disabled={saving} onClick={reset} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm font-bold disabled:opacity-50"><RotateCcw size={16} aria-hidden="true" />{t("استعادة الافتراضي")}</button>
             {message && <p role="status" className={`text-sm font-bold ${message.tone === 'ok' ? 'text-herb' : 'text-brick'}`}>{message.text}</p>}
           </div>
         </div>
 
         <aside className="lg:sticky lg:top-4">
           <Preview settings={settings} style={style} logoSrc={logoSrc} coverSrc={coverSrc} />
-          <p className="mt-3 text-center text-xs text-muted">بطاقات المعاينة هي نفسها بطاقات منيو الزبون.</p>
+          <p className="mt-3 text-center text-xs text-muted">{t("بطاقات المعاينة هي نفسها بطاقات منيو الزبون.")}</p>
         </aside>
       </div>
     </div>

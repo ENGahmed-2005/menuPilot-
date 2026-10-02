@@ -7,6 +7,7 @@
    ========================================================================== */
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
+import { t as tr, dir } from "../../i18n";
 
 const ToastContext = createContext(null);
 const TONES = {
@@ -39,10 +40,10 @@ export function ToastProvider({ children }) {
         {toasts.map((t) => {
           const { icon: Icon, box, iconClass } = TONES[t.tone] || TONES.info;
           return (
-            <div key={t.id} dir="rtl" className={`pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold shadow-[var(--shadow-dialog)] animate-dialog-in ${box}`}>
+            <div key={t.id} dir={dir} className={`pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold shadow-[var(--shadow-dialog)] animate-dialog-in ${box}`}>
               <Icon size={18} className={`shrink-0 ${iconClass}`} aria-hidden="true" />
               <span className="flex-1">{t.message}</span>
-              <button type="button" onClick={() => dismiss(t.id)} aria-label="إخفاء" className="-m-1 rounded-lg p-1 opacity-70 hover:opacity-100"><X size={15} aria-hidden="true" /></button>
+              <button type="button" onClick={() => dismiss(t.id)} aria-label={tr("إخفاء")} className="-m-1 rounded-lg p-1 opacity-70 hover:opacity-100"><X size={15} aria-hidden="true" /></button>
             </div>
           );
         })}

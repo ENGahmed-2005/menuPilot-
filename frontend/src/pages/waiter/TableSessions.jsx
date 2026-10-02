@@ -20,12 +20,13 @@ import { errorText } from "../../utils/errors";
 import { usePermissions } from "../../hooks/usePermissions";
 import { tableName } from "../../utils/format";
 import IdleHint from "../../components/billing/IdleHint";
+import { t } from "../../i18n";
 
 const priority = (s) => (s.assistanceRequested ? 0 : s.billRequested ? 1 : 2);
 const sinceLabel = (iso) => {
   if (!iso) return null;
   const m = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
-  return m < 1 ? "الآن" : `منذ ${m} د`;
+  return m < 1 ? t("الآن") : t("منذ {0} د", { 0: m });
 };
 
 export default function TableSessions() {
@@ -60,18 +61,18 @@ export default function TableSessions() {
   return (
     <div>
       <PageHeader
-        title="الطاولات والطلبات"
-        subtitle="الطاولات التي تطلب نادلًا تظهر أولًا، ثم طلبات الفاتورة."
+        title={t("الطاولات والطلبات")}
+        subtitle={t("الطاولات التي تطلب نادلًا تظهر أولًا، ثم طلبات الفاتورة.")}
         meta={<LiveIndicator connected={connected} />}
       />
 
-      {error && <Alert tone="danger" className="mb-4" onDismiss={() => setError(null)}>{errorText(error, "تعذّر تحميل الطاولات.")}</Alert>}
+      {error && <Alert tone="danger" className="mb-4" onDismiss={() => setError(null)}>{errorText(error, t("تعذّر تحميل الطاولات."))}</Alert>}
 
       {loading ? <SkeletonStats count={3} /> : (
         <div className="grid grid-cols-3 gap-3">
-          <StatCard icon={Users} label="جلسات نشطة" value={counts.all} onClick={() => setFilter("all")} active={filter === "all"} />
-          <StatCard icon={BellRing} tone="brick" label="تطلب نادلًا" value={counts.help} onClick={() => setFilter("help")} active={filter === "help"} emphasis={counts.help > 0} />
-          <StatCard icon={Receipt} tone="copper" label="طلب فاتورة" value={counts.bill} onClick={() => setFilter("bill")} active={filter === "bill"} />
+          <StatCard icon={Users} label={t("جلسات نشطة")} value={counts.all} onClick={() => setFilter("all")} active={filter === "all"} />
+          <StatCard icon={BellRing} tone="brick" label={t("تطلب نادلًا")} value={counts.help} onClick={() => setFilter("help")} active={filter === "help"} emphasis={counts.help > 0} />
+          <StatCard icon={Receipt} tone="copper" label={t("طلب فاتورة")} value={counts.bill} onClick={() => setFilter("bill")} active={filter === "bill"} />
         </div>
       )}
 
@@ -80,9 +81,9 @@ export default function TableSessions() {
           <Card>
             <EmptyState
               icon={HandPlatter}
-              title={filter === "all" ? "لا توجد طاولات نشطة الآن" : "لا توجد طلبات بانتظارك"}
-              description={filter === "all" ? "عندما يمسح زبون رمز QR على طاولته تظهر جلسته هنا فورًا." : "سيصلك التنبيه هنا لحظة طلب أي طاولة."}
-              action={filter !== "all" && <Button variant="secondary" size="sm" onClick={() => setFilter("all")}>عرض كل الطاولات</Button>}
+              title={filter === "all" ? t("لا توجد طاولات نشطة الآن") : t("لا توجد طلبات بانتظارك")}
+              description={filter === "all" ? t("عندما يمسح زبون رمز QR على طاولته تظهر جلسته هنا فورًا.") : t("سيصلك التنبيه هنا لحظة طلب أي طاولة.")}
+              action={filter !== "all" && <Button variant="secondary" size="sm" onClick={() => setFilter("all")}>{t("عرض كل الطاولات")}</Button>}
             />
           </Card>
         ) : (
@@ -93,7 +94,7 @@ export default function TableSessions() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-lg font-extrabold text-ink">{tableName(s.tableLabel || s.table_label)}</p>
-                      <p className="mt-0.5 truncate text-sm text-muted">{s.customerName || s.customer_name || "زبون"}</p>
+                      <p className="mt-0.5 truncate text-sm text-muted">{s.customerName || s.customer_name || t("زبون")}</p>
                     </div>
                     <StatusBadge type={s.lifecycle ? "lifecycle" : "session"} status={s.lifecycle || s.status} />
                   </div>
@@ -102,23 +103,23 @@ export default function TableSessions() {
                     <div className="mt-4 rounded-xl bg-brick/[0.08] p-3">
                       <div className="flex items-center justify-between gap-2">
                         <p className="flex items-center gap-2 text-sm font-extrabold text-brick">
-                          <BellRing size={17} className="animate-pulse-soft" aria-hidden="true" /> تطلب نادلًا
+                          <BellRing size={17} className="animate-pulse-soft" aria-hidden="true" /> {t("تطلب نادلًا")}
                           <span className="text-xs font-bold text-brick/80">{sinceLabel(s.assistanceRequest?.created_at)}</span>
                         </p>
                       </div>
                       {s.assistanceRequest?.note && <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-sm font-bold text-ink">«{s.assistanceRequest.note}»</p>}
                       {can("handle_assistance") && (
                         <Button block size="md" variant="dark" className="mt-3" loading={resolving === s.id} onClick={() => resolve(s.id)}>
-                          <Check size={17} aria-hidden="true" /> تمت الخدمة
+                          <Check size={17} aria-hidden="true" /> {t("تمت الخدمة")}
                         </Button>
                       )}
                     </div>
                   ) : s.billRequested ? (
                     <p className="mt-4 flex items-center gap-2 rounded-xl bg-copper/10 p-3 text-sm font-extrabold text-copper-ink">
-                      <Receipt size={17} aria-hidden="true" /> طلبت الفاتورة، والكاشير يستلمها الآن
+                      <Receipt size={17} aria-hidden="true" /> {t("طلبت الفاتورة، والكاشير يستلمها الآن")}
                     </p>
                   ) : (
-                    <p className="mt-auto pt-4 text-sm text-muted">لا توجد طلبات معلّقة</p>
+                    <p className="mt-auto pt-4 text-sm text-muted">{t("لا توجد طلبات معلّقة")}</p>
                   )}
                   <IdleHint session={s} />
                 </Card>

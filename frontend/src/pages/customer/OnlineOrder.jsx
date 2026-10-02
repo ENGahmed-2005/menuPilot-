@@ -15,6 +15,7 @@ import BrandLogo from "../../components/brand/Logo";
 import { waLink } from "../../utils/whatsapp";
 import { currentPosition } from "../../utils/maps";
 import LocationMap from "../../components/delivery/LocationMap";
+import { t, dir } from "../../i18n";
 
 export default function OnlineOrder() {
   const { slug } = useParams();
@@ -44,7 +45,7 @@ export default function OnlineOrder() {
   // Delivery minimum applies to the items (not the delivery fee) — same rule as the server.
   const minOrder = form.type === "delivery" && zone ? Number(zone.min_order) || 0 : 0;
   const missing = Math.max(0, Math.round((minOrder - subtotal) * 100) / 100);
-  const groups = useMemo(() => { const g = new Map(); items.forEach((i) => { const k = i.category || "أصناف"; g.set(k, [...(g.get(k) || []), i]); }); return [...g.entries()]; }, [items]);
+  const groups = useMemo(() => { const g = new Map(); items.forEach((i) => { const k = i.category || t("أصناف"); g.set(k, [...(g.get(k) || []), i]); }); return [...g.entries()]; }, [items]);
   const setQty = (id, q) => setCart((c) => { const n = { ...c }; if (q <= 0) delete n[id]; else n[id] = Math.min(50, q); return n; });
   const field = (k) => ({ value: form[k], onChange: (e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setFormError(null); } });
 
@@ -63,35 +64,35 @@ export default function OnlineOrder() {
       const o = await placeOnlineOrder(slug, { ...form, zone_id: form.type === "delivery" ? Number(form.zone_id) || null : null, proof: form.payment_method === "transfer" ? form.proof : undefined, ...(form.type === "delivery" && loc ? { latitude: loc.lat, longitude: loc.lng, location_accuracy: loc.accuracy } : {}), items: lines.map((l) => ({ menuItemId: l.id, quantity: l.quantity })) });
       navigate(`/o/${o.id}?token=${encodeURIComponent(o.token)}`);
     } catch (err) {
-      setFormError(errorText(err, "تعذّر إرسال الطلب."));
+      setFormError(errorText(err, t("تعذّر إرسال الطلب.")));
     } finally {
       setSending(false);
     }
   }
 
-  if (error) return <main dir="rtl" className="grid min-h-screen place-items-center bg-paper-2 p-6 text-center text-ink"><div><Utensils className="mx-auto text-muted" /><p className="mt-3 font-bold">{errorText(error, "هذا المطعم لا يستقبل طلبات أونلاين حاليًا.")}</p></div></main>;
-  if (!data) return <main dir="rtl" className="min-h-screen bg-paper-2 p-4"><div className="mx-auto max-w-3xl space-y-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-black/[0.06]" />)}</div></main>;
+  if (error) return <main dir={dir} className="grid min-h-screen place-items-center bg-paper-2 p-6 text-center text-ink"><div><Utensils className="mx-auto text-muted" /><p className="mt-3 font-bold">{errorText(error, t("هذا المطعم لا يستقبل طلبات أونلاين حاليًا."))}</p></div></main>;
+  if (!data) return <main dir={dir} className="min-h-screen bg-paper-2 p-4"><div className="mx-auto max-w-3xl space-y-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-black/[0.06]" />)}</div></main>;
 
   return (
-    <main dir="rtl" className={`min-h-screen bg-paper-2 text-ink ${count ? "pb-28" : "pb-10"}`}>
+    <main dir={dir} className={`min-h-screen bg-paper-2 text-ink ${count ? "pb-28" : "pb-10"}`}>
       <header className="bg-navy text-paper">
         <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-6">
           <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white">{data.restaurant.logo_url ? <img src={data.restaurant.logo_url} alt="" className="h-full w-full object-cover" /> : <Utensils className="text-navy" aria-hidden="true" />}</div>
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-black">{data.restaurant.name}</h1>
             <p className="mt-1 flex flex-wrap gap-2 text-xs font-bold">
-              <span className={`rounded-full px-2 py-0.5 ${data.open ? "bg-herb text-white" : "bg-brick text-white"}`}>{data.open ? "يستقبل الطلبات الآن" : data.paused ? "مشغول حاليًا" : "مغلق الآن"}</span>
-              {data.pickup && <span className="rounded-full bg-paper/15 px-2 py-0.5">استلام</span>}
-              {data.delivery && <span className="rounded-full bg-paper/15 px-2 py-0.5">توصيل</span>}
-              <span className="rounded-full bg-paper/15 px-2 py-0.5">التحضير ≈ {data.prep_minutes} د</span>
-              {data.restaurant.whatsapp && <a href={waLink(data.restaurant.whatsapp, `مرحبًا ${data.restaurant.name}، عندي استفسار عن الطلب أونلاين.`)} target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#1f9d55] px-2 py-0.5 text-white">واتساب</a>}
+              <span className={`rounded-full px-2 py-0.5 ${data.open ? "bg-herb text-white" : "bg-brick text-white"}`}>{data.open ? t("يستقبل الطلبات الآن") : data.paused ? t("مشغول حاليًا") : t("مغلق الآن")}</span>
+              {data.pickup && <span className="rounded-full bg-paper/15 px-2 py-0.5">{t("استلام")}</span>}
+              {data.delivery && <span className="rounded-full bg-paper/15 px-2 py-0.5">{t("توصيل")}</span>}
+              <span className="rounded-full bg-paper/15 px-2 py-0.5">{t("التحضير ≈")} {data.prep_minutes} {t("د")}</span>
+              {data.restaurant.whatsapp && <a href={waLink(data.restaurant.whatsapp, t("مرحبًا {0}، عندي استفسار عن الطلب أونلاين.", { 0: data.restaurant.name }))} target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#1f9d55] px-2 py-0.5 text-white">{t("واتساب")}</a>}
             </p>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-3xl px-4">
-        {!data.open && <p className="mt-4 rounded-2xl bg-copper/10 p-3 text-sm font-bold text-copper-ink">لا يستقبل المطعم طلبات الآن{data.hours ? ` (ساعات الطلب ${data.hours.opens_at}–${data.hours.closes_at})` : ""}. يمكنك تصفح المنيو.</p>}
+        {!data.open && <p className="mt-4 rounded-2xl bg-copper/10 p-3 text-sm font-bold text-copper-ink">{t("لا يستقبل المطعم طلبات الآن")}{data.hours ? t(" (ساعات الطلب {0}–{1})", { 0: data.hours.opens_at, 1: data.hours.closes_at }) : ""}{t(". يمكنك تصفح المنيو.")}</p>}
         {groups.map(([cat, list]) => (
           <section key={cat} className="mt-6">
             <h2 className="mb-3 text-lg font-black">{cat}</h2>
@@ -106,12 +107,12 @@ export default function OnlineOrder() {
                       <span className="num font-black text-copper-ink">{money(i.price)}</span>
                       {cart[i.id] ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-black/[0.05] p-1">
-                          <button onClick={() => setQty(i.id, cart[i.id] - 1)} aria-label={`إنقاص ${i.name}`} className="grid h-9 w-9 place-items-center rounded-full bg-white"><Minus size={15} /></button>
+                          <button onClick={() => setQty(i.id, cart[i.id] - 1)} aria-label={t("إنقاص {0}", { 0: i.name })} className="grid h-9 w-9 place-items-center rounded-full bg-white"><Minus size={15} /></button>
                           <b className="num min-w-6 text-center">{cart[i.id]}</b>
-                          <button onClick={() => setQty(i.id, cart[i.id] + 1)} aria-label={`زيادة ${i.name}`} className="grid h-9 w-9 place-items-center rounded-full bg-navy text-paper"><Plus size={15} /></button>
+                          <button onClick={() => setQty(i.id, cart[i.id] + 1)} aria-label={t("زيادة {0}", { 0: i.name })} className="grid h-9 w-9 place-items-center rounded-full bg-navy text-paper"><Plus size={15} /></button>
                         </span>
                       ) : (
-                        <button disabled={!data.open} onClick={() => setQty(i.id, 1)} aria-label={`إضافة ${i.name}`} className="grid h-10 w-10 place-items-center rounded-full bg-navy text-paper disabled:opacity-40"><Plus size={18} /></button>
+                        <button disabled={!data.open} onClick={() => setQty(i.id, 1)} aria-label={t("إضافة {0}", { 0: i.name })} className="grid h-10 w-10 place-items-center rounded-full bg-navy text-paper disabled:opacity-40"><Plus size={18} /></button>
                       )}
                     </div>
                   </div>
@@ -120,56 +121,56 @@ export default function OnlineOrder() {
             </ul>
           </section>
         ))}
-        <a href="/" className="mx-auto mt-10 flex w-fit items-center gap-2 text-xs font-bold opacity-60" dir="rtl">مدعوم من <BrandLogo height={20} /></a>
+        <a href="/" className="mx-auto mt-10 flex w-fit items-center gap-2 text-xs font-bold opacity-60" dir={dir}>{t("مدعوم من")} <BrandLogo height={20} /></a>
       </div>
 
       {count > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-2">
           <button onClick={() => setCheckout(true)} className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between rounded-2xl bg-navy px-5 text-paper shadow-xl">
             <span className="grid h-8 min-w-8 place-items-center rounded-full bg-paper/20 px-2 text-sm font-black">{count}</span>
-            <span className="text-base font-black">إتمام الطلب</span>
+            <span className="text-base font-black">{t("إتمام الطلب")}</span>
             <span className="num text-base font-black">{money(subtotal)}</span>
           </button>
         </div>
       )}
 
-      <Modal open={checkout} onClose={() => !sending && setCheckout(false)} title="إتمام الطلب" size="md">
+      <Modal open={checkout} onClose={() => !sending && setCheckout(false)} title={t("إتمام الطلب")} size="md">
         <form onSubmit={submit} className="space-y-4 text-ink">
           <div className="grid grid-cols-2 gap-2">
-            {data.pickup && <button type="button" onClick={() => setForm((f) => ({ ...f, type: "pickup" }))} aria-pressed={form.type === "pickup"} className={`flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-bold ${form.type === "pickup" ? "border-copper bg-copper/10" : "border-line"}`}><Store size={17} /> استلام</button>}
-            {data.delivery && <button type="button" onClick={() => setForm((f) => ({ ...f, type: "delivery" }))} aria-pressed={form.type === "delivery"} className={`flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-bold ${form.type === "delivery" ? "border-copper bg-copper/10" : "border-line"}`}><Bike size={17} /> توصيل</button>}
+            {data.pickup && <button type="button" onClick={() => setForm((f) => ({ ...f, type: "pickup" }))} aria-pressed={form.type === "pickup"} className={`flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-bold ${form.type === "pickup" ? "border-copper bg-copper/10" : "border-line"}`}><Store size={17} /> {t("استلام")}</button>}
+            {data.delivery && <button type="button" onClick={() => setForm((f) => ({ ...f, type: "delivery" }))} aria-pressed={form.type === "delivery"} className={`flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-bold ${form.type === "delivery" ? "border-copper bg-copper/10" : "border-line"}`}><Bike size={17} /> {t("توصيل")}</button>}
           </div>
-          <label className="block text-sm font-bold">الاسم<input required maxLength={120} {...field("name")} className="mt-1.5 h-11 w-full rounded-xl border border-line px-3 font-normal" /></label>
-          <label className="block text-sm font-bold">رقم الهاتف<input required type="tel" dir="ltr" placeholder="0599 000 000" {...field("phone")} className="mt-1.5 h-11 w-full rounded-xl border border-line px-3 font-normal" /></label>
+          <label className="block text-sm font-bold">{t("الاسم")}<input required maxLength={120} {...field("name")} className="mt-1.5 h-11 w-full rounded-xl border border-line px-3 font-normal" /></label>
+          <label className="block text-sm font-bold">{t("رقم الهاتف")}<input required type="tel" dir="ltr" placeholder="0599 000 000" {...field("phone")} className="mt-1.5 h-11 w-full rounded-xl border border-line px-3 font-normal" /></label>
           {form.type === "delivery" && (<>
-            <label className="block text-sm font-bold">منطقة التوصيل
+            <label className="block text-sm font-bold">{t("منطقة التوصيل")}
               <select required {...field("zone_id")} className="mt-1.5 h-11 w-full rounded-xl border border-line bg-white px-3 font-normal">
-                <option value="">اختر المنطقة</option>
-                {data.zones.map((z) => <option key={z.id} value={z.id}>{z.name} · التوصيل {money(z.fee)}{Number(z.min_order) ? ` · الحد الأدنى ${money(z.min_order)}` : ""}</option>)}
+                <option value="">{t("اختر المنطقة")}</option>
+                {data.zones.map((z) => <option key={z.id} value={z.id}>{z.name} {t("· التوصيل")} {money(z.fee)}{Number(z.min_order) ? t(" · الحد الأدنى {0}", { 0: money(z.min_order) }) : ""}</option>)}
               </select>
             </label>
-            <label className="block text-sm font-bold">العنوان بالتفصيل<textarea required rows={2} maxLength={500} placeholder="الحي، الشارع، أقرب معلم، رقم العمارة والطابق" {...field("address")} className="mt-1.5 w-full rounded-xl border border-line px-3 py-2 font-normal" /></label>
+            <label className="block text-sm font-bold">{t("العنوان بالتفصيل")}<textarea required rows={2} maxLength={500} placeholder={t("الحي، الشارع، أقرب معلم، رقم العمارة والطابق")} {...field("address")} className="mt-1.5 w-full rounded-xl border border-line px-3 py-2 font-normal" /></label>
             <div className="rounded-xl border border-dashed border-line p-3">
               {loc ? (
                 <div className="space-y-2">
-                  <LocationMap lat={loc.lat} lng={loc.lng} height={150} title="موقعك على الخريطة" />
+                  <LocationMap lat={loc.lat} lng={loc.lng} height={150} title={t("موقعك على الخريطة")} />
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-herb">تمت إضافة موقعك{loc.accuracy ? ` · الدقة ≈ ${loc.accuracy} م` : ""}</span>
-                    <button type="button" onClick={() => setLoc(null)} className="inline-flex items-center gap-1 font-bold text-muted"><X size={13} /> إزالة</button>
+                    <span className="font-bold text-herb">{t("تمت إضافة موقعك")}{loc.accuracy ? t(" · الدقة ≈ {0} م", { 0: loc.accuracy }) : ""}</span>
+                    <button type="button" onClick={() => setLoc(null)} className="inline-flex items-center gap-1 font-bold text-muted"><X size={13} /> {t("إزالة")}</button>
                   </div>
                 </div>
               ) : (
                 <button type="button" onClick={shareLocation} disabled={locating} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-navy text-sm font-bold text-paper disabled:opacity-60">
-                  <LocateFixed size={17} aria-hidden="true" /> {locating ? "جارٍ تحديد موقعك…" : "استخدم موقعي الحالي (اختياري)"}
+                  <LocateFixed size={17} aria-hidden="true" /> {locating ? t("جارٍ تحديد موقعك…") : t("استخدم موقعي الحالي (اختياري)")}
                 </button>
               )}
-              <p className="mt-2 text-[11px] leading-5 text-muted">يساعد السائق على الوصول بدقة، ولا يراه إلا المطعم.</p>
+              <p className="mt-2 text-[11px] leading-5 text-muted">{t("يساعد السائق على الوصول بدقة، ولا يراه إلا المطعم.")}</p>
             </div>
           </>)}
-          <label className="block text-sm font-bold">ملاحظات (اختياري)<input maxLength={500} {...field("notes")} className="mt-1.5 h-11 w-full rounded-xl border border-line px-3 font-normal" /></label>
+          <label className="block text-sm font-bold">{t("ملاحظات (اختياري)")}<input maxLength={500} {...field("notes")} className="mt-1.5 h-11 w-full rounded-xl border border-line px-3 font-normal" /></label>
           <fieldset className="space-y-2">
-            <legend className="text-sm font-bold">الدفع</legend>
-            {[["cash", form.type === "delivery" ? "نقدًا عند التوصيل" : "نقدًا عند الاستلام"], ["transfer", "تحويل مسبق (أرفق الإشعار)"]].map(([v, l]) => (
+            <legend className="text-sm font-bold">{t("الدفع")}</legend>
+            {[["cash", form.type === "delivery" ? t("نقدًا عند التوصيل") : t("نقدًا عند الاستلام")], ["transfer", t("تحويل مسبق (أرفق الإشعار)")]].map(([v, l]) => (
               <label key={v} className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 text-sm font-bold ${form.payment_method === v ? "border-copper bg-copper/[0.06]" : "border-line"}`}>
                 <input type="radio" name="pm" checked={form.payment_method === v} onChange={() => setForm((f) => ({ ...f, payment_method: v }))} /> {l}
               </label>
@@ -177,18 +178,18 @@ export default function OnlineOrder() {
             {form.payment_method === "transfer" && <input type="file" required accept="image/png,image/jpeg,image/webp" onChange={pickProof} className="text-sm" />}
           </fieldset>
           <dl className="space-y-1 rounded-xl bg-surface-2 p-3 text-sm">
-            <div className="flex justify-between"><dt>الأصناف</dt><dd className="num">{money(subtotal)}</dd></div>
-            {form.type === "delivery" && <div className="flex justify-between"><dt>التوصيل</dt><dd className="num">{zone ? money(fee) : "—"}</dd></div>}
-            <div className="flex justify-between text-base font-black"><dt>الإجمالي</dt><dd className="num">{money(subtotal + fee)}</dd></div>
+            <div className="flex justify-between"><dt>{t("الأصناف")}</dt><dd className="num">{money(subtotal)}</dd></div>
+            {form.type === "delivery" && <div className="flex justify-between"><dt>{t("التوصيل")}</dt><dd className="num">{zone ? money(fee) : "—"}</dd></div>}
+            <div className="flex justify-between text-base font-black"><dt>{t("الإجمالي")}</dt><dd className="num">{money(subtotal + fee)}</dd></div>
           </dl>
           {missing > 0 && (
             <p role="status" className="rounded-xl bg-copper/10 p-3 text-sm font-bold text-copper-ink">
-              الحد الأدنى للتوصيل إلى {zone.name} هو <span className="num">{money(minOrder)}</span> (دون رسوم التوصيل). أضف أصنافًا بقيمة <span className="num">{money(missing)}</span>.
+              {t("الحد الأدنى للتوصيل إلى")} {zone.name} {t("هو")} <span className="num">{money(minOrder)}</span> {t("(دون رسوم التوصيل). أضف أصنافًا بقيمة")} <span className="num">{money(missing)}</span>.
             </p>
           )}
           {formError && <p role="alert" className="rounded-xl bg-brick/10 p-3 text-sm font-bold text-brick">{formError}</p>}
-          <button type="submit" disabled={sending || missing > 0} className="h-12 w-full rounded-2xl bg-copper text-base font-black text-ink disabled:opacity-60">{sending ? "جارٍ الإرسال…" : `إرسال الطلب · ${money(subtotal + fee)}`}</button>
-          <p className="text-center text-xs text-muted">يؤكد المطعم طلبك ويحدد وقت التحضير، وتتابع الحالة من رابط التتبع.</p>
+          <button type="submit" disabled={sending || missing > 0} className="h-12 w-full rounded-2xl bg-copper text-base font-black text-ink disabled:opacity-60">{sending ? t("جارٍ الإرسال…") : t("إرسال الطلب · {0}", { 0: money(subtotal + fee) })}</button>
+          <p className="text-center text-xs text-muted">{t("يؤكد المطعم طلبك ويحدد وقت التحضير، وتتابع الحالة من رابط التتبع.")}</p>
         </form>
       </Modal>
     </main>

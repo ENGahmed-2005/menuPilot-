@@ -18,12 +18,13 @@ import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import Alert from "../ui/Alert";
 import { useToast } from "../ui/Toast";
+import { t } from "../../i18n";
 
 const BLOCKERS = {
-  OUTSTANDING_BALANCE: "يوجد مبلغ متبقٍ لم يُدفع بعد.",
-  PAYMENT_PENDING_VERIFICATION: "يوجد دفع من الزبون بانتظار التأكيد.",
-  PAYMENT_REQUIRED: "لم يُسجَّل أي دفع لهذه الجلسة بعد.",
-  SESSION_ALREADY_CLOSED: "هذه الجلسة مغلقة بالفعل.",
+  OUTSTANDING_BALANCE: t("يوجد مبلغ متبقٍ لم يُدفع بعد."),
+  PAYMENT_PENDING_VERIFICATION: t("يوجد دفع من الزبون بانتظار التأكيد."),
+  PAYMENT_REQUIRED: t("لم يُسجَّل أي دفع لهذه الجلسة بعد."),
+  SESSION_ALREADY_CLOSED: t("هذه الجلسة مغلقة بالفعل."),
 };
 
 export default function CloseSessionButton({ session, onClosed, block = false, size = "md" }) {
@@ -44,7 +45,7 @@ export default function CloseSessionButton({ session, onClosed, block = false, s
     try {
       await closeSession(session.id);
       setOpen(false);
-      toast.success(`أُغلقت جلسة ${table}، والطاولة متاحة الآن.`);
+      toast.success(t("أُغلقت جلسة {0}، والطاولة متاحة الآن.", { 0: table }));
       onClosed?.(session);
     } catch (err) {
       setError(err);
@@ -56,7 +57,7 @@ export default function CloseSessionButton({ session, onClosed, block = false, s
   return (
     <div>
       <Button variant="dark" size={size} block={block} disabled={blocked} onClick={() => { setError(null); setOpen(true); }}>
-        <DoorClosed size={16} aria-hidden="true" /> إغلاق الجلسة
+        <DoorClosed size={16} aria-hidden="true" /> {t("إغلاق الجلسة")}
       </Button>
       {blocked && session.closeBlocker && <p className="mt-1.5 text-xs font-bold text-muted">{BLOCKERS[session.closeBlocker]}</p>}
 
@@ -64,21 +65,21 @@ export default function CloseSessionButton({ session, onClosed, block = false, s
         open={open}
         onClose={() => !closing && setOpen(false)}
         size="sm"
-        title={`هل أنت متأكد من إغلاق جلسة ${table}؟`}
-        description="بعد الإغلاق ستصبح الطاولة متاحة لجلسة جديدة، ولن يستطيع الزبون إضافة طلبات لهذه الجلسة."
+        title={t("هل أنت متأكد من إغلاق جلسة {0}؟", { 0: table })}
+        description={t("بعد الإغلاق ستصبح الطاولة متاحة لجلسة جديدة، ولن يستطيع الزبون إضافة طلبات لهذه الجلسة.")}
         footer={<>
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={closing}>تراجع</Button>
-          <Button variant="dark" loading={closing} onClick={confirmClose}>تأكيد الإغلاق</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)} disabled={closing}>{t("تراجع")}</Button>
+          <Button variant="dark" loading={closing} onClick={confirmClose}>{t("تأكيد الإغلاق")}</Button>
         </>}
       >
         <dl className="divide-y divide-line rounded-xl border border-line text-sm">
-          <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">الطاولة</dt><dd className="font-bold">{table}</dd></div>
-          <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">رقم الجلسة</dt><dd className="num font-bold">#{session.id}</dd></div>
-          <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">إجمالي الفاتورة</dt><dd className="num font-bold">{money(session.billTotal)}</dd></div>
-          <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">المدفوع</dt><dd className="num font-bold text-herb">{money(session.paidTotal)}</dd></div>
-          <div className="flex justify-between px-4 py-2.5"><dt className="font-bold">المتبقي</dt><dd className="num font-extrabold">{money(session.outstanding)}</dd></div>
+          <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">{t("الطاولة")}</dt><dd className="font-bold">{table}</dd></div>
+          <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">{t("رقم الجلسة")}</dt><dd className="num font-bold">#{session.id}</dd></div>
+          <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">{t("إجمالي الفاتورة")}</dt><dd className="num font-bold">{money(session.billTotal)}</dd></div>
+          <div className="flex justify-between px-4 py-2.5"><dt className="text-muted">{t("المدفوع")}</dt><dd className="num font-bold text-herb">{money(session.paidTotal)}</dd></div>
+          <div className="flex justify-between px-4 py-2.5"><dt className="font-bold">{t("المتبقي")}</dt><dd className="num font-extrabold">{money(session.outstanding)}</dd></div>
         </dl>
-        {error && <Alert tone="danger" className="mt-4">{errorText(error, "تعذّر إغلاق الجلسة.")}</Alert>}
+        {error && <Alert tone="danger" className="mt-4">{errorText(error, t("تعذّر إغلاق الجلسة."))}</Alert>}
       </Modal>
     </div>
   );

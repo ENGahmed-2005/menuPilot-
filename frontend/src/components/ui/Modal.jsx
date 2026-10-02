@@ -6,6 +6,7 @@
    ========================================================================== */
 import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
+import { t, dir } from "../../i18n";
 
 const SIZES = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-2xl", xl: "max-w-5xl" };
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -56,7 +57,7 @@ export default function Modal({ open, onClose, title, description, size = "md", 
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
-        dir="rtl"
+        dir={dir}
         onMouseDown={(event) => event.stopPropagation()}
         className={`relative flex max-h-[92vh] w-full ${SIZES[size] || SIZES.md} flex-col rounded-t-[var(--radius-panel)] bg-surface text-ink shadow-[var(--shadow-dialog)] outline-none animate-dialog-in sm:rounded-[var(--radius-panel)]`}
       >
@@ -65,7 +66,7 @@ export default function Modal({ open, onClose, title, description, size = "md", 
             {title && <h2 id={titleId} className="text-lg font-extrabold">{title}</h2>}
             {description && <p id={descId} className="mt-1 text-sm text-muted">{description}</p>}
           </div>
-          <button type="button" onClick={onClose} aria-label="إغلاق" className="-m-1.5 rounded-full p-2 text-muted transition-colors hover:bg-ink/[0.06] hover:text-ink">
+          <button type="button" onClick={onClose} aria-label={t("إغلاق")} className="-m-1.5 rounded-full p-2 text-muted transition-colors hover:bg-ink/[0.06] hover:text-ink">
             <X size={18} aria-hidden="true" />
           </button>
         </div>

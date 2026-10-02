@@ -1,6 +1,7 @@
 import { getSessionToken } from "../utils/sessionToken";
 import { useEffect, useState } from "react";
 import { getSessionOrders } from "../api/orders";
+import { t } from "../i18n";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 // "polling" avoids long-lived SSE connections, which block the single-worker
@@ -15,7 +16,7 @@ export function useOrderTracking(sessionId) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!sessionId) { setOrders([]); setError(new Error("جلسة الطعام غير موجودة.")); setLoading(false); return undefined; }
+    if (!sessionId) { setOrders([]); setError(new Error(t("جلسة الطعام غير موجودة."))); setLoading(false); return undefined; }
     let active = true;
     const load = () => getSessionOrders(sessionId).then((data) => { if (active) { setOrders(data ?? []); setError(null); setLoading(false); } }).catch((err) => { if (active) { setError(err); setLoading(false); } });
     load();
