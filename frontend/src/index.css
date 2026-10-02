@@ -67,6 +67,11 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
 img, svg { display: block; max-width: 100%; }
 [dir="rtl"], .lang-ar { font-family: var(--font-arabic); }
 [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, .lang-ar h1, .lang-ar h2, .lang-ar h3 { font-family: var(--font-arabic-display); font-weight: 800; letter-spacing: 0; }
+/* English: headings in bold Inter, matching the weight of the Arabic design. */
+[dir="ltr"] h1, [dir="ltr"] h2, [dir="ltr"] h3 { font-family: var(--font-body); font-weight: 800; letter-spacing: -0.015em; }
+/* The UI was drawn right to left: in English, horizontal arrows point the other way. */
+[dir="ltr"] .lucide-arrow-left, [dir="ltr"] .lucide-arrow-right, [dir="ltr"] .lucide-chevron-left, [dir="ltr"] .lucide-chevron-right,
+[dir="ltr"] .lucide-chevrons-left, [dir="ltr"] .lucide-chevrons-right { transform: scaleX(-1); }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 :focus-visible { outline: 2px solid var(--color-copper); outline-offset: 3px; }
