@@ -4,6 +4,7 @@
 import { ArrowLeft, Check, QrCode, UtensilsCrossed } from "lucide-react";
 import { lazy, Suspense } from "react";
 import Reveal from "./Reveal";
+import { shot } from "./shots";
 import { t } from "../../../i18n";
 
 // Three.js تقيلة (~500 كيلوبايت) ومطلوبة بس في صفحة الهبوط، فلو استوردناها
@@ -79,7 +80,7 @@ export default function Hero({ onNavigate }) {
               {t("ابدأ مع menuPilot")}
               <ArrowLeft size={18} className="transition group-hover:-translate-x-1" />
             </button>
-            <a href="#how" className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[#F3EFE5]/15 px-7 py-4 font-bold text-[#F3EFE5]/85 transition hover:border-[#F3EFE5]/35 hover:bg-[#F3EFE5]/5">
+            <a href="#features" className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[#F3EFE5]/15 px-7 py-4 font-bold text-[#F3EFE5]/85 transition hover:border-[#F3EFE5]/35 hover:bg-[#F3EFE5]/5">
               {t("اكتشف كيف يعمل")}
               <ArrowLeft size={18} />
             </a>
@@ -92,46 +93,17 @@ export default function Hero({ onNavigate }) {
           </div>
         </Reveal>
 
-        <Reveal delay={150} className="relative mx-auto w-full max-w-xl">
-          <div className="absolute -inset-5 rounded-[2rem] bg-[#EEA122]/10 blur-2xl" />
-          <div className="relative animate-[float_6s_ease-in-out_infinite] overflow-hidden rounded-[2rem] border border-[#F3EFE5]/10 bg-[#F3EFE5] p-5 text-[#172331] shadow-2xl sm:p-7">
-            <div className="flex items-center justify-between border-b border-[#172331]/10 pb-5">
-              <div>
-                <p className="text-xs font-bold text-[#5A6574]">{t("لوحة المطعم")}</p>
-                <h2 className="mt-1 text-2xl font-black">{t("مطعمك")}</h2>
-              </div>
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#EEA122]"><QrCode size={25} /></span>
+        {/* The product itself: the owner dashboard and the guest menu, captured from the app. */}
+        <Reveal delay={150} className="relative mx-auto w-full max-w-xl pb-10 lg:max-w-none">
+          <div className="absolute -inset-6 rounded-[2rem] bg-[#EEA122]/10 blur-3xl" aria-hidden="true" />
+          <div className="hero-level relative overflow-hidden rounded-2xl border border-[#F3EFE5]/10 bg-[#0d1620] shadow-2xl">
+            <div className="flex h-7 items-center gap-1.5 border-b border-white/10 bg-[#0a1118] px-3" aria-hidden="true">
+              <i className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><i className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><i className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {PREVIEW_STATS.map(([value, label]) => (
-                <div key={label} className="rounded-2xl bg-navy p-4 text-[#F3EFE5] transition hover:bg-[#2a3b50]">
-                  <div className="text-2xl font-black text-[#EEA122]">{value}</div>
-                  <div className="mt-1 text-[11px] text-[#F3EFE5]/70">{label}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 rounded-2xl border border-[#172331]/10 bg-white/70 p-4">
-              <div className="mb-3 flex items-center justify-between text-xs font-bold">
-                <span>{t("الطلبات الحالية")}</span>
-                <span className="flex items-center gap-1.5 text-[#4B6A8A]">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4B6A8A]" />
-                  {t("مباشر")}
-                </span>
-              </div>
-              {PREVIEW_ORDERS.map(([table, order, status], index) => (
-                <div key={table} className="flex items-center gap-3 border-t border-[#172331]/8 py-3 first:border-0 first:pt-0 last:pb-0">
-                  <span className={`grid h-9 w-9 place-items-center rounded-xl ${index === 0 ? "bg-[#EEA122]/15 text-[#E67E22]" : "bg-[#4B6A8A]/10 text-[#4B6A8A]"}`}>
-                    <UtensilsCrossed size={17} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-black">{table}</p>
-                    <p className="truncate text-[11px] text-[#5A6574]">{order}</p>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#5A6574]">{status}</span>
-                </div>
-              ))}
-            </div>
+            <img src={shot("dashboard")} alt={t("لوحة المالك في menuPilot: مبيعات اليوم والطلبات والطاولات")} width="1600" height="1000" fetchPriority="high" className="block w-full" />
           </div>
+          <img src={shot("menu")} alt={t("منيو الزبون على الجوال بعد مسح رمز الطاولة")} width="560" height="1212"
+            className="hero-phone absolute -bottom-2 end-[-0.5rem] w-[30%] max-w-[180px] rounded-[1.5rem] border-[6px] border-[#05090d] shadow-2xl sm:end-[-1.5rem]" />
         </Reveal>
       </div>
     </section>
