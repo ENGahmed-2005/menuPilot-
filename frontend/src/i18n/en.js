@@ -1790,4 +1790,12 @@ export default {
   "الأجر المستحق لكل موظف حسب نوع راتبه وأيام حضوره.": "What each employee is owed, by pay type and days worked.",
   "نوع الراتب": "Pay type",
   "أسبوعيًا": "weekly",
+  "عند الضغط على الزر يطلب المتصفح موقعك مرة واحدة، للتأكد أنك داخل المطعم.": "When you press the button, your browser asks for your location once, to check you're inside the restaurant.",
+  "بياناتك لإرسال الطلب": "Your details to send the order",
+  "تأكيد الطلب": "Confirm the order",
+  "نحتاج اسمك ورقم جوالك مرة واحدة فقط لهذه الطاولة.": "We need your name and mobile number just once for this table.",
+  "مثلًا: أحمد": "e.g. Ahmed",
+  "أنت خارج نطاق المطعم. يجب أن تكون ضمن 200 متر من المطعم لفتح الطاولة.": "You're outside the restaurant. You need to be within 200 metres of it to open the table.",
+  "هذه الطاولة محجوزة حاليًا. اطلب المساعدة من أحد أفراد الطاقم.": "This table is reserved right now. Ask a member of staff for help.",
+  "هذه الطاولة خارج الخدمة حاليًا. اطلب المساعدة من أحد أفراد الطاقم.": "This table is out of service right now. Ask a member of staff for help.",
 };
