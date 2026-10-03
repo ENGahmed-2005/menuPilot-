@@ -47,11 +47,13 @@ const FEATURES = [
 
 function Screen({ feature }) {
   return (
-    <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-[#F3EFE5]/10 bg-[#0d1620] shadow-2xl">
+    // Phone shots get a taller box on small screens, so the screen stays readable.
+    <div className={`relative overflow-hidden rounded-2xl border border-[#F3EFE5]/10 bg-[#0d1620] shadow-2xl ${feature.phone ? "aspect-[4/5] sm:aspect-[16/10]" : "aspect-[16/10]"}`}>
       {feature.phone ? (
-        <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(60%_80%_at_50%_30%,rgba(238,161,34,0.14),transparent_70%)]">
+        // A flex box with a definite height (inset-0), so the phone fits its full height on any width.
+        <div className="absolute inset-0 flex items-center justify-center py-[3%] bg-[radial-gradient(60%_80%_at_50%_30%,rgba(238,161,34,0.14),transparent_70%)]">
           <img key={feature.img} src={shot(feature.img)} alt={feature.title} width="560" height="1212" decoding="async"
-            className="tour-in h-[92%] w-auto rounded-[1.6rem] border-[6px] border-[#05090d] shadow-2xl" />
+            className="tour-in block h-full w-auto max-w-[80%] rounded-[1.6rem] border-[6px] border-[#05090d] object-contain shadow-2xl" />
         </div>
       ) : (
         <>
@@ -69,7 +71,8 @@ export default function ProductTour() {
   const [active, setActive] = useState(0);
   const [auto, setAuto] = useState(true);
   const [paused, setPaused] = useState(false);
-  const [reduce] = useState(() => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches));
+  // No auto-advance for reduced motion, nor on small screens, where the box's height changes between parts.
+  const [reduce] = useState(() => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce), (max-width: 1023px)").matches));
   useEffect(() => {
     if (!auto || paused || reduce) return undefined;
     const id = setTimeout(() => setActive((a) => (a + 1) % FEATURES.length), STEP_MS);

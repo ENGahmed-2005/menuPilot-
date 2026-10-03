@@ -28,8 +28,6 @@ const PREVIEW_ORDERS = [
 export default function Hero({ onNavigate }) {
   return (
     <section className="relative isolate overflow-hidden">
-      <div className="pointer-events-none absolute -right-40 top-0 -z-10 h-96 w-96 animate-[pulse_9s_ease-in-out_infinite] rounded-full bg-[#EEA122]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -left-40 bottom-0 -z-10 h-96 w-96 animate-[pulse_11s_ease-in-out_infinite] rounded-full bg-[#4B6A8A]/10 blur-3xl" />
 
       {/* خلفية Shape Mosaic التفاعلية (WebGL/Three.js) — أشكال بتلف وتضيء
           قرب الماوس. ألوان مربوطة بهوية الموقع: ink-soft للحالة العادية
@@ -50,7 +48,7 @@ export default function Hero({ onNavigate }) {
             spin={8}
             turn={16}
             reach={17}
-            style={{ opacity: 0.75 }}
+            style={{ opacity: 0.4 }} /* quieter, so the real screenshots lead */
           />
         </Suspense>
       </div>
@@ -63,11 +61,9 @@ export default function Hero({ onNavigate }) {
           بنفسه صراحة عشان يفضل شغّال عادي. */}
       <div className="pointer-events-none mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[1.05fr_.95fr] lg:px-10 lg:pb-32">
         <Reveal>
-          <h1 className="max-w-3xl text-5xl font-black leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="max-w-3xl text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
             {t("مطعمك يتحرك أسرع،")}
-            <span className="block bg-gradient-to-l from-[#EEA122] to-[#E67E22] bg-clip-text text-transparent">
-              {t("والطلب يصبح أبسط.")}
-            </span>
+            <span className="block">{t("والطلب يصبح أبسط.")}</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-[#F3EFE5]/65 sm:text-xl">
             {t("menuPilot يجمع المنيو الرقمي، الطلب عبر QR، المطبخ، الطاولات، الفواتير والتقارير في منصة واحدة مصممة لتقليل الفوضى ورفع كفاءة التشغيل.")}
