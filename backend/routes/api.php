@@ -7,6 +7,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BrandingController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MenuCategoryController;
 use App\Http\Controllers\MenuController;
@@ -170,6 +171,23 @@ Route::middleware('api.auth')->group(function () {
 
     // Owner account: these endpoints act on the owner's own user row, so they
     // stay owner-only on top of the permission check.
+    // Salaries, expenses and profit: the owner, or a manager given manage_finance.
+    Route::middleware('role:owner,manager')->group(function () {
+        Route::middleware(['permission:manage_finance', 'feature:reports'])->group(function () {
+            Route::get('owner/finance/summary', [FinanceController::class, 'summary']);
+            Route::get('owner/finance/employees', [FinanceController::class, 'employees']);
+            Route::get('owner/finance/expenses', [FinanceController::class, 'expenses']);
+            Route::middleware('subscription')->group(function () {
+                Route::post('owner/finance/employees', [FinanceController::class, 'storeEmployee']);
+                Route::patch('owner/finance/employees/{id}', [FinanceController::class, 'updateEmployee']);
+                Route::delete('owner/finance/employees/{id}', [FinanceController::class, 'destroyEmployee']);
+                Route::post('owner/finance/expenses', [FinanceController::class, 'storeExpense']);
+                Route::patch('owner/finance/expenses/{id}', [FinanceController::class, 'updateExpense']);
+                Route::delete('owner/finance/expenses/{id}', [FinanceController::class, 'destroyExpense']);
+            });
+        });
+    });
+
     Route::middleware('role:owner')->group(function () {
         Route::get('me/restaurant', [AccountController::class, 'show'])->middleware('permission:manage_restaurant');
         Route::patch('me/restaurant', [AccountController::class, 'updateRestaurant'])->middleware('permission:manage_restaurant');
