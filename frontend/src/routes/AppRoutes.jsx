@@ -32,6 +32,7 @@ const DeliveryBoard = lazy(() => import("../pages/owner/DeliveryBoard"));
 const AccountingExports = lazy(() => import("../pages/owner/AccountingExports"));
 const MenuManagement = lazy(() => import("../pages/owner/MenuManagement"));
 const Reports = lazy(() => import("../pages/owner/Reports"));
+const Finance = lazy(() => import("../pages/owner/Finance"));
 const StaffManagement = lazy(() => import("../pages/owner/StaffManagement"));
 const KitchenDashboard = lazy(() => import("../pages/kitchen/KitchenDashboard"));
 const Billing = lazy(() => import("../pages/cashier/Billing"));
@@ -71,6 +72,7 @@ export default function AppRoutes() {
         <Route path="/owner/settings" element={<DashboardShell><RestaurantSettings /></DashboardShell>} />
         <Route path="/owner/branding" element={<DashboardShell><BrandingCustomization /></DashboardShell>} />
         <Route path="/owner/reports" element={<FeatureProtectedRoute feature="reports"><DashboardShell><Reports /></DashboardShell></FeatureProtectedRoute>} />
+        <Route path="/owner/finance" element={<FeatureProtectedRoute feature="reports"><DashboardShell><Finance /></DashboardShell></FeatureProtectedRoute>} />
         <Route path="/owner/theme" element={<FeatureProtectedRoute feature="theme-presets"><DashboardShell><ThemeCustomization /></DashboardShell></FeatureProtectedRoute>} />
       </Route>
 

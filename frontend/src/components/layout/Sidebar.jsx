@@ -9,8 +9,7 @@ import { useEffect, useState } from "react";
 import BrandLogo from "../brand/Logo";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  BarChart3, Bell, Bike, ChefHat, KeyRound, MapPin, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette,
-  ChevronDown, QrCode, Receipt, Settings, Settings2, Sparkles, UtensilsCrossed, Users, X,
+  BarChart3, Bell, Bike, ChefHat, KeyRound, MapPin, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette, ChevronDown, QrCode, Receipt, Settings, Settings2, Sparkles, UtensilsCrossed, Users, X, Wallet,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { SUBSCRIPTION_ADDONS, getSubscriptionPlan, monthlyPrice, subscriptionOf, userHasFeature } from "../../config/subscriptions";
@@ -43,6 +42,7 @@ const NAV = {
       ["/owner/staff", t("الفريق والصلاحيات"), Users, null, "manage_staff"],
       ["/owner/reports", t("التقارير"), BarChart3, "reports", "view_reports"],
       ["/owner/accounting", t("المحاسبة والتصدير"), FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
+      ["/owner/finance", t("الأرباح والمصاريف"), Wallet, "reports", "manage_finance"],
     ] },
     { id: "settings", settings: true, links: [
       ["/owner/settings", t("إعدادات المطعم"), Settings, null, "manage_settings"],
@@ -59,6 +59,7 @@ const NAV = {
       ["/owner/menu", t("المنيو"), UtensilsCrossed, "menu", "manage_menu"],
       ["/owner/staff", t("الفريق والصلاحيات"), Users, null, "manage_staff"],
       ["/owner/accounting", t("المحاسبة والتصدير"), FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
+      ["/owner/finance", t("الأرباح والمصاريف"), Wallet, "reports", "manage_finance"],
     ] },
   ],
   kitchen: [{ links: [["/kitchen", t("شاشة المطبخ"), ChefHat, "kitchen", "manage_orders"]] }],
@@ -68,6 +69,7 @@ const NAV = {
     ["/cashier/tables", t("الطاولات والفواتير"), Receipt, "cashier", "view_payments"],
     ["/cashier/reports", t("تقارير المبيعات"), BarChart3, "cashier", "view_reports|view_payments"],
     ["/owner/accounting", t("المحاسبة والتصدير"), FileSpreadsheet, null, "export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"],
+      ["/owner/finance", t("الأرباح والمصاريف"), Wallet, "reports", "manage_finance"],
   ] }],
   waiter: [{ links: [["/waiter", t("الطاولات والطلبات"), HandPlatter, "waiter", "view_tables"]] }],
   admin: [
