@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\Finance;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 
@@ -103,4 +105,70 @@ it('is for the owner, or a manager given manage_finance, on a plan with reports'
     $this->getJson('/api/owner/finance/summary', authAs($cashier))->assertForbidden();
 
     $this->getJson('/api/owner/finance/summary', authAs(financeOwner('basic')))->assertForbidden()->assertJsonPath('code', 'FEATURE_NOT_AVAILABLE');
+});
+
+// ── Pay types and attendance ──
+
+function payOf(string $type, float $rate, string $month, array $marks = [], ?string $starts = null, ?string $ends = null): array
+{
+    $employee = (object) ['pay_type' => $type, 'pay_rate' => $rate, 'monthly_salary' => $rate, 'starts_on' => $starts, 'ends_on' => $ends];
+
+    return Finance::pay($employee, CarbonImmutable::parse("$month-01"), $marks);
+}
+
+it('pays monthly, weekly and daily workers by the days that count', function () {
+    // Monthly 3,100 in a 31-day month, 2 absences and a half day → 28.5 paid days.
+    expect(payOf('monthly', 3100, '2026-10', ['2026-10-05' => 'absent', '2026-10-06' => 'absent', '2026-10-07' => 'half', '2026-10-08' => 'present']))
+        ->toMatchArray(['amount' => 2850.0, 'paid_days' => 28.5, 'absent' => 2, 'half' => 1, 'present' => 1]);
+    // Weekly 700 = 100 a day; one absence in October → 30 days.
+    expect(payOf('weekly', 700, '2026-10', ['2026-10-02' => 'absent'])['amount'])->toBe(3000.0);
+    // Daily 120: only marked days count — 10 present + 2 halves = 11; leave and absence are unpaid.
+    $marks = [];
+    foreach (range(1, 10) as $d) {
+        $marks[sprintf('2026-10-%02d', $d)] = 'present';
+    }
+    $marks += ['2026-10-11' => 'half', '2026-10-12' => 'half', '2026-10-13' => 'leave', '2026-10-14' => 'absent'];
+    expect(payOf('daily', 120, '2026-10', $marks))->toMatchArray(['amount' => 1320.0, 'paid_days' => 11.0]);
+    // Paid leave doesn't cut a monthly salary; unmarked days count as worked; a daily worker with no marks earns nothing.
+    expect(payOf('monthly', 3000, '2026-09', ['2026-09-10' => 'leave', '2026-09-11' => 'leave', '2026-09-12' => 'leave'])['amount'])->toBe(3000.0);
+    expect(payOf('daily', 120, '2026-10')['amount'])->toBe(0.0);
+    // Marks outside the employment don't count: started on the 21st, absent on the 5th → 11 days of 31.
+    expect(payOf('monthly', 3100, '2026-10', ['2026-10-05' => 'absent'], '2026-10-21')['amount'])->toBe(1100.0);
+});
+
+it('marks attendance for a day, clears it, and the profit follows', function () {
+    $this->travelTo('2026-10-20 10:00:00');
+    $owner = financeOwner();
+    $api = authAs($owner);
+    $daily = $this->postJson('/api/owner/finance/employees', ['name' => 'Day worker', 'pay_type' => 'daily', 'pay_rate' => 100, 'starts_on' => '2026-10-01'], $api)->assertCreated()->json('data');
+    $monthly = $this->postJson('/api/owner/finance/employees', ['name' => 'Chef', 'pay_type' => 'monthly', 'pay_rate' => 3100, 'starts_on' => '2026-10-01'], $api)->assertCreated()->json('data');
+    expect($daily['monthly_salary'])->toBe('2600.00'); // a monthly estimate: 26 days
+
+    foreach (['2026-10-12', '2026-10-13', '2026-10-14'] as $day) {
+        $this->putJson('/api/owner/finance/attendance', ['date' => $day, 'marks' => [['employee_id' => $daily['id'], 'status' => 'present'], ['employee_id' => $monthly['id'], 'status' => $day === '2026-10-14' ? 'absent' : 'present']]], $api)->assertOk();
+    }
+    $sheet = $this->getJson('/api/owner/finance/attendance?date=2026-10-14', $api)->assertOk()->json('data.employees');
+    expect(collect($sheet)->pluck('status', 'name')->all())->toBe(['Chef' => 'absent', 'Day worker' => 'present']);
+
+    $payroll = $this->getJson('/api/owner/finance/payroll?month=2026-10', $api)->assertOk()->json('data');
+    expect(collect($payroll['employees'])->pluck('amount', 'name')->all())->toBe(['Chef' => 3000, 'Day worker' => 300])
+        ->and($payroll['total'])->toEqual(3300);
+    expect($this->getJson('/api/owner/finance/summary?month=2026-10', $api)->json('data.salaries'))->toEqual(3300);
+
+    // Clearing the absence gives the day back.
+    $this->putJson('/api/owner/finance/attendance', ['date' => '2026-10-14', 'marks' => [['employee_id' => $monthly['id'], 'status' => null]]], $api)->assertOk();
+    expect($this->getJson('/api/owner/finance/summary?month=2026-10', $api)->json('data.salaries'))->toEqual(3400);
+});
+
+it('refuses attendance for another restaurant, a future day or an unknown status', function () {
+    $this->travelTo('2026-10-20 10:00:00');
+    $a = financeOwner();
+    $b = financeOwner();
+    $theirs = $this->postJson('/api/owner/finance/employees', ['name' => 'B chef', 'pay_rate' => 1000], authAs($b))->json('data');
+    $mine = $this->postJson('/api/owner/finance/employees', ['name' => 'A chef', 'pay_rate' => 1000], authAs($a))->json('data');
+
+    $this->putJson('/api/owner/finance/attendance', ['date' => '2026-10-19', 'marks' => [['employee_id' => $theirs['id'], 'status' => 'absent']]], authAs($a))->assertStatus(422)->assertJsonValidationErrors('marks.0.employee_id');
+    $this->putJson('/api/owner/finance/attendance', ['date' => '2026-10-25', 'marks' => [['employee_id' => $mine['id'], 'status' => 'present']]], authAs($a))->assertStatus(422)->assertJsonValidationErrors('date');
+    $this->putJson('/api/owner/finance/attendance', ['date' => '2026-10-19', 'marks' => [['employee_id' => $mine['id'], 'status' => 'sleeping']]], authAs($a))->assertStatus(422)->assertJsonValidationErrors('marks.0.status');
+    $this->postJson('/api/owner/finance/employees', ['name' => 'X', 'pay_type' => 'hourly', 'pay_rate' => 10], authAs($a))->assertStatus(422)->assertJsonValidationErrors('pay_type');
 });
