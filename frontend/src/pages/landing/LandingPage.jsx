@@ -14,6 +14,8 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import ProductTour from "./components/ProductTour";
+import HowItWorks from "./components/HowItWorks";
+import Roles from "./components/Roles";
 import Pricing from "./components/Pricing";
 import TeamSection from "./components/TeamSection";
 import CTASection from "./components/CTASection";
@@ -33,6 +35,8 @@ export default function LandingPage() {
       <div className="h-[4.25rem]" aria-hidden="true" />
       <Hero onNavigate={navigate} />
       <ProductTour />
+      <HowItWorks />
+      <Roles />
       <Pricing />
 
       {/* TEAM: intentionally before CTA + footer */}

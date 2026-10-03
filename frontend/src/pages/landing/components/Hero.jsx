@@ -76,7 +76,7 @@ export default function Hero({ onNavigate }) {
               {t("ابدأ مع menuPilot")}
               <ArrowLeft size={18} className="transition group-hover:-translate-x-1" />
             </button>
-            <a href="#features" className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[#F3EFE5]/15 px-7 py-4 font-bold text-[#F3EFE5]/85 transition hover:border-[#F3EFE5]/35 hover:bg-[#F3EFE5]/5">
+            <a href="#how" className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[#F3EFE5]/15 px-7 py-4 font-bold text-[#F3EFE5]/85 transition hover:border-[#F3EFE5]/35 hover:bg-[#F3EFE5]/5">
               {t("اكتشف كيف يعمل")}
               <ArrowLeft size={18} />
             </a>

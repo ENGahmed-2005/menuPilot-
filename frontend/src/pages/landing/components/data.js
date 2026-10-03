@@ -41,6 +41,8 @@ export const ROLES = [
 
 export const NAV_LINKS = [
   { href: "#features", label: t("المميزات") },
+  { href: "#how", label: t("كيف يعمل") },
+  { href: "#roles", label: t("الأدوار") },
   { href: "#pricing", label: t("الأسعار") },
   { href: "#team", label: t("الفريق") },
 ];

@@ -79,6 +79,17 @@ export default function ProductTour() {
     return () => clearTimeout(id);
   }, [active, auto, paused, reduce]);
   const pick = (i) => { setActive(i); setAuto(false); };
+  // Other sections (Roles) can ask to show a part: menupilot:tour with its id.
+  useEffect(() => {
+    const show = (e) => {
+      const i = FEATURES.findIndex((x) => x.id === e.detail);
+      if (i < 0) return;
+      setActive(i); setAuto(false);
+      document.getElementById("features")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    };
+    window.addEventListener("menupilot:tour", show);
+    return () => window.removeEventListener("menupilot:tour", show);
+  }, [reduce]);
   const f = FEATURES[active];
 
   return (
