@@ -1846,4 +1846,5 @@ export default {
   "كشف رواتب لكل شهر": "A payroll for every month",
   "منيو يشبه مطعمك: الألوان والشعار وطريقة عرض الأطباق، بمعاينة حية.": "A menu that looks like your restaurant: colours, logo and how dishes are shown, with a live preview.",
   "اختر جزءًا لترى شاشته الحقيقية من النظام، من طاولة الزبون إلى أرباح الشهر.": "Pick a part to see its real screen, from the guest's table to the month's profit.",
+  "شاهد شاشته": "See its screen",
 };
