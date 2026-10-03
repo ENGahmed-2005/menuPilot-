@@ -1759,4 +1759,7 @@ export default {
   "يتكرر كل شهر (مثل الإيجار)": "Repeats every month (like rent)",
   "ينتهي في (اختياري)": "Ends on (optional)",
   "يُحذف من حساب الربح لهذا الشهر.": "It's removed from this month's profit.",
+  "افتح شاشة المطبخ": "Open the kitchen screen",
+  "اذهب للطاولات": "Go to the tables",
+  "افتح الفواتير": "Open the bills",
 };

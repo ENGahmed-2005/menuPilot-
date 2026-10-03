@@ -16,10 +16,10 @@ const VARIANTS = {
 };
 
 const SIZES = {
-  sm: "h-9 gap-1.5 px-3 text-xs",
+  sm: "btn-touch h-9 gap-1.5 px-3 text-xs",
   md: "h-11 gap-2 px-4 text-sm",
   lg: "h-12 gap-2 px-6 text-base",
-  icon: "h-10 w-10 justify-center",
+  icon: "btn-touch btn-touch-square h-10 w-10 justify-center",
 };
 
 export function buttonClasses({ variant = "primary", size = "md", block = false, className = "" } = {}) {

@@ -1,7 +1,7 @@
 /* ==========================================================================
    Hero.jsx — قسم البداية (العنوان الرئيسي + معاينة تفاعلية للوحة المطعم)
    ========================================================================== */
-import { ArrowLeft, Check, QrCode, Sparkles, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, Check, QrCode, UtensilsCrossed } from "lucide-react";
 import { lazy, Suspense } from "react";
 import Reveal from "./Reveal";
 import { t } from "../../../i18n";
@@ -62,10 +62,6 @@ export default function Hero({ onNavigate }) {
           بنفسه صراحة عشان يفضل شغّال عادي. */}
       <div className="pointer-events-none mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[1.05fr_.95fr] lg:px-10 lg:pb-32">
         <Reveal>
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#EEA122]/25 bg-[#EEA122]/10 px-4 py-2 text-xs font-bold text-[#EEA122]">
-            <Sparkles size={14} className="animate-pulse" />
-            {t("نظام إدارة مطاعم حديث")}
-          </div>
           <h1 className="max-w-3xl text-5xl font-black leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
             {t("مطعمك يتحرك أسرع،")}
             <span className="block bg-gradient-to-l from-[#EEA122] to-[#E67E22] bg-clip-text text-transparent">

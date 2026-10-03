@@ -11,15 +11,15 @@ const TONES = {
   info: "bg-info/10 text-info",
 };
 
-export default function StatCard({ icon: Icon, label, value, hint, tone = "ink", onClick, active = false, emphasis = false }) {
+export default function StatCard({ icon: Icon, label, value, hint, tone = "ink", onClick, active = false, emphasis = false, featured = false, className = "" }) {
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
       aria-pressed={onClick ? active : undefined}
-      className={`flex w-full flex-col items-start gap-2 rounded-[var(--radius-card)] border bg-surface p-3 text-right shadow-[var(--shadow-card)] transition-colors sm:flex-row sm:items-center sm:gap-3.5 sm:p-4 ${
-        active ? "border-copper ring-2 ring-copper/25" : emphasis ? "border-brick/40" : "border-line"
+      className={`flex w-full flex-col items-start gap-2 rounded-[var(--radius-card)] border bg-surface p-3 text-right shadow-[var(--shadow-card)] transition-colors sm:flex-row sm:items-center sm:gap-3.5 sm:p-4 ${className} ${
+        active ? "border-copper ring-2 ring-copper/25" : emphasis ? "border-brick/40" : featured ? "border-herb/40" : "border-line"
       } ${onClick ? "hover:border-ink/25" : ""}`}
     >
       {Icon && (
@@ -28,7 +28,7 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = "ink",
         </span>
       )}
       <span className="min-w-0 w-full">
-        <span className="num block text-xl font-extrabold leading-tight text-ink sm:text-2xl">{value}</span>
+        <span className={`num block font-extrabold leading-tight text-ink ${featured ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"}`}>{value}</span>
         <span className="block text-xs font-bold leading-5 text-muted sm:truncate">{label}</span>
         {hint && <span className="block text-xs font-bold text-brick sm:truncate">{hint}</span>}
       </span>
