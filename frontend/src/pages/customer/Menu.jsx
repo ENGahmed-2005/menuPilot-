@@ -22,6 +22,7 @@ import Modal from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { money } from "../../utils/format";
 import MenuItemCard from "../../components/menu/MenuItemCard";
+import { tableSession } from "../../utils/tableSession";
 import { AR, countAr } from "../../utils/plural";
 import { DEFAULT_TAGLINE, cardRadius, logoRadius, resolveMenuStyle } from "../../components/menu/menuStyle";
 import { t, dir } from "../../i18n";
@@ -74,7 +75,8 @@ export default function Menu() {
   const navigate = useNavigate();
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const sessionId = searchParams.get("session");
+  // The menu needs no session: it's opened when the first order is sent.
+  const sessionId = searchParams.get("session") || tableSession(tableCode);
   const addingMore = searchParams.get("more") === "1"; // came from tracking to order more
   const { addItem, items: cart, total: cartTotal } = useCart();
 

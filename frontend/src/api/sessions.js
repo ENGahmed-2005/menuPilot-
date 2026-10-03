@@ -1,4 +1,5 @@
 import { saveSessionToken } from "../utils/sessionToken";
+import { rememberTableSession } from "../utils/tableSession";
 import { api } from "./client";
 import { t } from "../i18n";
 
@@ -21,6 +22,7 @@ export const openSession = async (payload) => {
   const session = await api.post(`/public/tables/${payload.tableCode}/sessions`, body);
   // Keep the session secret on this phone; later calls send it automatically.
   saveSessionToken(session?.id, session?.access_token);
+  rememberTableSession(payload.tableCode, session?.id);
   return session;
 };
 

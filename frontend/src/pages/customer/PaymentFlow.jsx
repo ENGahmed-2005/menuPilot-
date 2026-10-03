@@ -35,6 +35,8 @@ export default function PaymentFlow() {
     Promise.all([getSession(sessionId), getPaymentOptions(sessionId)]).then(([s, paymentOptions]) => {
       setSession(s); setOptions(paymentOptions);
       setForm({ name: s?.customer_name || "", phone: s?.customer_phone || "", payerName: s?.customer_name || "", payerPhone: s?.customer_phone || "" });
+      // Name and phone were given when the session was opened: go straight to the payment method.
+      if (s?.customer_name && s?.customer_phone) setStep((current) => (current === 1 ? 2 : current));
     }).catch((err) => setError(err.message || t("تعذر تحميل بيانات الدفع."))).finally(() => setLoading(false));
   }, [sessionId]);
 
