@@ -49,6 +49,7 @@ class Permissions
         'export_payments' => 'تصدير المدفوعات',
         'export_sales' => 'تصدير المبيعات والأصناف',
         'manage_accounting_settings' => 'إعدادات المحاسبة والحسابات',
+        'manage_finance' => 'الرواتب والمصاريف والأرباح',
         'manage_users' => 'إدارة مستخدمي المنصة',
         'manage_admin' => 'إدارة المنصة',
     ];

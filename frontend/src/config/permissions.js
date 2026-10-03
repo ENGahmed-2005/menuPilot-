@@ -9,7 +9,7 @@ export const PERMISSION_GROUPS = [
   { title: t("الطاولات والطلبات"), items: ["view_dashboard", "view_tables", "manage_tables", "view_orders", "manage_orders", "cancel_orders", "reassign_orders", "handle_assistance"] },
   { title: t("الفواتير والمدفوعات"), items: ["view_payments", "verify_payments", "record_payment", "adjust_bill", "close_session"] },
   { title: t("المنيو والتقارير"), items: ["view_menu", "manage_menu", "view_reports"] },
-  { title: t("المحاسبة والتصدير"), items: ["export_reports", "export_invoices", "export_payments", "export_sales", "manage_accounting_settings"] },
+  { title: t("المحاسبة والتصدير"), items: ["export_reports", "export_invoices", "export_payments", "export_sales", "manage_accounting_settings", "manage_finance"] },
   { title: t("إدارة المطعم"), items: ["manage_staff", "manage_restaurant", "manage_branding", "manage_settings"] },
 ];
 
@@ -42,6 +42,7 @@ export const PERMISSION_LABELS = {
   export_payments: t("تصدير المدفوعات"),
   export_sales: t("تصدير المبيعات والأصناف"),
   manage_accounting_settings: t("إعدادات المحاسبة والحسابات"),
+  manage_finance: t("الرواتب والمصاريف والأرباح"),
   manage_users: t("إدارة مستخدمي المنصة"),
   manage_admin: t("إدارة المنصة"),
 };
