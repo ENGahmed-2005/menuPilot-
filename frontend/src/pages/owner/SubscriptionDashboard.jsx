@@ -126,9 +126,10 @@ export default function SubscriptionDashboard() {
     .slice(0, 8), [orderList]);
 
   const attention = [
-    stats.late && { tone: "danger", text: tr("{0} {1} {2} دقيقة في المطبخ", { 0: stats.late, 1: stats.late === 1 ? "طلب تجاوز" : "طلبات تجاوزت", 2: LATE_AFTER_MIN }) },
-    stats.help && { tone: "danger", text: countAr(stats.help, AR.tablesAskingWaiter) },
-    stats.bills && { tone: "warning", text: countAr(stats.bills, AR.tablesAskedBill) },
+    // Each alert takes you where it can be dealt with.
+    stats.late && { tone: "danger", text: countAr(stats.late, AR.ordersLateInKitchen, { m: LATE_AFTER_MIN }), to: "/kitchen", go: tr("افتح شاشة المطبخ") },
+    stats.help && { tone: "danger", text: countAr(stats.help, AR.tablesAskingWaiter), to: "/waiter", go: tr("اذهب للطاولات") },
+    stats.bills && { tone: "warning", text: countAr(stats.bills, AR.tablesAskedBill), to: "/cashier/tables", go: tr("افتح الفواتير") },
   ].filter(Boolean);
 
   const firstLoad = orders.loading && !orders.data;
@@ -151,7 +152,9 @@ export default function SubscriptionDashboard() {
         </Alert>
       ) : attention.length ? (
         <section aria-label={tr("تحتاج انتباهك")} className="grid gap-2 md:grid-cols-3">
-          {attention.map(({ tone, text }) => <Alert key={text} tone={tone}>{text}</Alert>)}
+          {attention.map(({ tone, text, to, go }) => (
+            <Alert key={text} tone={tone} action={<Link to={to} className="inline-flex min-h-10 items-center rounded-lg px-2 text-sm font-extrabold underline-offset-4 hover:underline">{go}</Link>}>{text}</Alert>
+          ))}
         </section>
       ) : !firstLoad && !sessions.loading ? (
         <Alert tone="success">{tr("لا شيء يحتاج انتباهك الآن. كل الطلبات ضمن الوقت المتوقع.")}</Alert>
@@ -159,9 +162,10 @@ export default function SubscriptionDashboard() {
 
       {firstLoad ? <SkeletonStats /> : (
         <section aria-label={tr("أرقام اليوم")} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {/* Today's sales lead: the number an owner checks first. */}
+          <StatCard featured className="col-span-2 lg:col-span-1" icon={Wallet} tone="herb" label={tr("مبيعات اليوم المؤكدة")} value={sales.loading && !sales.data ? "…" : money(stats.revenueToday)} />
           <StatCard icon={ClipboardList} label={tr("طلبات اليوم")} value={stats.ordersToday} />
           <StatCard icon={CookingPot} tone="info" label={tr("طلبات قيد العمل")} value={stats.active} hint={stats.late ? countAr(stats.late, AR.lateOrders) : undefined} emphasis={stats.late > 0} />
-          <StatCard icon={Wallet} tone="herb" label={tr("مبيعات اليوم المؤكدة")} value={sales.loading && !sales.data ? "…" : money(stats.revenueToday)} />
           <StatCard icon={LayoutGrid} tone="copper" label={tr("طاولات مشغولة")} value={tables.loading && !tables.data ? "…" : `${stats.occupied} / ${stats.tables}`} />
         </section>
       )}

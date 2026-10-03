@@ -11,14 +11,73 @@ use Illuminate\Support\Facades\Schema;
  *
  *  revenue   verified table payments (paid_at in the month, as in the owner
  *            reports) + completed outside orders (items + delivery fee)
- *  salaries  each employee's monthly salary × the share of the month they
- *            were employed (starts_on / ends_on)
+ *  salaries  per employee: a daily rate × the paid days in the month
+ *              monthly  rate ÷ days in the month, weekly  rate ÷ 7,
+ *              daily    the rate itself
+ *            paid days: monthly and weekly — days employed (starts_on /
+ *            ends_on) minus absences (half day = ½); a day with no record
+ *            counts as worked, so forgetting to mark it never cuts pay.
+ *            daily — only the days marked present (half day = ½).
+ *            Paid leave counts for monthly and weekly, not for daily.
  *  expenses  one-off expenses dated in the month + monthly ones running
  *            in it (from spent_on until ends_on)
  */
 class Finance
 {
     public const CATEGORIES = ['rent', 'utilities', 'supplies', 'maintenance', 'marketing', 'other'];
+
+    public const PAY_TYPES = ['monthly', 'weekly', 'daily'];
+
+    public const ATTENDANCE = ['present', 'absent', 'leave', 'half'];
+
+    /**
+     * One employee's pay for a month, with the days behind it.
+     *
+     * @param  array<string, string>  $marks  day (Y-m-d) => status, for this month
+     */
+    public static function pay(object $employee, CarbonImmutable $month, array $marks): array
+    {
+        $from = $month->startOfMonth();
+        $to = $month->endOfMonth();
+        $start = $employee->starts_on ? max(CarbonImmutable::parse($employee->starts_on)->startOfDay(), $from) : $from;
+        $end = $employee->ends_on ? min(CarbonImmutable::parse($employee->ends_on)->startOfDay(), $to->startOfDay()) : $to->startOfDay();
+        $counts = ['present' => 0, 'absent' => 0, 'leave' => 0, 'half' => 0];
+        if ($end < $start) {
+            return ['amount' => 0.0, 'days_employed' => 0, 'paid_days' => 0.0] + $counts;
+        }
+        foreach ($marks as $day => $status) {
+            $d = CarbonImmutable::parse($day);
+            if ($d >= $start && $d <= $end && isset($counts[$status])) {
+                $counts[$status]++;
+            }
+        }
+        $employed = $start->diffInDays($end) + 1;
+        $type = $employee->pay_type ?? 'monthly';
+        $rate = (float) ($employee->pay_rate ?? $employee->monthly_salary);
+        if ($type === 'daily') {
+            $paid = $counts['present'] + 0.5 * $counts['half'];
+            $perDay = $rate;
+        } else {
+            $paid = max(0, $employed - $counts['absent'] - 0.5 * $counts['half']);
+            $perDay = $type === 'weekly' ? $rate / 7 : $rate / $from->daysInMonth;
+        }
+
+        return ['amount' => round($perDay * $paid, 2), 'days_employed' => (int) $employed, 'paid_days' => (float) $paid] + $counts;
+    }
+
+    /** day (Y-m-d) => status for each employee id, for the month. */
+    public static function marks(array $employeeIds, CarbonImmutable $month): array
+    {
+        $rows = DB::table('employee_attendance')->whereIn('employee_id', $employeeIds ?: [0])
+            ->whereBetween('day', [$month->startOfMonth()->toDateString(), $month->endOfMonth()->toDateString()])
+            ->get(['employee_id', 'day', 'status']);
+        $out = [];
+        foreach ($rows as $r) {
+            $out[$r->employee_id][substr((string) $r->day, 0, 10)] = $r->status;
+        }
+
+        return $out;
+    }
 
     public static function month(int $ownerId, CarbonImmutable $month): array
     {
@@ -44,17 +103,14 @@ class Finance
             $outside = (float) $items->sum(DB::raw('quantity * unit_price')) + (float) (clone $orders)->sum('delivery_fee');
         }
 
-        $days = $from->daysInMonth;
         $salaries = 0.0;
         $employees = DB::table('restaurant_employees')->where('user_id', $ownerId)
             ->where(fn ($q) => $q->whereNull('starts_on')->orWhere('starts_on', '<=', $to->toDateString()))
             ->where(fn ($q) => $q->whereNull('ends_on')->orWhere('ends_on', '>=', $from->toDateString()))
-            ->get(['monthly_salary', 'starts_on', 'ends_on']);
+            ->get(['id', 'monthly_salary', 'pay_type', 'pay_rate', 'starts_on', 'ends_on']);
+        $marks = self::marks($employees->pluck('id')->all(), $from);
         foreach ($employees as $e) {
-            $start = $e->starts_on ? max(CarbonImmutable::parse($e->starts_on), $from) : $from;
-            $end = $e->ends_on ? min(CarbonImmutable::parse($e->ends_on)->endOfDay(), $to) : $to;
-            $worked = $start->startOfDay()->diffInDays($end->startOfDay()) + 1;
-            $salaries += (float) $e->monthly_salary * min($worked, $days) / $days;
+            $salaries += self::pay($e, $from, $marks[$e->id] ?? [])['amount'];
         }
 
         $byCategory = array_fill_keys(self::CATEGORIES, 0.0);

@@ -121,3 +121,9 @@ img, svg { display: block; max-width: 100%; }
 .hover\:text-\[\#EEA122\]:hover { color: #E67E22 !important; }
 .hover\:bg-\[\#E67E22\]:hover { background-color: #CF6410 !important; }
 
+
+/* Touch screens: small and icon buttons grow to a 44px finger target. */
+@media (pointer: coarse) {
+  .btn-touch { min-height: 44px; }
+  .btn-touch-square { min-width: 44px; }
+}

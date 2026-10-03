@@ -10,3 +10,6 @@ export const removeEmployee = (id) => api.delete(`/owner/finance/employees/${id}
 export const getExpenses = (month) => api.get(`/owner/finance/expenses${q(month)}`);
 export const addExpense = (data) => api.post("/owner/finance/expenses", data);
 export const removeExpense = (id) => api.delete(`/owner/finance/expenses/${id}`);
+export const getPayroll = (month) => api.get(`/owner/finance/payroll${q(month)}`);
+export const getAttendance = (date) => api.get(`/owner/finance/attendance?date=${date}`);
+export const markAttendance = (date, marks) => api.put("/owner/finance/attendance", { date, marks });

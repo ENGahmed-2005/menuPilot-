@@ -10,10 +10,11 @@ const rules = new Intl.PluralRules("ar");
 const enRules = new Intl.PluralRules("en");
 
 // In English the same call uses the entry's `en` forms (one / other).
-export function countAr(n, forms) {
-  if (lang === "en" && forms.en) return (forms.en[enRules.select(n)] ?? forms.en.other).replace("{n}", n);
-  const form = forms[rules.select(n)] ?? forms.other;
-  return form.replace("{n}", n);
+// vars fills other placeholders in the forms, e.g. { m: 15 } for {m}.
+export function countAr(n, forms, vars = {}) {
+  const fill = (text) => Object.entries({ n, ...vars }).reduce((out, [k, v]) => out.replaceAll(`{${k}}`, v), text);
+  if (lang === "en" && forms.en) return fill(forms.en[enRules.select(n)] ?? forms.en.other);
+  return fill(forms[rules.select(n)] ?? forms.other);
 }
 
 /* The forms the app uses most, so wording stays the same everywhere. */
@@ -27,5 +28,6 @@ export const AR = {
   extraFeatures: { one: "ميزة إضافية", two: "ميزتين إضافيتين", few: "{n} ميزات إضافية", many: "{n} ميزة إضافية", other: "{n} ميزة إضافية", en: { one: "1 more feature", other: "{n} more features" } },
   tablesAskingWaiter: { one: "طاولة واحدة تطلب نادلًا الآن", two: "طاولتان تطلبان نادلًا الآن", few: "{n} طاولات تطلب نادلًا الآن", many: "{n} طاولة تطلب نادلًا الآن", other: "{n} طاولة تطلب نادلًا الآن", en: { one: "1 table is asking for a waiter now", other: "{n} tables are asking for a waiter now" } },
   tablesAskedBill: { one: "طاولة واحدة طلبت الفاتورة", two: "طاولتان طلبتا الفاتورة", few: "{n} طاولات طلبت الفاتورة", many: "{n} طاولة طلبت الفاتورة", other: "{n} طاولة طلبت الفاتورة", en: { one: "1 table asked for the bill", other: "{n} tables asked for the bill" } },
+  ordersLateInKitchen: { one: "طلب واحد تجاوز {m} دقيقة في المطبخ", two: "طلبان تجاوزا {m} دقيقة في المطبخ", few: "{n} طلبات تجاوزت {m} دقيقة في المطبخ", many: "{n} طلبًا تجاوز {m} دقيقة في المطبخ", other: "{n} طلب تجاوز {m} دقيقة في المطبخ", en: { one: "1 order has been in the kitchen over {m} minutes", other: "{n} orders have been in the kitchen over {m} minutes" } },
   minutes: { zero: "أقل من دقيقة", one: "دقيقة واحدة", two: "دقيقتان", few: "{n} دقائق", many: "{n} دقيقة", other: "{n} دقيقة", en: { zero: "less than a minute", one: "1 minute", other: "{n} minutes" } },
 };

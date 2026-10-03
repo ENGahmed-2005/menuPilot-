@@ -177,6 +177,8 @@ Route::middleware('api.auth')->group(function () {
             Route::get('owner/finance/summary', [FinanceController::class, 'summary']);
             Route::get('owner/finance/employees', [FinanceController::class, 'employees']);
             Route::get('owner/finance/expenses', [FinanceController::class, 'expenses']);
+            Route::get('owner/finance/payroll', [FinanceController::class, 'payroll']);
+            Route::get('owner/finance/attendance', [FinanceController::class, 'attendance']);
             Route::middleware('subscription')->group(function () {
                 Route::post('owner/finance/employees', [FinanceController::class, 'storeEmployee']);
                 Route::patch('owner/finance/employees/{id}', [FinanceController::class, 'updateEmployee']);
@@ -184,6 +186,7 @@ Route::middleware('api.auth')->group(function () {
                 Route::post('owner/finance/expenses', [FinanceController::class, 'storeExpense']);
                 Route::patch('owner/finance/expenses/{id}', [FinanceController::class, 'updateExpense']);
                 Route::delete('owner/finance/expenses/{id}', [FinanceController::class, 'destroyExpense']);
+                Route::put('owner/finance/attendance', [FinanceController::class, 'markAttendance']);
             });
         });
     });
