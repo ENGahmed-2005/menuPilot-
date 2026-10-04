@@ -29,6 +29,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_active' => 'boolean',
+            'is_demo' => 'boolean',
             'last_active_at' => 'datetime',
             'subscription_cancelled_at' => 'datetime',
             'plan_requested_at' => 'datetime',

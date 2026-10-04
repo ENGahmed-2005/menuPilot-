@@ -9,6 +9,7 @@ use App\Support\SessionLifecycle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class SessionController extends Controller
 {
@@ -37,8 +38,9 @@ class SessionController extends Controller
         $v = $request->validate([
             'name' => 'required|string|min:2|max:255',
             'phone' => 'required|string|min:7|max:50',
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
+            // Required, except at a demo restaurant (checked below, once the table is known).
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         $result = DB::transaction(function () use ($v, $code) {
@@ -62,13 +64,19 @@ class SessionController extends Controller
             }
 
             $restaurant = DB::table('users')->where('id', $table->user_id)->first();
-            if (! $restaurant || $restaurant->latitude === null || $restaurant->longitude === null) {
-                return response()->json(['message' => 'لم يضبط المطعم موقعه الجغرافي بعد. يجب على صاحب المطعم تحديد موقع المطعم من الإعدادات.', 'code' => 'RESTAURANT_LOCATION_NOT_CONFIGURED'], 503);
-            }
+            // Visitors trying the demo aren't inside the restaurant: no location check there.
+            if (! $restaurant?->is_demo) {
+                if (! isset($v['latitude'], $v['longitude'])) {
+                    throw ValidationException::withMessages(['latitude' => [__('validation.required', ['attribute' => 'latitude'])]]);
+                }
+                if (! $restaurant || $restaurant->latitude === null || $restaurant->longitude === null) {
+                    return response()->json(['message' => 'لم يضبط المطعم موقعه الجغرافي بعد. يجب على صاحب المطعم تحديد موقع المطعم من الإعدادات.', 'code' => 'RESTAURANT_LOCATION_NOT_CONFIGURED'], 503);
+                }
 
-            $distance = $this->distanceMeters((float) $v['latitude'], (float) $v['longitude'], (float) $restaurant->latitude, (float) $restaurant->longitude);
-            if ($distance > self::TABLE_RADIUS_METERS) {
-                return response()->json(['message' => 'أنت خارج نطاق المطعم. يجب أن تكون ضمن 200 متر من المطعم لفتح الطاولة.', 'code' => 'TABLE_LOCATION_REQUIRED'], 403);
+                $distance = $this->distanceMeters((float) $v['latitude'], (float) $v['longitude'], (float) $restaurant->latitude, (float) $restaurant->longitude);
+                if ($distance > self::TABLE_RADIUS_METERS) {
+                    return response()->json(['message' => 'أنت خارج نطاق المطعم. يجب أن تكون ضمن 200 متر من المطعم لفتح الطاولة.', 'code' => 'TABLE_LOCATION_REQUIRED'], 403);
+                }
             }
 
             // US-08: one active session per table. A second diner scanning the same

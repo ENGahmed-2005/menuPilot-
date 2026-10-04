@@ -6,6 +6,7 @@ use App\Models\Staff;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ApiAuth
 {
@@ -45,6 +46,24 @@ class ApiAuth
 
         $request->setUserResolver(static fn () => $user);
 
+        // The demo restaurant can be used freely, but not its accounts, plan,
+        // payments or restaurant details (App\Support\DemoRestaurant).
+        if ($user->is_demo && ! $request->isMethodSafe() && self::closedInDemo((string) $request->route()?->uri())) {
+            return response()->json(['message' => 'هذا الإجراء غير متاح في المطعم التجريبي. أنشئ حسابك لتجربته كاملًا.', 'code' => 'DEMO_READ_ONLY'], 403);
+        }
+
         return $next($request);
+    }
+
+    private static function closedInDemo(string $uri): bool
+    {
+        $uri = Str::after($uri, 'api/');
+        foreach (['staff', 'me/plan', 'me/restaurant', 'subscription/', 'online-ordering/settings', 'accounting/settings'] as $prefix) {
+            if (str_starts_with($uri, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
