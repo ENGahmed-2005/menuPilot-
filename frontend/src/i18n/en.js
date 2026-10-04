@@ -1864,4 +1864,8 @@ export default {
   "جرّب شاشة المطبخ": "Try the kitchen screen",
   "جرّب ككاشير": "Try as the cashier",
   "جرّب كزبون": "Try as a guest",
+  "لا يوجد اتصال بالإنترنت — تعرض الشاشة آخر بيانات محفوظة.": "No internet connection — this screen shows the last saved data.",
+  "آخر تحديث: {0}": "Last updated: {0}",
+  "يتوفر إصدار جديد من التطبيق.": "A new version of the app is available.",
+  "تحديث الآن": "Update now",
 };

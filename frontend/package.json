@@ -11,6 +11,10 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@fontsource/instrument-serif": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/space-mono": "^5.3.0",
+    "@fontsource/tajawal": "^5.3.0",
     "laravel-echo": "^2.5.0",
     "lucide-react": "^1.31.0",
     "pusher-js": "^8.6.0",
@@ -28,6 +32,13 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.12.0",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.2.1"
+    "vite": "^8.2.1",
+    "vite-plugin-pwa": "^2.0.0",
+    "workbox-core": "^7.4.1",
+    "workbox-expiration": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1",
+    "workbox-strategies": "^7.4.1",
+    "workbox-window": "^7.4.1"
   }
 }

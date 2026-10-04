@@ -10,6 +10,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { login as apiLogin, logout as apiLogout, register as apiRegister, fetchCurrentUser } from "../api/auth";
 import { getToken } from "../api/client";
 import { startDemo as apiStartDemo } from "../api/demo";
+import { saveUser, savedUser } from "../offline/storage";
 
 const AuthContext = createContext(null);
 
@@ -27,9 +28,13 @@ export function AuthProvider({ children }) {
 
     fetchCurrentUser()
       .then(setUser)
-      .catch(() => setUser(null)) // توكن منتهي أو غير صالح
+      // No connection is not a sign-out: open with the user saved on this device.
+      .catch((err) => setUser(err?.status === 0 ? savedUser() : null)) // وإلا توكن منتهي أو غير صالح
       .finally(() => setLoading(false));
   }, []);
+
+  // Remember the user so the app can open offline (removed on sign-out).
+  useEffect(() => { if (user) saveUser(user); }, [user]);
 
   // Keep permissions current: when the owner changes an employee's permissions
   // (or disables the account), the employee's screen follows within ~30 s,

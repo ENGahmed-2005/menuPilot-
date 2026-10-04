@@ -18,9 +18,44 @@ import react from "@vitejs/plugin-react";
 // إضافة Tailwind CSS v4 — تدمج مباشرة مع Vite بدون ملف config منفصل.
 import tailwindcss from "@tailwindcss/vite";
 
+// PWA: installable on tablets and works offline (src/sw.js, docs/offline.md).
+import { VitePWA } from "vite-plugin-pwa";
+
 export default defineConfig({
   // plugins: قائمة الإضافات. لاحظ react() و tailwindcss() بالأقواس لأنها دوال نستدعيها.
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
+      registerType: "prompt", // a new version waits for a click: never reload mid-payment
+      injectRegister: false, // registered in src/offline/register.js
+      manifest: {
+        name: "menuPilot",
+        short_name: "menuPilot",
+        description: "QR ordering and restaurant management — keeps working when the internet drops.",
+        lang: "ar",
+        dir: "rtl",
+        start_url: "/",
+        scope: "/",
+        display: "standalone",
+        background_color: "#1f2d3d",
+        theme_color: "#1f2d3d",
+        icons: [
+          { src: "/brand/mark-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/brand/mark-512.png", sizes: "512x512", type: "image/png" },
+        ],
+      },
+      injectManifest: {
+        // The app and its fonts; not the big landing-page media.
+        globPatterns: ["**/*.{js,css,html,woff2,svg}", "brand/mark-*.png", "favicon.svg"],
+        globIgnores: ["landing/**"],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      },
+    }),
+  ],
 
   server: {
     // المنفذ الذي يفتح عليه سيرفر التطوير → http://localhost:5173

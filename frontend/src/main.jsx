@@ -20,6 +20,11 @@ import App from "./App.jsx";
 // لا يوجد متغيّر نستقبله هنا لأننا نريد التأثير فقط (الستايل).
 import "./index.css";
 
+// Bundled fonts + service worker: the app opens and keeps working offline (docs/offline.md).
+import "./fonts";
+import { registerServiceWorker } from "./offline/register";
+registerServiceWorker();
+
 // 1) document.getElementById("root") → نبحث عن <div id="root"> في index.html
 // 2) createRoot(...) → نُنشئ "جذر" React داخل ذلك العنصر
 // 3) .render(...) → نطلب من React رسم شجرة المكوّنات

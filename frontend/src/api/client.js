@@ -1,6 +1,8 @@
 import { mockRequest } from './mockServer';
 import { friendlyMessage } from '../utils/errors';
 import { sessionHeaders, sessionIdFromPath } from '../utils/sessionToken';
+import { markOffline, noteResponse } from '../offline/connectivity';
+import { clearOfflineData } from '../offline/storage';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -12,7 +14,11 @@ export function getToken() {
 
 export function setToken(token) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  else {
+    localStorage.removeItem(TOKEN_KEY);
+    // Signed out: nothing saved for this person may stay on the device.
+    clearOfflineData();
+  }
 }
 
 export async function request(path, options = {}) {
@@ -40,8 +46,10 @@ export async function request(path, options = {}) {
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
+    noteResponse(response);
   } catch (cause) {
     // Offline, DNS, CORS or server down: fetch rejects before any response.
+    markOffline();
     const error = new Error(friendlyMessage(0));
     error.status = 0;
     error.friendly = true;
