@@ -136,6 +136,39 @@ class DemoRestaurant
                 $tables[$n] = DB::table('restaurant_tables')->insertGetId(['user_id' => $id, 'label' => (string) $n, 'table_code' => strtoupper("demo{$lang}").Str::upper(Str::random(6)), 'seats' => 4, 'status' => 'available', 'created_at' => $now, 'updated_at' => $now]);
             }
 
+            // Six months of visits, oldest first: each one an order of real dishes and
+            // its payment, so reports, charts, best sellers and profit all agree.
+            mt_srand(crc32($lang.$today->toDateString()));
+            $number = 0;
+            $lines = [];
+            $payments = [];
+            for ($back = 181; $back >= 0; $back--) {
+                $day = $today->subDays($back);
+                $sid = DB::table('dining_sessions')->insertGetId(['restaurant_table_id' => $tables[8], 'customer_name' => '—', 'status' => 'closed', 'opened_at' => $day->setTime(12, 0), 'closed_at' => $day->setTime(22, 0), 'created_at' => $day, 'updated_at' => $day]);
+                $visits = $back < 7 ? mt_rand(5, 9) : mt_rand(4, 7);
+                $rows = [];
+                foreach (range(1, $visits) as $v) {
+                    $at = $back === 0 ? $now->subMinutes(30 + 25 * $v) : $day->setTime(12, 0)->addMinutes(intdiv(600 * $v, $visits + 1));
+                    $rows[] = ['dining_session_id' => $sid, 'user_id' => $id, 'order_number' => ++$number, 'status' => 'served', 'submitted_at' => $at, 'created_at' => $at, 'updated_at' => $at];
+                }
+                DB::table('orders')->insert($rows);
+                foreach (DB::table('orders')->where('dining_session_id', $sid)->orderBy('id')->get(['id', 'created_at']) as $order) {
+                    $total = 0;
+                    foreach ((array) array_rand(array_flip($items), mt_rand(2, 4)) as $item) {
+                        $qty = mt_rand(1, 2);
+                        $total += $qty * $price[$item];
+                        $lines[] = ['order_id' => $order->id, 'menu_item_id' => $item, 'quantity' => $qty, 'unit_price' => $price[$item], 'status' => 'active', 'created_at' => $order->created_at, 'updated_at' => $order->created_at];
+                    }
+                    $payments[] = ['dining_session_id' => $sid, 'method' => mt_rand(1, 4) === 1 ? 'transfer' : 'cash', 'amount' => $total, 'status' => 'verified', 'paid_at' => $order->created_at, 'created_at' => $order->created_at, 'updated_at' => $order->created_at];
+                }
+            }
+            foreach (array_chunk($lines, 500) as $chunk) {
+                DB::table('order_items')->insert($chunk);
+            }
+            foreach (array_chunk($payments, 500) as $chunk) {
+                DB::table('payments')->insert($chunk);
+            }
+
             // Tables in service: orders at every stage, and a guest asking for the waiter.
             foreach ([1 => 'pending', 2 => 'preparing', 3 => 'ready', 4 => 'ready'] as $n => $status) {
                 $sid = DB::table('dining_sessions')->insertGetId(['restaurant_table_id' => $tables[$n], 'customer_name' => $d['guests'][$n - 1], 'customer_phone' => '05991234'.$n.'0', 'status' => 'opened', 'access_token' => Str::random(48), 'opened_at' => $now->subMinutes(6 + 5 * $n), 'created_at' => $now, 'updated_at' => $now]);
@@ -159,20 +192,6 @@ class DemoRestaurant
                     DB::table('order_items')->insert(['order_id' => $order, 'menu_item_id' => $item, 'quantity' => 2, 'unit_price' => $price[$item], 'status' => 'active', 'created_at' => $now, 'updated_at' => $now]);
                 }
                 DB::table('outside_order_contacts')->insert(['order_id' => $order, 'name' => $d['guests'][$guest], 'phone' => '059955500'.$guest, 'address' => $channel === 'delivery' ? $d['address'] : null, 'zone_id' => $channel === 'delivery' ? $zone : null, 'zone_name' => $channel === 'delivery' ? $d['zone'] : null, 'created_at' => $now, 'updated_at' => $now]);
-            }
-
-            // Six months of paid visits, for the reports, the charts and the profit.
-            mt_srand(crc32($lang.$today->toDateString()));
-            $payments = [];
-            for ($back = 0; $back < 182; $back++) {
-                $day = $today->subDays($back)->setTime(14, 0);
-                $sid = DB::table('dining_sessions')->insertGetId(['restaurant_table_id' => $tables[8], 'customer_name' => '—', 'status' => 'closed', 'opened_at' => $day->subHour(), 'closed_at' => $day, 'created_at' => $day, 'updated_at' => $day]);
-                foreach (range(1, $back < 7 ? mt_rand(5, 9) : mt_rand(4, 7)) as $v) {
-                    $payments[] = ['dining_session_id' => $sid, 'method' => 'cash', 'amount' => mt_rand(3500, 14000) / 100, 'status' => 'verified', 'paid_at' => $day, 'created_at' => $day, 'updated_at' => $day];
-                }
-            }
-            foreach (array_chunk($payments, 300) as $chunk) {
-                DB::table('payments')->insert($chunk);
             }
 
             // Payroll, attendance and expenses.

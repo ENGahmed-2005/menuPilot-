@@ -28,7 +28,8 @@ const RAW = /^(server error|internal server error|request failed|unauthenticated
 export function friendlyMessage(status, serverMessage) {
   if (!status) return NETWORK_MESSAGE;
   if (status >= 500) return SERVER_MESSAGE;
-  if (serverMessage && !RAW.test(serverMessage.trim())) return serverMessage;
+  // Server messages are Arabic; t() gives their English when the app is in English.
+  if (serverMessage && !RAW.test(serverMessage.trim())) return t(serverMessage.trim());
   return BY_STATUS[status] || t("تعذّر إتمام العملية. حاول مرة أخرى.");
 }
 

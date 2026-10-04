@@ -12,6 +12,8 @@ export const money = (value) => `${moneyFormat.format(Number(value || 0))} ₪`;
 export const tableName = (label) => {
   const text = String(label ?? "").trim();
   if (!text) return t("طاولة");
+  // Outside orders carry their channel instead of a table.
+  if (text === "توصيل" || text === "استلام") return t(text);
   return /^(table|طاولة)\b/i.test(text) ? text : t("طاولة {0}", { 0: text });
 };
 
