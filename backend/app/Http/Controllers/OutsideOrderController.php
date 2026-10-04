@@ -7,6 +7,7 @@ use App\Support\Audit;
 use App\Support\MediaStore;
 use App\Support\OrderWorkflow;
 use App\Support\Permissions;
+use App\Support\Realtime;
 use App\Support\ResolvesRestaurant;
 use App\Support\SubscriptionAccess;
 use Illuminate\Http\Request;
@@ -258,6 +259,7 @@ class OutsideOrderController extends Controller
 
         return response()->json(['data' => $this->present($o) + [
             'eta_at' => $eta,
+            'realtime_channel' => Realtime::outsideChannel((int) $o->id),
             'restaurant' => ['name' => $restaurant->restaurant_name, 'phone' => $restaurant->restaurant_phone, 'whatsapp' => $whatsapp],
         ]]);
     }

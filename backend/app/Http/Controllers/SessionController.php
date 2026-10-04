@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\Audit;
+use App\Support\Realtime;
 use App\Support\ResolvesRestaurant;
 use App\Support\SessionLifecycle;
 use Illuminate\Http\Request;
@@ -128,6 +129,7 @@ class SessionController extends Controller
             ->where('restaurant_tables.id', $s->restaurant_table_id)->value('users.payment_timing') ?: 'before';
         $money = SessionLifecycle::summaries([(int) $id])[(int) $id];
         $s->can_leave = ! $s->is_closed && ! $money['has_pending_payment'] && $money['outstanding'] <= 0;
+        $s->realtime_channel = Realtime::sessionChannel((int) $id);
 
         return $this->out($s);
     }
