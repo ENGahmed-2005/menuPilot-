@@ -13,6 +13,7 @@ import { errorText } from "../../utils/errors";
 import { money } from "../../utils/format";
 import { waLink } from "../../utils/whatsapp";
 import { t, dir, locale } from "../../i18n";
+import { useLive, useSessionChannel } from "../../realtime";
 
 const STATE = {
   closed: { icon: CheckCircle2, tone: "bg-herb/10 text-herb", title: t("تم الدفع، شكرًا لزيارتك"), note: t("أُغلقت جلسة الطاولة. نتمنى أن تكون وجبتك قد أعجبتك.") },
@@ -34,11 +35,8 @@ export default function BillRequest() {
     getCustomerBill(sessionId).then((data) => { setBill(data); setError(null); }).catch(setError);
   }, [sessionId]);
 
-  useEffect(() => {
-    load();
-    const timer = setInterval(load, 5000);
-    return () => clearInterval(timer);
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
+  useLive({ channel: useSessionChannel(sessionId), onSignal: load, pollMs: 5000 });
 
   const closed = Boolean(bill?.session?.closed_at);
   const stateKey = closed ? "closed" : bill?.lifecycle === "paid" ? "paid" : bill?.lifecycle === "payment_pending" ? "payment_pending" : bill?.session?.bill_requested ? "bill_requested" : "active";

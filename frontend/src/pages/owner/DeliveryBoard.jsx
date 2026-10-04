@@ -19,12 +19,13 @@ import LocationMap from "../../components/delivery/LocationMap";
 import OwnerStatusControl from "../../components/delivery/OwnerStatusControl";
 import { useToast } from "../../components/ui/Toast";
 import { t as tr } from "../../i18n";
+import { restaurantChannel, useLive } from "../../realtime";
 
 export default function DeliveryBoard() {
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [busy, setBusy] = useState(null);
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   // The delivery manager, owner and manager distribute orders; drivers only see theirs.
   const canAssign = can("dispatch_deliveries") || can("manage_orders") || can("view_payments");
   const [drivers, setDrivers] = useState([]);
@@ -34,7 +35,8 @@ export default function DeliveryBoard() {
     if (canAssign) getDrivers().then((d) => setDrivers(d || [])).catch(() => {});
   }, [canAssign]);
   const shown = filter === "unassigned" ? rows.filter((o) => !o.driver) : rows;
-  useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { load(); }, [load]);
+  useLive({ channel: restaurantChannel(user), isPrivate: true, topics: ["outside"], onSignal: load, pollMs: 10000 });
 
   async function act(o, fn, done) {
     setBusy(o.id);

@@ -217,6 +217,7 @@ class SubscriptionAccess
         return [
             'status' => $this->status(),
             'phase' => $this->phase(),
+            'owner_id' => $o?->id, // the restaurant, for its realtime channel
             'plan' => $o?->plan,
             'addons' => array_values($o?->addons ?? []),
             // Gated features usable right now (trial = all). The UI hides what

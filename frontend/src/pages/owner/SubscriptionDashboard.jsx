@@ -28,6 +28,7 @@ import { errorText } from "../../utils/errors";
 import { money, orderNo, tableName } from "../../utils/format";
 import { AR, countAr } from "../../utils/plural";
 import { t as tr, locale } from "../../i18n";
+import { restaurantChannel, useLive } from "../../realtime";
 
 const ACTIVE = ["pending", "preparing", "ready"];
 const LATE_AFTER_MIN = 20;
@@ -96,11 +97,8 @@ export default function SubscriptionDashboard() {
   const [sales, loadSales] = useSection(useCallback(() => api.get("/owner/reports/sales-trend?days=7"), []));
 
   const refreshAll = useCallback(() => { loadOrders(); loadSessions(); loadTables(); loadSales(); }, [loadOrders, loadSessions, loadTables, loadSales]);
-  useEffect(() => {
-    refreshAll();
-    const id = setInterval(() => { loadOrders(); loadSessions(); }, 15000);
-    return () => clearInterval(id);
-  }, [refreshAll, loadOrders, loadSessions]);
+  useEffect(() => { refreshAll(); }, [refreshAll]);
+  useLive({ channel: restaurantChannel(user), isPrivate: true, topics: ["orders", "tables"], onSignal: () => { loadOrders(); loadSessions(); }, pollMs: 15000 });
 
   const orderList = useMemo(() => (orders.data || []).map((o) => ({ ...o, status: String(o.status || "").toLowerCase() })), [orders.data]);
   const sessionList = sessions.data || [];

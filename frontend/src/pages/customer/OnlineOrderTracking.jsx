@@ -2,7 +2,7 @@
    OnlineOrderTracking.jsx — customer tracking for pickup/delivery orders
    (route /o/:id?token=). Refreshes every 5 s from the API.
    ========================================================================== */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Check, Clock3, MessageCircle, Phone, Printer, XCircle } from "lucide-react";
 import { waLink } from "../../utils/whatsapp";
@@ -10,6 +10,7 @@ import { trackOnlineOrder } from "../../api/outsideOrders";
 import { errorText } from "../../utils/errors";
 import { money, orderNo } from "../../utils/format";
 import { t as tr, dir, locale } from "../../i18n";
+import { useLive } from "../../realtime";
 
 const STEPS = {
   pickup: [["awaiting_acceptance", tr("استُلم طلبك")], ["accepted", tr("قبِل المطعم الطلب")], ["preparing", tr("قيد التحضير")], ["ready", tr("جاهز للاستلام")], ["completed", tr("تم الاستلام")]],
@@ -55,12 +56,10 @@ export default function OnlineOrderTracking() {
   const [error, setError] = useState(null);
   const token = params.get("token") || "";
 
-  useEffect(() => {
-    const load = () => trackOnlineOrder(id, token).then((d) => { setO(d); setError(null); }).catch(setError);
-    load();
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
-  }, [id, token]);
+  const load = useCallback(() => trackOnlineOrder(id, token).then((d) => { setO(d); setError(null); }).catch(setError), [id, token]);
+  useEffect(() => { load(); }, [load]);
+  // The tracking response names the order's channel.
+  useLive({ channel: o?.realtime_channel || null, onSignal: load, pollMs: 5000 });
 
   if (error && !o) return <main dir={dir} className="grid min-h-screen place-items-center bg-paper-2 p-6 text-center font-bold text-brick">{errorText(error, tr("رابط التتبع غير صالح."))}</main>;
   if (!o) return <main dir={dir} className="min-h-screen bg-paper-2 p-6"><div className="mx-auto h-64 max-w-lg animate-pulse rounded-3xl bg-black/[0.06]" /></main>;

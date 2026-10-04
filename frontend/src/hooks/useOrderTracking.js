@@ -2,6 +2,7 @@ import { getSessionToken } from "../utils/sessionToken";
 import { useEffect, useState } from "react";
 import { getSessionOrders } from "../api/orders";
 import { t } from "../i18n";
+import { realtimeEnabled, useLive, useSessionChannel } from "../realtime";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 // "polling" avoids long-lived SSE connections, which block the single-worker
@@ -15,11 +16,16 @@ export function useOrderTracking(sessionId) {
   const [loading, setLoading] = useState(Boolean(sessionId));
   const [error, setError] = useState(null);
 
+  const channel = useSessionChannel(sessionId);
+  const reload = () => getSessionOrders(sessionId).then((data) => { setOrders(data ?? []); setError(null); setLoading(false); }).catch((err) => { setError(err); setLoading(false); });
+  useLive({ channel: realtimeEnabled && sessionId ? channel : null, onSignal: reload, pollMs: realtimeEnabled && sessionId ? POLL_MS : 0 });
+
   useEffect(() => {
     if (!sessionId) { setOrders([]); setError(new Error(t("جلسة الطعام غير موجودة."))); setLoading(false); return undefined; }
     let active = true;
     const load = () => getSessionOrders(sessionId).then((data) => { if (active) { setOrders(data ?? []); setError(null); setLoading(false); } }).catch((err) => { if (active) { setError(err); setLoading(false); } });
     load();
+    if (realtimeEnabled) return () => { active = false; }; // useLive keeps it fresh
 
     if (POLLING) {
       const timer = setInterval(load, POLL_MS);
