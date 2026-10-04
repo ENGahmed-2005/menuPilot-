@@ -16,6 +16,7 @@ import Hero from "./components/Hero";
 import ProductTour from "./components/ProductTour";
 import HowItWorks from "./components/HowItWorks";
 import Roles from "./components/Roles";
+import TryDemo from "./components/TryDemo";
 import Pricing from "./components/Pricing";
 import TeamSection from "./components/TeamSection";
 import CTASection from "./components/CTASection";
@@ -37,6 +38,7 @@ export default function LandingPage() {
       <ProductTour />
       <HowItWorks />
       <Roles />
+      <TryDemo />
       <Pricing />
 
       {/* TEAM: intentionally before CTA + footer */}

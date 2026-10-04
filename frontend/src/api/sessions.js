@@ -1,5 +1,5 @@
 import { saveSessionToken } from "../utils/sessionToken";
-import { rememberTableSession } from "../utils/tableSession";
+import { isDemoTable, rememberTableSession } from "../utils/tableSession";
 import { api } from "./client";
 import { t } from "../i18n";
 
@@ -18,7 +18,8 @@ function getLocation() {
 
 export const openSession = async (payload) => {
   const body = { name: payload.name, phone: payload.phone };
-  if (!isMockMode()) { const position = await getLocation(); body.latitude = position.coords.latitude; body.longitude = position.coords.longitude; }
+  // Demo tables skip the location check: visitors trying menuPilot aren't in the restaurant.
+  if (!isMockMode() && !isDemoTable(payload.tableCode)) { const position = await getLocation(); body.latitude = position.coords.latitude; body.longitude = position.coords.longitude; }
   const session = await api.post(`/public/tables/${payload.tableCode}/sessions`, body);
   // Keep the session secret on this phone; later calls send it automatically.
   saveSessionToken(session?.id, session?.access_token);

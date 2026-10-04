@@ -9,6 +9,7 @@ import { ROLE_DEFAULTS } from "../config/permissions";
 import { createContext, useContext, useEffect, useState } from "react";
 import { login as apiLogin, logout as apiLogout, register as apiRegister, fetchCurrentUser } from "../api/auth";
 import { getToken } from "../api/client";
+import { startDemo as apiStartDemo } from "../api/demo";
 
 const AuthContext = createContext(null);
 
@@ -52,6 +53,13 @@ export function AuthProvider({ children }) {
     return data;
   }
 
+  /** «Try it»: log in to the demo restaurant as owner, kitchen, cashier or waiter. */
+  async function startDemo(role) {
+    const data = await apiStartDemo(role);
+    setUser(data.user);
+    return data;
+  }
+
   async function register(payload) {
     const data = await apiRegister(payload);
     setUser(data.user);
@@ -86,8 +94,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
-    updateUser,
-  };
+    updateUser, startDemo };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

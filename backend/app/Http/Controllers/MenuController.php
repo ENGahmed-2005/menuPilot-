@@ -248,6 +248,7 @@ class MenuController extends Controller
                 'name' => $owner?->restaurant_name,
                 'theme' => $owner?->theme,
                 'branding' => $branding,
+                'is_demo' => (bool) ($owner?->is_demo ?? false), // guests skip the location check
             ],
             'items' => $items,
         ]);

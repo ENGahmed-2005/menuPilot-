@@ -22,7 +22,7 @@ import Modal from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { money } from "../../utils/format";
 import MenuItemCard from "../../components/menu/MenuItemCard";
-import { tableSession } from "../../utils/tableSession";
+import { markDemoTable, tableSession } from "../../utils/tableSession";
 import { AR, countAr } from "../../utils/plural";
 import { DEFAULT_TAGLINE, cardRadius, logoRadius, resolveMenuStyle } from "../../components/menu/menuStyle";
 import { t, dir } from "../../i18n";
@@ -105,6 +105,8 @@ export default function Menu() {
   }, [tableCode]);
 
   const style = useMemo(() => resolveMenuStyle(restaurant?.branding), [restaurant]);
+
+  useEffect(() => { if (restaurant?.is_demo) markDemoTable(tableCode); }, [restaurant, tableCode]);
   const brand = useMemo(() => {
     const b = { ...FALLBACK, ...themeColors(restaurant?.theme), ...(restaurant?.branding || {}) };
     return style.background_color ? { ...b, background_color: style.background_color } : b;

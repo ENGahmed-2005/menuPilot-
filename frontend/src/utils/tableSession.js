@@ -11,6 +11,15 @@ export function tableSession(tableCode) {
   try { return sessionStorage.getItem(key(tableCode)); } catch { return null; }
 }
 
+/** Demo tables (DemoRestaurant) skip the location check: the menu marks them. */
+export function markDemoTable(tableCode) {
+  try { sessionStorage.setItem(`menupilot.demo.${tableCode}`, "1"); } catch { /* private mode */ }
+}
+
+export function isDemoTable(tableCode) {
+  try { return sessionStorage.getItem(`menupilot.demo.${tableCode}`) === "1"; } catch { return false; }
+}
+
 export function forgetTableSession(tableCode) {
   try { sessionStorage.removeItem(key(tableCode)); } catch { /* private mode */ }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BrandingController;
+use App\Http\Controllers\DemoController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MenuCategoryController;
@@ -35,6 +36,9 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
+// «Try it» demo restaurants (App\Support\DemoRestaurant).
+Route::post('demo/session', [DemoController::class, 'start'])->middleware('throttle:30,1');
+Route::get('demo/guest', [DemoController::class, 'guest'])->middleware('throttle:30,1');
 // SRS-compatible public QR menu endpoint. Alias of the table-code menu route.
 Route::get('menu/{table_token}', [MenuController::class, 'publicMenu']);
 // New table sessions stop in restricted mode (trial ended / subscription stopped).
