@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getToken } from "../api/client";
 import { getActiveSessions } from "../api/sessions";
+import { useAuth } from "../context/AuthContext";
+import { realtimeEnabled, restaurantChannel, useLive } from "../realtime";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 // See useOrderTracking: "polling" is for local development on Windows.
@@ -36,10 +38,14 @@ async function consumeStream(url, onSessions, signal) {
 export function useWaiterRealtime(initialSessions = []) {
   const [sessions, setSessions] = useState(initialSessions);
   const [connected, setConnected] = useState(false);
+  const { user } = useAuth();
+  const reload = () => getActiveSessions().then((next) => { setSessions(next ?? []); setConnected(true); }).catch(() => setConnected(false));
+  const live = useLive({ channel: realtimeEnabled ? restaurantChannel(user) : null, isPrivate: true, topics: ["tables", "orders"], onSignal: reload, pollMs: realtimeEnabled ? POLL_MS : 0 });
 
   useEffect(() => {
     let stopped = false;
     let controller;
+    if (realtimeEnabled) { reload(); return () => { stopped = true; }; } // useLive keeps it fresh
 
     if (POLLING) {
       const load = () => getActiveSessions()
@@ -66,5 +72,5 @@ export function useWaiterRealtime(initialSessions = []) {
     return () => { stopped = true; controller?.abort(); };
   }, []);
 
-  return { sessions, setSessions, connected };
+  return { sessions, setSessions, connected, live };
 }

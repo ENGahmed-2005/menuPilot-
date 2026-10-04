@@ -22,6 +22,8 @@ import StatusBadge from "../../components/ui/StatusBadge";
 import Skeleton from "../../components/ui/Skeleton";
 import { useToast } from "../../components/ui/Toast";
 import { t, locale } from "../../i18n";
+import { useAuth } from "../../context/AuthContext";
+import { restaurantChannel, useLive } from "../../realtime";
 
 const NEXT = { pending: ["preparing", t("ابدأ التحضير")], preparing: ["ready", t("جاهز للتقديم")], ready: ["served", t("تم التقديم")] };
 const FILTERS = [
@@ -60,9 +62,9 @@ export default function Orders() {
   useEffect(() => {
     setLoading(true);
     load();
-    const id = setInterval(load, 15000);
-    return () => clearInterval(id);
   }, [load]);
+  const { user } = useAuth();
+  useLive({ channel: restaurantChannel(user), isPrivate: true, topics: ["orders"], onSignal: load, pollMs: 15000 });
 
   const counts = useMemo(() => ({
     active: orders.filter((o) => NEXT[o.status]).length,

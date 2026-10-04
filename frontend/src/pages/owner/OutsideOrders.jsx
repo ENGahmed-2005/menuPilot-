@@ -18,6 +18,8 @@ import Button from "../../components/ui/Button";
 import SegmentedControl from "../../components/ui/SegmentedControl";
 import { useToast } from "../../components/ui/Toast";
 import { t as tr } from "../../i18n";
+import { useAuth } from "../../context/AuthContext";
+import { restaurantChannel, useLive } from "../../realtime";
 
 const STATE = { awaiting_acceptance: [tr("بانتظار موافقتك"), "warning"], accepted: [tr("مقبول"), "info"], out_for_delivery: [tr("خرج للتوصيل"), "info"], completed: [tr("مكتمل"), "success"], rejected: [tr("مرفوض"), "danger"] };
 const ago = (iso) => { const m = Math.max(0, Math.floor((Date.now() - new Date(iso)) / 60000)); return m < 1 ? tr("الآن") : tr("منذ {0} د", { 0: m }); };
@@ -39,7 +41,9 @@ export default function OutsideOrders() {
     if (seen.current && waiting.some((id) => !seen.current.includes(id))) { beep(); toast.info(tr("وصل طلب خارجي جديد")); }
     seen.current = waiting;
   }).catch(() => {}), [tab, toast]);
-  useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { load(); }, [load]);
+  const { user } = useAuth();
+  useLive({ channel: restaurantChannel(user), isPrivate: true, topics: ["outside"], onSignal: load, pollMs: 8000 });
 
   async function act(o, fn, done) {
     setBusy(o.id);
