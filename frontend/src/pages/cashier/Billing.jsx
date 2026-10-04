@@ -18,6 +18,7 @@ import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import CloseSessionButton from "../../components/billing/CloseSessionButton";
 import { usePermissions } from "../../hooks/usePermissions";
+import { queuedRefs, useOutbox } from "../../offline/outbox";
 import Input from "../../components/ui/Input";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
@@ -226,6 +227,11 @@ export default function Billing() {
 
     try {
       const payment = await recordPayment(sessionId, method);
+      if (payment?.queued) {
+        // No connection: saved on this device, sent when it returns (offline/outbox.js).
+        setNotice({ type: "success", text: t("لا يوجد اتصال: حُفظ الدفع على هذا الجهاز وسيُرسل تلقائيًا عند عودة الإنترنت.") });
+        return;
+      }
       setNotice({
         type: "success",
         text: payment?.status === "pending_reconciliation"
@@ -240,10 +246,13 @@ export default function Billing() {
     }
   }
 
+  const outbox = useOutbox();
   if (loading) return <Spinner label={t("جارِ تحميل الفاتورة…")} />;
   if (!bill) return null;
 
   const isPaid = bill.closed || bill.outstanding <= 0;
+  // A payment saved offline is not on the server yet: never offer to take it twice.
+  const queuedPayment = queuedRefs(outbox, "payment").has(String(sessionId));
   const hasPending = bill.pendingPayments?.length > 0;
 
   return (
@@ -399,7 +408,15 @@ export default function Billing() {
       </Card>
 
       {/* ── Payment section ────────────────────────────────────────────── */}
-      {!isPaid && !can("record_payment") ? (
+      {queuedPayment ? (
+        <Card className="flex items-center gap-3 p-5 text-herb">
+          <CheckCircle2 size={22} aria-hidden="true" />
+          <div>
+            <p className="font-bold">{t("حُفظ الدفع على هذا الجهاز")}</p>
+            <p className="mt-0.5 text-xs text-muted">{t("سيُرسل تلقائيًا عند عودة الإنترنت، ثم تُغلق الجلسة من شاشة الطاولات.")}</p>
+          </div>
+        </Card>
+      ) : !isPaid && !can("record_payment") ? (
         <Card className="p-5 text-sm text-muted">{t("تسجيل الدفع يحتاج صلاحية «تسجيل الدفع». اطلبها من صاحب المطعم إذا كانت ضمن عملك.")}</Card>
       ) : !isPaid ? (
         <Card className="p-5">

@@ -3,6 +3,7 @@ import { friendlyMessage } from '../utils/errors';
 import { sessionHeaders, sessionIdFromPath } from '../utils/sessionToken';
 import { markOffline, noteResponse } from '../offline/connectivity';
 import { clearOfflineData } from '../offline/storage';
+import { enqueue, hasBacklog, matchRule, newIdempotencyKey, setSender } from '../offline/outbox';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -21,18 +22,18 @@ export function setToken(token) {
   }
 }
 
-export async function request(path, options = {}) {
-  const token = getToken();
+const WRITE_TIMEOUT_MS = 10000; // a hanging connection counts as offline
 
-  if (USE_MOCKS) {
-    return mockRequest(options.method || 'GET', path, options.body, token);
-  }
+/** One real HTTP call. Network failure → Error with status 0; never queues. */
+async function send(path, options = {}) {
+  const { timeoutMs, ...fetchOptions } = options;
+  const token = getToken();
 
   const headers = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers || {}),
+    ...(fetchOptions.headers || {}),
   };
 
   // Customer session endpoints need the session secret (see utils/sessionToken).
@@ -42,7 +43,8 @@ export async function request(path, options = {}) {
   let response;
   try {
     response = await fetch(`${BASE_URL}${path}`, {
-      ...options,
+      ...fetchOptions,
+      ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
@@ -75,6 +77,36 @@ export async function request(path, options = {}) {
 
   return data && Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data;
 }
+
+/**
+ * Every API call goes through here. Reads and most writes just fail when the
+ * network is down; the kitchen/cashier actions in offline/outbox.js are kept
+ * and sent later (they resolve to { queued: true } meanwhile).
+ */
+export async function request(path, options = {}) {
+  if (USE_MOCKS) {
+    return mockRequest(options.method || 'GET', path, options.body, getToken());
+  }
+
+  const method = options.method || 'GET';
+  const rule = method === 'GET' ? null : matchRule(method, path, options.body);
+  if (!rule) return send(path, options);
+
+  const key = newIdempotencyKey();
+  if (!hasBacklog()) {
+    try {
+      // The same key is reused if this answer is lost and the call is queued.
+      return await send(path, { ...options, timeoutMs: WRITE_TIMEOUT_MS, headers: { ...options.headers, 'Idempotency-Key': key } });
+    } catch (error) {
+      if (error.status !== 0) throw error;
+    }
+  }
+  await enqueue({ key, method, path, body: options.body, ...rule });
+  return { queued: true };
+}
+
+// The outbox sends its waiting calls with the same transport.
+setSender((op) => send(op.path, { method: op.method, body: op.body, timeoutMs: WRITE_TIMEOUT_MS, headers: { 'Idempotency-Key': op.key } }));
 
 export const api = {
   get: (p) => request(p, { method: 'GET' }),

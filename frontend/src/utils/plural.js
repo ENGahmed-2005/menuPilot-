@@ -29,5 +29,6 @@ export const AR = {
   tablesAskingWaiter: { one: "طاولة واحدة تطلب نادلًا الآن", two: "طاولتان تطلبان نادلًا الآن", few: "{n} طاولات تطلب نادلًا الآن", many: "{n} طاولة تطلب نادلًا الآن", other: "{n} طاولة تطلب نادلًا الآن", en: { one: "1 table is asking for a waiter now", other: "{n} tables are asking for a waiter now" } },
   tablesAskedBill: { one: "طاولة واحدة طلبت الفاتورة", two: "طاولتان طلبتا الفاتورة", few: "{n} طاولات طلبت الفاتورة", many: "{n} طاولة طلبت الفاتورة", other: "{n} طاولة طلبت الفاتورة", en: { one: "1 table asked for the bill", other: "{n} tables asked for the bill" } },
   ordersLateInKitchen: { one: "طلب واحد تجاوز {m} دقيقة في المطبخ", two: "طلبان تجاوزا {m} دقيقة في المطبخ", few: "{n} طلبات تجاوزت {m} دقيقة في المطبخ", many: "{n} طلبًا تجاوز {m} دقيقة في المطبخ", other: "{n} طلب تجاوز {m} دقيقة في المطبخ", en: { one: "1 order has been in the kitchen over {m} minutes", other: "{n} orders have been in the kitchen over {m} minutes" } },
+  operations: { one: "عملية واحدة", two: "عمليتان", few: "{n} عمليات", many: "{n} عملية", other: "{n} عملية", en: { one: "1 change", other: "{n} changes" } },
   minutes: { zero: "أقل من دقيقة", one: "دقيقة واحدة", two: "دقيقتان", few: "{n} دقائق", many: "{n} دقيقة", other: "{n} دقيقة", en: { zero: "less than a minute", one: "1 minute", other: "{n} minutes" } },
 };

@@ -8,7 +8,7 @@
    on this device; Esc or the button leaves it.
    ========================================================================== */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlarmClock, ChefHat, Clock3, Maximize2, MessageSquareText, Minimize2, RefreshCw } from "lucide-react";
+import { AlarmClock, ChefHat, Clock3, CloudUpload, Maximize2, MessageSquareText, Minimize2, RefreshCw } from "lucide-react";
 import { getKitchenOrders, updateOrderStatus } from "../../api/orders";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
@@ -25,6 +25,7 @@ import { AR, countAr } from "../../utils/plural";
 import { t, locale } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import { restaurantChannel, useLive } from "../../realtime";
+import { queuedOrderStatuses, useOutbox } from "../../offline/outbox";
 
 const FLOW = ["pending", "preparing", "ready", "served"];
 const NEXT_ACTION = { pending: t("ابدأ التحضير"), preparing: t("جاهز للتقديم"), ready: t("تم التقديم") };
@@ -70,12 +71,19 @@ export default function KitchenDashboard() {
   const { user } = useAuth();
   const live = useLive({ channel: restaurantChannel(user), isPrivate: true, topics: ["orders"], onSignal: load, pollMs: POLL_MS });
 
-  const enriched = useMemo(() => orders.map((o) => {
+  // Status changes saved offline show at once, marked "waiting to sync", even while
+  // the list still comes from the saved copy.
+  const outbox = useOutbox();
+  const queuedStatuses = useMemo(() => queuedOrderStatuses(outbox), [outbox]);
+
+  const enriched = useMemo(() => orders.map((order) => {
+    const queued = queuedStatuses.get(String(order.id));
+    const o = queued ? { ...order, status: queued, waiting: true } : order;
     const elapsed = minutesSince(o.submittedAt, now);
     const limit = Number(o.expectedPrepMinutes || o.avgPrepTimeMinutes || 15);
     // Only tickets still in the kitchen can be late; "ready" is waiting on a waiter.
     return { ...o, elapsed, limit, late: ["pending", "preparing"].includes(o.status) && elapsed > limit };
-  }), [orders, now]);
+  }), [orders, now, queuedStatuses]);
 
   const counts = useMemo(() => ({
     active: enriched.filter((o) => o.status !== "served").length,
@@ -217,7 +225,10 @@ function Ticket({ o, busyId, onAdvance, big = false }) {
           <p className={`num font-extrabold leading-none text-ink ${big ? "text-3xl" : "text-2xl"}`}>{orderNo(o.orderNumber)}</p>
           <p className={`mt-1.5 font-bold text-ink-soft ${big ? "text-base" : "text-sm"}`}>{tableName(o.tableLabel)}{o.customerName ? <span className="font-medium text-muted">{t("،")} {o.customerName}</span> : null}</p>
         </div>
-        <StatusBadge type="order" status={o.status} />
+        <div className="flex flex-col items-end gap-1.5">
+          <StatusBadge type="order" status={o.status} />
+          {o.waiting && <span className="inline-flex items-center gap-1 text-xs font-bold text-copper-ink"><CloudUpload size={13} aria-hidden="true" />{t("بانتظار المزامنة")}</span>}
+        </div>
       </div>
       <div className={`flex items-center gap-2 px-4 pt-3 font-bold ${o.late ? "text-brick" : "text-muted"} ${big ? "text-base" : "text-sm"}`}>
         {o.late ? <AlarmClock size={16} aria-hidden="true" /> : <Clock3 size={16} aria-hidden="true" />}

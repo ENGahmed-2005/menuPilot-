@@ -43,9 +43,10 @@ export default function CloseSessionButton({ session, onClosed, block = false, s
     setClosing(true);
     setError(null);
     try {
-      await closeSession(session.id);
+      const result = await closeSession(session.id);
       setOpen(false);
-      toast.success(t("أُغلقت جلسة {0}، والطاولة متاحة الآن.", { 0: table }));
+      if (result?.queued) toast.info(t("لا يوجد اتصال: سيُغلق جلسة {0} تلقائيًا عند عودة الإنترنت.", { 0: table }));
+      else toast.success(t("أُغلقت جلسة {0}، والطاولة متاحة الآن.", { 0: table }));
       onClosed?.(session);
     } catch (err) {
       setError(err);
