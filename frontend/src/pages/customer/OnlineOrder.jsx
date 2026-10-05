@@ -3,6 +3,8 @@
    Menu → cart → checkout (pickup or delivery, cash or bank transfer with a
    receipt) → tracking page. No login; totals, fees and the minimum order
    are checked by the API. Separate cart from dine-in so the two never mix.
+   Dishes with paid extras open the shared ProductSheet; each dish + extras
+   + note is its own cart line, priced (for display) with its extras.
    ========================================================================== */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,14 +17,21 @@ import BrandLogo from "../../components/brand/Logo";
 import { waLink } from "../../utils/whatsapp";
 import { currentPosition } from "../../utils/maps";
 import LocationMap from "../../components/delivery/LocationMap";
+import ProductSheet from "../../components/menu/ProductSheet";
+import ItemOptions from "../../components/orders/ItemOptions";
+import { lineKey, toOrderItem, unitPrice } from "../../components/menu/cartLine";
 import { t, dir } from "../../i18n";
+
+// This page wears menuPilot's colours, so the dish sheet does too.
+const SHEET_BRAND = { primary_color: "#B8793E", button_color: "#1F2D3D" };
 
 export default function OnlineOrder() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [cart, setCart] = useState({}); // id → quantity
+  const [cart, setCart] = useState({}); // line key → { item, options, note, quantity }
+  const [sheetItem, setSheetItem] = useState(null);
   const [checkout, setCheckout] = useState(false);
   const [form, setForm] = useState({ type: "pickup", name: "", phone: "", zone_id: "", address: "", notes: "", payment_method: "cash", proof: "" });
   const [sending, setSending] = useState(false);
@@ -37,8 +46,8 @@ export default function OnlineOrder() {
   useEffect(() => { getOnlineRestaurant(slug).then((d) => { setData(d); setForm((f) => ({ ...f, type: d.pickup ? "pickup" : "delivery" })); }).catch(setError); }, [slug]);
 
   const items = data?.items || [];
-  const lines = useMemo(() => items.filter((i) => cart[i.id]).map((i) => ({ ...i, quantity: cart[i.id] })), [items, cart]);
-  const subtotal = lines.reduce((s, l) => s + l.price * l.quantity, 0);
+  const lines = useMemo(() => Object.entries(cart).map(([key, l]) => ({ key, ...l, unit: unitPrice(l.item.price, l.options) })), [cart]);
+  const subtotal = lines.reduce((s, l) => s + l.unit * l.quantity, 0);
   const zone = data?.zones?.find((z) => String(z.id) === String(form.zone_id));
   const fee = form.type === "delivery" && zone ? Number(zone.fee) : 0;
   const count = lines.reduce((s, l) => s + l.quantity, 0);
@@ -46,7 +55,15 @@ export default function OnlineOrder() {
   const minOrder = form.type === "delivery" && zone ? Number(zone.min_order) || 0 : 0;
   const missing = Math.max(0, Math.round((minOrder - subtotal) * 100) / 100);
   const groups = useMemo(() => { const g = new Map(); items.forEach((i) => { const k = i.category || t("أصناف"); g.set(k, [...(g.get(k) || []), i]); }); return [...g.entries()]; }, [items]);
-  const setQty = (id, q) => setCart((c) => { const n = { ...c }; if (q <= 0) delete n[id]; else n[id] = Math.min(50, q); return n; });
+  const MAX_QTY = 50;
+  const addLine = (item, quantity = 1, note = "", options = []) => setCart((c) => {
+    const key = lineKey(item.id, options, note);
+    return { ...c, [key]: { item, options, note, quantity: Math.min(MAX_QTY, (c[key]?.quantity || 0) + quantity) } };
+  });
+  const setQty = (key, q) => setCart((c) => { const n = { ...c }; if (q <= 0) delete n[key]; else n[key] = { ...n[key], quantity: Math.min(MAX_QTY, q) }; return n; });
+  // A dish without extras is changed right on its card (its plain line).
+  const plainKey = (item) => lineKey(item.id, [], "");
+  const dishCount = (item) => lines.filter((l) => l.item.id === item.id).reduce((s, l) => s + l.quantity, 0);
   const field = (k) => ({ value: form[k], onChange: (e) => { setForm((f) => ({ ...f, [k]: e.target.value })); setFormError(null); } });
 
   function pickProof(e) {
@@ -61,7 +78,7 @@ export default function OnlineOrder() {
     e.preventDefault();
     setSending(true);
     try {
-      const o = await placeOnlineOrder(slug, { ...form, zone_id: form.type === "delivery" ? Number(form.zone_id) || null : null, proof: form.payment_method === "transfer" ? form.proof : undefined, ...(form.type === "delivery" && loc ? { latitude: loc.lat, longitude: loc.lng, location_accuracy: loc.accuracy } : {}), items: lines.map((l) => ({ menuItemId: l.id, quantity: l.quantity })) });
+      const o = await placeOnlineOrder(slug, { ...form, zone_id: form.type === "delivery" ? Number(form.zone_id) || null : null, proof: form.payment_method === "transfer" ? form.proof : undefined, ...(form.type === "delivery" && loc ? { latitude: loc.lat, longitude: loc.lng, location_accuracy: loc.accuracy } : {}), items: lines.map((l) => toOrderItem({ menuItemId: l.item.id, quantity: l.quantity, note: l.note, options: l.options })) });
       navigate(`/o/${o.id}?token=${encodeURIComponent(o.token)}`);
     } catch (err) {
       setFormError(errorText(err, t("تعذّر إرسال الطلب.")));
@@ -103,16 +120,23 @@ export default function OnlineOrder() {
                   <div className="flex min-w-0 flex-1 flex-col">
                     <p className="font-black">{i.name}</p>
                     {i.description && <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted">{i.description}</p>}
+                    {i.options?.length > 0 && <p className="mt-0.5 text-xs font-bold text-copper-ink">{t("إضافات حسب الطلب")}</p>}
                     <div className="mt-auto flex items-center justify-between pt-2">
                       <span className="num font-black text-copper-ink">{money(i.price)}</span>
-                      {cart[i.id] ? (
+                      {i.options?.length ? (
+                        // Extras to choose: the sheet adds a line each time.
+                        <button disabled={!data.open} onClick={() => setSheetItem(i)} aria-label={t("إضافة {0}", { 0: i.name })} className="relative grid h-10 w-10 place-items-center rounded-full bg-navy text-paper disabled:opacity-40">
+                          <Plus size={18} />
+                          {dishCount(i) > 0 && <span className="absolute -end-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-copper px-1 text-xs font-black text-ink">{dishCount(i)}</span>}
+                        </button>
+                      ) : cart[plainKey(i)] ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-black/[0.05] p-1">
-                          <button onClick={() => setQty(i.id, cart[i.id] - 1)} aria-label={t("إنقاص {0}", { 0: i.name })} className="grid h-9 w-9 place-items-center rounded-full bg-white"><Minus size={15} /></button>
-                          <b className="num min-w-6 text-center">{cart[i.id]}</b>
-                          <button onClick={() => setQty(i.id, cart[i.id] + 1)} aria-label={t("زيادة {0}", { 0: i.name })} className="grid h-9 w-9 place-items-center rounded-full bg-navy text-paper"><Plus size={15} /></button>
+                          <button onClick={() => setQty(plainKey(i), cart[plainKey(i)].quantity - 1)} aria-label={t("إنقاص {0}", { 0: i.name })} className="grid h-9 w-9 place-items-center rounded-full bg-white"><Minus size={15} /></button>
+                          <b className="num min-w-6 text-center">{cart[plainKey(i)].quantity}</b>
+                          <button onClick={() => setQty(plainKey(i), cart[plainKey(i)].quantity + 1)} aria-label={t("زيادة {0}", { 0: i.name })} className="grid h-9 w-9 place-items-center rounded-full bg-navy text-paper"><Plus size={15} /></button>
                         </span>
                       ) : (
-                        <button disabled={!data.open} onClick={() => setQty(i.id, 1)} aria-label={t("إضافة {0}", { 0: i.name })} className="grid h-10 w-10 place-items-center rounded-full bg-navy text-paper disabled:opacity-40"><Plus size={18} /></button>
+                        <button disabled={!data.open} onClick={() => addLine(i)} aria-label={t("إضافة {0}", { 0: i.name })} className="grid h-10 w-10 place-items-center rounded-full bg-navy text-paper disabled:opacity-40"><Plus size={18} /></button>
                       )}
                     </div>
                   </div>
@@ -136,6 +160,24 @@ export default function OnlineOrder() {
 
       <Modal open={checkout} onClose={() => !sending && setCheckout(false)} title={t("إتمام الطلب")} size="md">
         <form onSubmit={submit} className="space-y-4 text-ink">
+          {/* Every line, with its extras: dishes with extras are changed here. */}
+          <ul className="divide-y divide-line rounded-xl border border-line">
+            {lines.map((l) => (
+              <li key={l.key} className="flex items-center gap-3 px-3 py-2.5">
+                <div className="min-w-0 flex-1 text-sm">
+                  <p className="font-bold">{l.item.name}</p>
+                  <ItemOptions options={l.options} />
+                  {l.note && <p className="text-xs text-muted">{l.note}</p>}
+                  <p className="num text-xs font-bold text-copper-ink">{money(l.unit * l.quantity)}</p>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-black/[0.05] p-1">
+                  <button type="button" onClick={() => setQty(l.key, l.quantity - 1)} aria-label={t("إنقاص {0}", { 0: l.item.name })} className="grid h-9 w-9 place-items-center rounded-full bg-white"><Minus size={15} /></button>
+                  <b className="num min-w-6 text-center">{l.quantity}</b>
+                  <button type="button" onClick={() => setQty(l.key, l.quantity + 1)} aria-label={t("زيادة {0}", { 0: l.item.name })} className="grid h-9 w-9 place-items-center rounded-full bg-navy text-paper"><Plus size={15} /></button>
+                </span>
+              </li>
+            ))}
+          </ul>
           <div className="grid grid-cols-2 gap-2">
             {data.pickup && <button type="button" onClick={() => setForm((f) => ({ ...f, type: "pickup" }))} aria-pressed={form.type === "pickup"} className={`flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-bold ${form.type === "pickup" ? "border-copper bg-copper/10" : "border-line"}`}><Store size={17} /> {t("استلام")}</button>}
             {data.delivery && <button type="button" onClick={() => setForm((f) => ({ ...f, type: "delivery" }))} aria-pressed={form.type === "delivery"} className={`flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-bold ${form.type === "delivery" ? "border-copper bg-copper/10" : "border-line"}`}><Bike size={17} /> {t("توصيل")}</button>}
@@ -192,6 +234,9 @@ export default function OnlineOrder() {
           <p className="text-center text-xs text-muted">{t("يؤكد المطعم طلبك ويحدد وقت التحضير، وتتابع الحالة من رابط التتبع.")}</p>
         </form>
       </Modal>
+
+      <ProductSheet key={sheetItem?.id} item={sheetItem} brand={SHEET_BRAND} onClose={() => setSheetItem(null)}
+        onAdd={({ quantity, note, options }) => { addLine(sheetItem, quantity, note, options); setSheetItem(null); }} />
     </main>
   );
 }

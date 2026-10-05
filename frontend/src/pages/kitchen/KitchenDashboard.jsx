@@ -26,6 +26,7 @@ import { t, locale } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import { restaurantChannel, useLive } from "../../realtime";
 import { queuedOrderStatuses, useOutbox } from "../../offline/outbox";
+import ItemOptions from "../../components/orders/ItemOptions";
 
 const FLOW = ["pending", "preparing", "ready", "served"];
 const NEXT_ACTION = { pending: t("ابدأ التحضير"), preparing: t("جاهز للتقديم"), ready: t("تم التقديم") };
@@ -242,6 +243,7 @@ function Ticket({ o, busyId, onAdvance, big = false }) {
           <li key={item.id || index} className={big ? "text-lg leading-7" : "text-[0.95rem] leading-6"}>
             <span className={`num ml-1.5 inline-grid min-w-7 place-items-center rounded-md bg-navy px-1.5 font-extrabold text-paper ${big ? "text-base" : "text-sm"}`}>{item.quantity}×</span>
             <span className="font-bold text-ink">{item.name}</span>
+            <ItemOptions options={item.options} size={big ? "lg" : "md"} className="ms-9 mt-0.5" />
             {item.note && (
               <span className="mt-1 flex items-start gap-1.5 rounded-lg bg-copper/10 px-2 py-1 text-sm font-bold text-copper-ink">
                 <MessageSquareText size={14} className="mt-1 shrink-0" aria-hidden="true" />{item.note}

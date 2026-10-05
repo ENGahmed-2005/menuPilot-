@@ -2,6 +2,7 @@
 
 namespace App\Support\Accounting;
 
+use App\Support\MenuOptions;
 use Generator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +103,7 @@ class AccountingExporter
             ->join('menu_items as m', 'm.id', '=', 'oi.menu_item_id')
             ->leftJoinSub($originals, 'adj', 'adj.order_item_id', '=', 'oi.id')
             ->whereIn('o.dining_session_id', $sessionIds)
-            ->select('oi.id', 'oi.quantity', 'oi.unit_price', 'oi.status as line_status', 'o.id as order_id', 'o.order_number', 'o.status as order_status', 'o.dining_session_id',
+            ->select('oi.id', 'oi.quantity', 'oi.unit_price', 'oi.options', 'oi.status as line_status', 'o.id as order_id', 'o.order_number', 'o.status as order_status', 'o.dining_session_id',
                 'm.id as product_id', 'm.name as product_name', 'm.category', 'm.sku', DB::raw('COALESCE(adj.original_price, oi.unit_price) as original_price'));
 
         $orderStatus = $this->filters['order_status'] ?? null;
@@ -218,7 +219,7 @@ class AccountingExporter
                 yield $meta + [
                     'order_reference' => '#'.($l->order_number ?? $l->order_id),
                     'product_code' => $l->sku ?: 'MP-'.$l->product_id,
-                    'product_name' => $l->product_name,
+                    'product_name' => MenuOptions::label($l->product_name, $l->options),
                     'category' => $l->category,
                     'account_code' => $this->salesAccount($l->category),
                     'quantity' => (float) $l->quantity,

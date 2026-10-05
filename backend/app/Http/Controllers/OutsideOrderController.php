@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Support\Audit;
 use App\Support\MediaStore;
+use App\Support\MenuOptions;
 use App\Support\OrderWorkflow;
 use App\Support\Permissions;
 use App\Support\Realtime;
@@ -75,7 +76,7 @@ class OutsideOrderController extends Controller
     {
         $items = DB::table('order_items')->join('menu_items', 'menu_items.id', '=', 'order_items.menu_item_id')
             ->where('order_items.order_id', $o->id)->where('order_items.status', 'active')
-            ->select('order_items.id', 'menu_items.name', 'order_items.quantity', 'order_items.unit_price', 'order_items.note')->get();
+            ->select('order_items.id', 'menu_items.name', 'order_items.quantity', 'order_items.unit_price', 'order_items.note', 'order_items.options')->get();
         $subtotal = round($items->sum(fn ($i) => $i->quantity * $i->unit_price), 2);
         $c = DB::table('outside_order_contacts')->where('order_id', $o->id)->first();
 
@@ -96,7 +97,7 @@ class OutsideOrderController extends Controller
             'dispatched_at' => $o->dispatched_at,
             'completed_at' => $o->completed_at,
             'driver' => $staff && $o->assigned_driver_id ? ['id' => (int) $o->assigned_driver_id, 'name' => DB::table('staff')->where('account_user_id', $o->assigned_driver_id)->value('name')] : null,
-            'items' => $items->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'quantity' => (int) $i->quantity, 'unit_price' => (float) $i->unit_price, 'note' => $i->note])->values(),
+            'items' => $items->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'quantity' => (int) $i->quantity, 'unit_price' => (float) $i->unit_price, 'note' => $i->note, 'options' => MenuOptions::decode($i->options)])->values(),
             'subtotal' => $subtotal,
             'delivery_fee' => (float) $o->delivery_fee,
             'total' => round($subtotal + (float) $o->delivery_fee, 2),
@@ -144,8 +145,8 @@ class OutsideOrderController extends Controller
             'prep_minutes' => (int) $s->prep_minutes,
             'zones' => $s->delivery_enabled ? DB::table('delivery_zones')->where('user_id', $owner->id)->where('active', true)->orderBy('name')->get(['id', 'name', 'fee', 'min_order']) : [],
             'items' => DB::table('menu_items')->where('user_id', $owner->id)->where('is_available', true)->whereNull('deleted_at')
-                ->orderBy('category')->orderBy('name')->get(['id', 'name', 'description', 'price', 'category', 'image_url'])
-                ->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'description' => $i->description, 'price' => (float) $i->price, 'category' => $i->category, 'imageUrl' => $i->image_url]),
+                ->orderBy('category')->orderBy('name')->get(['id', 'name', 'description', 'price', 'category', 'image_url', 'options'])
+                ->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'description' => $i->description, 'price' => (float) $i->price, 'category' => $i->category, 'imageUrl' => $i->image_url, 'options' => MenuOptions::decode($i->options)]),
         ]]);
     }
 
@@ -175,7 +176,7 @@ class OutsideOrderController extends Controller
             'items.*.menuItemId' => 'required|integer',
             'items.*.quantity' => 'required|integer|min:1|max:50',
             'items.*.note' => 'nullable|string|max:300',
-        ], ['type.in' => 'نوع الطلب غير متاح في هذا المطعم.', 'address.required_if' => 'اكتب عنوان التوصيل.', 'zone_id.required_if' => 'اختر منطقة التوصيل.', 'phone.regex' => 'رقم الهاتف غير صحيح.', 'proof.required_if' => 'أرفق صورة إشعار التحويل.']);
+        ] + MenuOptions::orderRules(), ['type.in' => 'نوع الطلب غير متاح في هذا المطعم.', 'address.required_if' => 'اكتب عنوان التوصيل.', 'zone_id.required_if' => 'اختر منطقة التوصيل.', 'phone.regex' => 'رقم الهاتف غير صحيح.', 'proof.required_if' => 'أرفق صورة إشعار التحويل.']);
 
         $phone = preg_replace('/\s+/', '', $v['phone']);
         $waiting = DB::table('orders')->join('outside_order_contacts', 'outside_order_contacts.order_id', '=', 'orders.id')
@@ -184,14 +185,20 @@ class OutsideOrderController extends Controller
             return response()->json(['message' => 'لديك طلبات بانتظار موافقة المطعم. انتظر قبولها قبل إرسال طلب جديد.', 'code' => 'TOO_MANY_PENDING'], 429);
         }
 
-        $prices = DB::table('menu_items')->where('user_id', $owner->id)->where('is_available', true)->whereNull('deleted_at')
-            ->whereIn('id', collect($v['items'])->pluck('menuItemId'))->pluck('price', 'id');
+        $menu = DB::table('menu_items')->where('user_id', $owner->id)->where('is_available', true)->whereNull('deleted_at')
+            ->whereIn('id', collect($v['items'])->pluck('menuItemId'))->get(['id', 'price', 'options'])->keyBy('id');
         foreach ($v['items'] as $line) {
-            if (! isset($prices[$line['menuItemId']])) {
+            if (! $menu->has($line['menuItemId'])) {
                 return response()->json(['message' => 'أحد الأصناف لم يعد متاحًا. حدّث المنيو وحاول مجددًا.', 'code' => 'ITEM_UNAVAILABLE'], 422);
             }
         }
-        $subtotal = collect($v['items'])->sum(fn ($l) => $prices[$l['menuItemId']] * $l['quantity']);
+        // Each line at the dish price + its current extras (422 if one was removed).
+        $lines = [];
+        foreach ($v['items'] as $n => $line) {
+            $lines[] = ['menu_item_id' => $line['menuItemId'], 'quantity' => $line['quantity'], 'note' => $line['note'] ?? null]
+                + MenuOptions::orderLine($menu[$line['menuItemId']], $line['options'] ?? [], "items.$n.options");
+        }
+        $subtotal = round(collect($lines)->sum(fn ($l) => $l['unit_price'] * $l['quantity']), 2);
 
         $zone = null;
         if ($v['type'] === 'delivery') {
@@ -215,7 +222,7 @@ class OutsideOrderController extends Controller
         }
 
         $token = Str::random(40);
-        $orderId = DB::transaction(function () use ($owner, $v, $prices, $zone, $proofUrl, $token, $phone) {
+        $orderId = DB::transaction(function () use ($owner, $v, $lines, $zone, $proofUrl, $token, $phone) {
             $now = now();
             $id = DB::table('orders')->insertGetId([
                 'dining_session_id' => null,
@@ -231,8 +238,8 @@ class OutsideOrderController extends Controller
                 'public_token' => $token,
                 'submitted_at' => $now, 'created_at' => $now, 'updated_at' => $now,
             ]);
-            foreach ($v['items'] as $line) {
-                DB::table('order_items')->insert(['order_id' => $id, 'menu_item_id' => $line['menuItemId'], 'quantity' => $line['quantity'], 'unit_price' => $prices[$line['menuItemId']], 'note' => $line['note'] ?? null, 'status' => 'active', 'created_at' => $now, 'updated_at' => $now]);
+            foreach ($lines as $line) {
+                DB::table('order_items')->insert($line + ['order_id' => $id, 'status' => 'active', 'created_at' => $now, 'updated_at' => $now]);
             }
             DB::table('outside_order_contacts')->insert(['order_id' => $id, 'name' => trim($v['name']), 'phone' => $phone, 'address' => $v['address'] ?? null, 'zone_id' => $zone->id ?? null, 'zone_name' => $zone->name ?? null, 'notes' => $v['notes'] ?? null,
                 'latitude' => $v['type'] === 'delivery' ? ($v['latitude'] ?? null) : null,

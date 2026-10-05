@@ -23,9 +23,9 @@ class MenuStyle
     public const COLORS = ['background_color', 'surface_color'];
 
     public const DEFAULTS = [
-        'layout' => 'compact',
+        'layout' => 'grid', // two-column photo cards
         'image_side' => 'start',
-        'header' => 'cover',
+        'header' => 'solid', // a band in the brand colour
         'logo_shape' => 'rounded',
         'chips' => 'pill',
         'price_color' => 'primary',

@@ -1,9 +1,10 @@
 /* ==========================================================================
    MenuManagement.jsx — إدارة أصناف القائمة
    يغطي: FR-08 (إضافة), FR-09 (تعديل), FR-10 (حذف)
+   + إضافات الصنف (options): يحرّرها المالك هنا، ويختارها الزبون من المنيو.
    ========================================================================== */
 import { useEffect, useMemo, useState } from "react";
-import { ImagePlus, Pencil, Plus, Trash2, UtensilsCrossed, X, Check, Crown } from "lucide-react";
+import { ImagePlus, Pencil, Plus, Trash2, UtensilsCrossed, X, Check, Crown, ListPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createMenuItem, deleteMenuItem, getMenuItems, updateMenuItem } from "../../api/menu";
 import { useAuth } from "../../context/AuthContext";
@@ -19,9 +20,11 @@ import Button from "../../components/ui/Button";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
 import EmptyState from "../../components/dashboard/EmptyState";
+import OptionsEditor from "../../components/menu/OptionsEditor";
+import { extrasCount, flagRows, optionErrorFlags, optionRows, optionsPayload } from "../../components/menu/menuOptions";
 import { t } from "../../i18n";
 
-const EMPTY_FORM = { name: "", price: "", category: "", description: "", imageUrl: "" };
+const EMPTY_FORM = { name: "", price: "", category: "", description: "", imageUrl: "", options: [] };
 const fieldClass =
   "w-full rounded-lg border border-ink/15 px-3 py-2 text-sm text-ink outline-none focus:border-copper focus:ring-2 focus:ring-copper/20";
 
@@ -114,18 +117,27 @@ export default function MenuManagement() {
     setImageError("");
   }
 
+  /** A rejected extra (options.N.name / .price) is marked on its own row;
+   *  the banner then only points to the highlighted fields. */
+  function showSaveError(err, sentOptions, setFormState) {
+    const flags = optionErrorFlags(sentOptions, err);
+    if (flags) setFormState((f) => ({ ...f, options: flagRows(f.options, flags) }));
+    setError(flags ? new Error(t("بعض البيانات غير صحيحة. راجع الحقول المحددة.")) : err);
+  }
+
   async function handleAdd(e) {
     e.preventDefault();
     if (adding) return;
     setAdding(true);
     setError(null);
+    const sentOptions = form.options;
     try {
-      await createMenuItem({ ...form, price: Number(form.price) });
+      await createMenuItem({ ...form, price: Number(form.price), options: optionsPayload(sentOptions) });
       setNotice(t("أُضيف «{0}» إلى المنيو.", { 0: form.name.trim() }));
       setForm(EMPTY_FORM);
       load();
     } catch (err) {
-      setError(err); // the form keeps what the owner typed
+      showSaveError(err, sentOptions, setForm); // the form keeps what the owner typed
     } finally {
       setAdding(false);
     }
@@ -157,6 +169,7 @@ export default function MenuManagement() {
       category: item.category || "",
       description: item.description || "",
       imageUrl: item.imageUrl || "",
+      options: optionRows(item.options), // ids kept, so past orders still match
     });
     setEditImageError("");
   }
@@ -203,12 +216,13 @@ export default function MenuManagement() {
   async function handleSaveEdit(e, itemId) {
     e.preventDefault();
     setSavingEdit(true);
+    const sentOptions = editForm.options;
     try {
-      await updateMenuItem(itemId, { ...editForm, price: Number(editForm.price) });
+      await updateMenuItem(itemId, { ...editForm, price: Number(editForm.price), options: optionsPayload(sentOptions) });
       cancelEdit();
       load();
     } catch (err) {
-      setError(err);
+      showSaveError(err, sentOptions, setEditForm);
     } finally {
       setSavingEdit(false);
     }
@@ -246,6 +260,10 @@ export default function MenuManagement() {
           <div className="sm:col-span-2 lg:col-span-4">
             <Input label={t("الوصف")} maxLength={300} value={form.description} onChange={handleChange("description")} placeholder={t("المكونات أو طريقة التحضير، في سطر واحد")} />
           </div>
+        </div>
+
+        <div className="border-t border-ink/8 pt-4">
+          <OptionsEditor rows={form.options} onChange={(options) => setForm((f) => ({ ...f, options }))} />
         </div>
 
         {/* رفع صورة الصنف — معاينة فورية عبر FileReader (base64)، لحين توفر
@@ -349,6 +367,10 @@ export default function MenuManagement() {
                           />
                         </div>
 
+                        <div className="border-t border-ink/8 pt-3">
+                          <OptionsEditor rows={editForm.options} onChange={(options) => setEditForm((f) => ({ ...f, options }))} />
+                        </div>
+
                         <div className="flex flex-wrap items-center gap-4 border-t border-ink/8 pt-3">
                           <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-ink/25 bg-white/50 px-3.5 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-copper hover:text-ink">
                             <ImagePlus size={16} aria-hidden="true" />
@@ -418,8 +440,16 @@ export default function MenuManagement() {
                         )}
                         <div className="min-w-0">
                           <div className="truncate font-medium text-ink">{item.name}</div>
-                          {item.description && (
-                            <div className="truncate text-xs text-ink-soft">{item.description}</div>
+                          {(item.description || item.options.length > 0) && (
+                            <div className="flex min-w-0 items-center gap-2 text-xs text-ink-soft">
+                              {item.options.length > 0 && (
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink/[0.06] px-2 py-0.5 text-[11px] font-bold">
+                                  <ListPlus size={12} aria-hidden="true" />
+                                  {extrasCount(item.options.length)}
+                                </span>
+                              )}
+                              {item.description && <span className="truncate">{item.description}</span>}
+                            </div>
                           )}
                         </div>
                       </div>

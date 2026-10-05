@@ -20,6 +20,7 @@ import { useToast } from "../../components/ui/Toast";
 import { t as tr } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import { restaurantChannel, useLive } from "../../realtime";
+import ItemOptions from "../../components/orders/ItemOptions";
 
 const STATE = { awaiting_acceptance: [tr("بانتظار موافقتك"), "warning"], accepted: [tr("مقبول"), "info"], out_for_delivery: [tr("خرج للتوصيل"), "info"], completed: [tr("مكتمل"), "success"], rejected: [tr("مرفوض"), "danger"] };
 const ago = (iso) => { const m = Math.max(0, Math.floor((Date.now() - new Date(iso)) / 60000)); return m < 1 ? tr("الآن") : tr("منذ {0} د", { 0: m }); };
@@ -71,7 +72,7 @@ export default function OutsideOrders() {
                   </div>
                   <Badge tone={STATE[o.fulfillment_status]?.[1]}>{STATE[o.fulfillment_status]?.[0]}</Badge>
                 </div>
-                <ul className="mt-3 flex-1 space-y-1 text-sm">{o.items.map((i) => <li key={i.id}><b className="num">{i.quantity}×</b> {i.name}{i.note && <span className="text-xs text-copper-ink"> — {i.note}</span>}</li>)}</ul>
+                <ul className="mt-3 flex-1 space-y-1 text-sm">{o.items.map((i) => <li key={i.id}><b className="num">{i.quantity}×</b> {i.name}{i.note && <span className="text-xs text-copper-ink"> — {i.note}</span>}<ItemOptions options={i.options} /></li>)}</ul>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-sm">
                   <span className="num font-black">{money(o.total)}{o.delivery_fee > 0 && <span className="text-xs font-medium text-muted"> {tr("(منها توصيل")} {money(o.delivery_fee)})</span>}</span>
                   <span className="text-xs font-bold">{o.payment_method === "transfer" ? (o.payment_status === "paid" ? tr("تحويل ✓") : tr("تحويل · يحتاج تحقق")) : tr("نقدًا")}{o.payment_proof_url && <a href={o.payment_proof_url} target="_blank" rel="noopener noreferrer" className="mr-2 inline-flex items-center gap-1 text-copper-ink">{tr("الإشعار")} <ExternalLink size={12} /></a>}</span>

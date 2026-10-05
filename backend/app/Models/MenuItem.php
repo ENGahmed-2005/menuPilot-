@@ -10,9 +10,9 @@ class MenuItem extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['user_id', 'name', 'price', 'category', 'description', 'image_url', 'is_available', 'prep_time_minutes'];
+    protected $fillable = ['user_id', 'name', 'price', 'category', 'description', 'image_url', 'is_available', 'prep_time_minutes', 'options'];
 
-    protected $casts = ['price' => 'decimal:2', 'is_available' => 'boolean'];
+    protected $casts = ['price' => 'decimal:2', 'is_available' => 'boolean', 'options' => 'array'];
 
     public function user()
     {

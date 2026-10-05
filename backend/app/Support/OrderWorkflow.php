@@ -87,15 +87,18 @@ class OrderWorkflow
         return max(1, (int) round($avg));
     }
 
-    /** Active (non-cancelled) items of an order, with the menu item name. */
+    /** Items of an order with the dish's name, photo and category, extras decoded. */
     public static function items(int $orderId)
     {
         return DB::table('order_items')
             ->join('menu_items', 'menu_items.id', '=', 'order_items.menu_item_id')
             ->where('order_items.order_id', $orderId)
-            ->select('order_items.*', 'menu_items.name', DB::raw('COALESCE(menu_items.prep_time_minutes, '.self::DEFAULT_PREP_MINUTES.') as prep_time_minutes'))
+            ->select('order_items.*', 'menu_items.name', 'menu_items.image_url', 'menu_items.category', DB::raw('COALESCE(menu_items.prep_time_minutes, '.self::DEFAULT_PREP_MINUTES.') as prep_time_minutes'))
             ->orderBy('order_items.id')
-            ->get();
+            ->get()
+            ->each(function ($item) {
+                $item->options = MenuOptions::decode($item->options);
+            });
     }
 
     /**
@@ -114,6 +117,7 @@ class OrderWorkflow
             'name' => $i->name,
             'quantity' => (int) $i->quantity,
             'note' => $i->note,
+            'options' => $i->options,
             'unit_price' => $i->unit_price,
         ])->all();
         $order->orderNumber = $order->order_number ?? $order->id;

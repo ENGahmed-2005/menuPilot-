@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\Audit;
+use App\Support\MenuOptions;
 use App\Support\OrderWorkflow;
 use App\Support\ResolvesRestaurant;
 use Illuminate\Http\Request;
@@ -35,6 +36,15 @@ class OrderController extends Controller
             ->first();
     }
 
+    /** One order_items row as the API returns it (extras decoded). */
+    private function orderItem($id): object
+    {
+        $item = DB::table('order_items')->find($id);
+        $item->options = MenuOptions::decode($item->options);
+
+        return $item;
+    }
+
     private function sessionOrders($sid)
     {
         $orders = DB::table('orders')->where('dining_session_id', $sid)->latest('id')->get();
@@ -57,7 +67,7 @@ class OrderController extends Controller
             'items.*.menuItemId' => 'required|integer',
             'items.*.quantity' => 'required|integer|min:1|max:99',
             'items.*.note' => 'nullable|string|max:500',
-        ], [
+        ] + MenuOptions::orderRules(), [
             'items.required' => 'Add at least one item before placing your order.',
             'items.min' => 'Add at least one item before placing your order.',
         ]);
@@ -94,17 +104,23 @@ class OrderController extends Controller
             return response()->json(['message' => 'One or more menu items are unavailable. Please refresh the menu and try again.'], 422);
         }
 
-        $oid = DB::transaction(function () use ($v, $sid, $s, $availableItems) {
+        // Priced from the dish and its current extras (422 if one was removed).
+        $lines = [];
+        foreach ($v['items'] as $n => $i) {
+            $m = $availableItems->get($i['menuItemId']);
+            $lines[] = [
+                'menu_item_id' => $m->id,
+                'quantity' => $i['quantity'],
+                'note' => $i['note'] ?? null,
+            ] + MenuOptions::orderLine($m, $i['options'] ?? [], "items.$n.options");
+        }
+
+        $oid = DB::transaction(function () use ($lines, $sid, $s) {
             $oid = OrderWorkflow::createOrder((int) $sid, (int) $s->user_id);
             $now = now();
-            foreach ($v['items'] as $i) {
-                $m = $availableItems->get($i['menuItemId']);
-                DB::table('order_items')->insert([
+            foreach ($lines as $line) {
+                DB::table('order_items')->insert($line + [
                     'order_id' => $oid,
-                    'menu_item_id' => $m->id,
-                    'quantity' => $i['quantity'],
-                    'unit_price' => $m->price,
-                    'note' => $i['note'] ?? null,
                     'status' => 'active',
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -313,7 +329,7 @@ class OrderController extends Controller
             }
         });
 
-        return $this->out(DB::table('order_items')->find($id));
+        return $this->out($this->orderItem($id));
     }
 
     /**
@@ -391,6 +407,7 @@ class OrderController extends Controller
                 'menu_item_id' => $item->menu_item_id,
                 'quantity' => $item->quantity,
                 'unit_price' => $item->unit_price,
+                'options' => $item->options,
                 'note' => $item->note,
                 'status' => 'active',
                 'reassigned_from_item_id' => $id,
@@ -403,8 +420,8 @@ class OrderController extends Controller
         });
 
         return $this->out([
-            'original' => DB::table('order_items')->find($id),
-            'reassigned' => DB::table('order_items')->find($newItemId),
+            'original' => $this->orderItem($id),
+            'reassigned' => $this->orderItem($newItemId),
         ], 201);
     }
 }

@@ -30,6 +30,8 @@ import {
   rejectPayment,
 } from "../../api/billing";
 import { t, dir } from "../../i18n";
+import ItemOptions from "../../components/orders/ItemOptions";
+import { withOptions } from "../../components/menu/cartLine";
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
@@ -45,6 +47,7 @@ function mapBill(data, sessionId) {
     price: Number(item.unit_price),
     total: Number(item.total),
     note: item.note,
+    options: item.options || [],
   }));
   const payments = data?.payments || [];
   const pendingPayments = payments.filter((p) => p.status === "pending");
@@ -107,7 +110,7 @@ function downloadExcelCompatible(bill) {
   const headers = [t("رقم الفاتورة"), t("التاريخ"), t("الطاولة"), t("الصنف"), t("كود الصنف"), t("التصنيف"), t("الكمية"), t("سعر الوحدة"), t("الإجمالي")];
   const rows = bill.items.map((item) => [
     bill.invoiceNumber, bill.date, bill.table,
-    item.name, item.code, item.category,
+    withOptions(item), item.code, item.category,
     item.quantity, item.price, item.total,
   ]);
   const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n");
@@ -367,6 +370,7 @@ export default function Billing() {
               <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-ink/[0.015]">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{item.name}</p>
+                  <ItemOptions options={item.options} />
                   <p className="mt-0.5 text-xs text-muted">
                     {item.code} · {item.category} · {money(item.price)} {t("للوحدة")}
                   </p>
