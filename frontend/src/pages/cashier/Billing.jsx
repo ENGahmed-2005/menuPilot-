@@ -18,7 +18,7 @@ import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import CloseSessionButton from "../../components/billing/CloseSessionButton";
 import { usePermissions } from "../../hooks/usePermissions";
-import { queuedRefs, useOutbox } from "../../offline/outbox";
+import { SYNCED, queuedRefs, useOutbox } from "../../offline/outbox";
 import Input from "../../components/ui/Input";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
@@ -162,6 +162,12 @@ export default function Billing() {
   }
 
   useEffect(() => { loadBill(); }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A payment saved offline was just sent: show the bill as the server has it now.
+  useEffect(() => {
+    const refresh = () => loadBill(true);
+    window.addEventListener(SYNCED, refresh);
+    return () => window.removeEventListener(SYNCED, refresh);
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleVerify(paymentId) {
     setVerifying(paymentId);
@@ -417,7 +423,7 @@ export default function Billing() {
           <CheckCircle2 size={22} aria-hidden="true" />
           <div>
             <p className="font-bold">{t("حُفظ الدفع على هذا الجهاز")}</p>
-            <p className="mt-0.5 text-xs text-muted">{t("سيُرسل تلقائيًا عند عودة الإنترنت، ثم تُغلق الجلسة من شاشة الطاولات.")}</p>
+            <p className="mt-0.5 text-xs text-muted">{t("سيُرسل تلقائيًا عند عودة الإنترنت، وتُغلق الجلسة معه.")}</p>
           </div>
         </Card>
       ) : !isPaid && !can("record_payment") ? (

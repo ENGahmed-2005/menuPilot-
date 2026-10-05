@@ -23,7 +23,9 @@ import "./index.css";
 // Bundled fonts + service worker: the app opens and keeps working offline (docs/offline.md).
 import "./fonts";
 import { registerServiceWorker } from "./offline/register";
+import { startOutbox } from "./offline/outbox";
 registerServiceWorker();
+startOutbox();
 
 // 1) document.getElementById("root") → نبحث عن <div id="root"> في index.html
 // 2) createRoot(...) → نُنشئ "جذر" React داخل ذلك العنصر

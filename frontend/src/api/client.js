@@ -4,8 +4,8 @@ import { sessionHeaders, sessionIdFromPath } from '../utils/sessionToken';
 import { markOffline, noteResponse } from '../offline/connectivity';
 import { clearOfflineData } from '../offline/storage';
 import { enqueue, hasBacklog, matchRule, newIdempotencyKey, setSender } from '../offline/outbox';
+import { API_BASE_URL as BASE_URL } from './baseUrl';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 const TOKEN_KEY = 'menupilot_token';
 

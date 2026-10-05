@@ -8,17 +8,17 @@ their changes when the connection returns.
 
 | Screen action | Offline behaviour |
 | --- | --- |
-| Open the app / any screen | Works: the service worker has the app files and fonts. |
+| Open the app / any screen | Works: the service worker has the app files and fonts. Staff see an offline banner; public pages don't. |
 | See orders, tables, bills, menu | Shows the **last saved answer** of each call, with a banner and its time. |
 | Kitchen: change an order's status | Shown at once, marked «بانتظار المزامنة», sent later. |
-| Cashier: record a payment, close a session, cancel an order/item, resolve a call | Saved on the device, sent later (a saved payment can't be taken twice). |
+| Cashier: record a payment, close a session, resolve a waiter call | Saved on the device, sent later (a saved payment can't be taken twice). |
 | New orders from guests' phones | **Not received** until the connection returns — the kitchen can't fetch what the server hasn't sent. |
 | Everything else (login, menu editing, guest ordering…) | Fails with the usual «تعذّر الاتصال» message. |
 
 ## How it works
 
 - `frontend/src/sw.js` — precaches the build; `GET /api/*` is **network first
-  (3 s)** and falls back to the saved copy, marked `X-Menupilot-Cache`.
+  (5 s)** and falls back to the saved copy, marked `X-Menupilot-Cache`.
   Writes are never handled here: Safari has no Background Sync.
 - `offline/connectivity.js` — «online» means our own calls reach the server (a
   router with no internet still reports `navigator.onLine = true`). While
@@ -27,12 +27,19 @@ their changes when the connection returns.
   - which calls may wait is the `RULES` table;
   - a new change queues behind older ones, so order is kept;
   - each carries an `Idempotency-Key`; the API (`Idempotency` middleware)
-    replays the first answer for a repeated key instead of running it twice;
-  - temporary failures (network, 5xx, 401, 429) are retried; a change the
-    server refuses (order cancelled meanwhile…) goes to a **failed** list shown
-    in the banner, to retry or dismiss — nothing is dropped silently;
+    replays the first answer for a repeated key from the same account (also
+    after signing in again) instead of running it twice;
+  - offline: it waits; an expired login (401): it waits for a new sign-in and
+    the banner says why; 5xx/408/429: retried up to 5 times, then it is given
+    up; a change the server refuses (order cancelled meanwhile…) goes straight
+    to the **failed** list in the banner, to retry or dismiss;
+  - an op is kept in the tab's memory until IndexedDB confirms it, so a
+    failed write (private mode, full quota) never makes it disappear;
   - changes belong to the user who made them and are only sent under that user.
-- Saved answers and the saved user are removed on sign-out (`offline/storage.js`).
+- Saved answers and the saved user are removed on sign-out and when the server
+  rejects the login (`offline/storage.js`).
+- After a sync the `menupilot:outbox-synced` event makes the kitchen, tables
+  and bill screens re-read the server.
 
 ## Adding another action to the queue
 

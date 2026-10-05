@@ -14,6 +14,7 @@ import { formatTime } from "../../utils/formatDateTime";
 import { countAr, AR } from "../../utils/plural";
 import { locale, t } from "../../i18n";
 
+const MAX_SHOWN = 3; // failed changes listed at once
 const pill = "pointer-events-auto flex max-w-xl items-center gap-2.5 rounded-2xl px-4 py-2.5 text-sm font-bold text-paper shadow-lg";
 
 export default function ConnectionBanner() {
@@ -30,7 +31,7 @@ export default function ConnectionBanner() {
   if (online && !update && !pending.length && !failed.length) return null;
 
   return (
-    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] z-[80] flex flex-col items-center gap-2">
+    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] z-[45] flex flex-col items-center gap-2">
       {!online && (
         <div className={`${pill} bg-brick`}>
           <WifiOff size={18} aria-hidden="true" className="shrink-0" />
@@ -47,6 +48,7 @@ export default function ConnectionBanner() {
             {online || syncing
               ? t("جارٍ إرسال {0} إلى الخادم…", { 0: countAr(pending.length, AR.operations) })
               : t("{0} محفوظة على هذا الجهاز وستُرسل عند عودة الإنترنت.", { 0: countAr(pending.length, AR.operations) })}
+            {pending[0].error && <span className="block text-xs font-medium text-paper/80">{pending[0].error}</span>}
           </span>
         </div>
       )}
@@ -54,7 +56,7 @@ export default function ConnectionBanner() {
         <div className={`${pill} flex-col items-stretch bg-brick`}>
           <p className="flex items-center gap-2"><AlertTriangle size={18} aria-hidden="true" className="shrink-0" />{t("تعذّر إرسال بعض العمليات المحفوظة:")}</p>
           <ul className="space-y-2">
-            {failed.slice(0, 3).map((op) => (
+            {failed.slice(0, MAX_SHOWN).map((op) => (
               <li key={op.key} className="rounded-xl bg-black/15 p-2.5 font-medium">
                 <p className="font-bold">{op.label}</p>
                 <p className="text-xs opacity-90">{op.error}</p>
@@ -65,7 +67,7 @@ export default function ConnectionBanner() {
               </li>
             ))}
           </ul>
-          {failed.length > 3 && <p className="text-xs">{t("و{0} أخرى.", { 0: failed.length - 3 })}</p>}
+          {failed.length > MAX_SHOWN && <p className="text-xs">{t("و{0} أخرى.", { 0: failed.length - MAX_SHOWN })}</p>}
         </div>
       )}
       {update && (

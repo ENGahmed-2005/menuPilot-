@@ -7,13 +7,13 @@
    server every few seconds and announces the return.
    ========================================================================== */
 import { useSyncExternalStore } from "react";
+import { API_BASE_URL } from "../api/baseUrl";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 const PROBE_MS = 8000;
 const PROBE_TIMEOUT_MS = 6000;
 export const BACK_ONLINE = "menupilot:back-online";
 
-let state = { online: true, lastSyncAt: null, savedAt: null };
+let state = { online: true, savedAt: null };
 const listeners = new Set();
 let probeTimer = null;
 
@@ -26,7 +26,7 @@ function set(patch) {
 
 async function probe() {
   try {
-    const origin = new URL(BASE_URL, window.location.href).origin;
+    const origin = new URL(API_BASE_URL, window.location.href).origin;
     // no-cors: we only need to know the server answered, not read the answer.
     await fetch(`${origin}/up`, { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
     markOnline();
@@ -46,7 +46,7 @@ function stopProbing() {
 /** A call reached the server. */
 export function markOnline() {
   const wasOffline = !state.online;
-  set({ online: true, lastSyncAt: Date.now(), savedAt: null });
+  set({ online: true, savedAt: null });
   stopProbing();
   if (wasOffline) window.dispatchEvent(new Event(BACK_ONLINE));
 }
@@ -63,7 +63,6 @@ export function noteResponse(response) {
   else markOnline();
 }
 
-export const isOnline = () => state.online;
 export const getConnectivity = () => state;
 const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 export const useConnectivity = () => useSyncExternalStore(subscribe, getConnectivity, getConnectivity);

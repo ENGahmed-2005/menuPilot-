@@ -25,7 +25,8 @@ import { AR, countAr } from "../../utils/plural";
 import { t, locale } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import { restaurantChannel, useLive } from "../../realtime";
-import { queuedOrderStatuses, useOutbox } from "../../offline/outbox";
+import { SYNCED, queuedOrderStatuses, useOutbox } from "../../offline/outbox";
+import { useConnectivity } from "../../offline/connectivity";
 import ItemOptions from "../../components/orders/ItemOptions";
 
 const FLOW = ["pending", "preparing", "ready", "served"];
@@ -66,8 +67,11 @@ export default function KitchenDashboard() {
   useEffect(() => {
     load();
     const clock = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(clock);
+    window.addEventListener(SYNCED, load); // status changes saved offline were just sent
+    return () => { clearInterval(clock); window.removeEventListener(SYNCED, load); };
   }, [load]);
+  // Saved data shown offline is not "live", whatever the last call said.
+  const { online } = useConnectivity();
   // New and changed orders arrive the moment they happen (timer until the socket is up).
   const { user } = useAuth();
   const live = useLive({ channel: restaurantChannel(user), isPrivate: true, topics: ["orders"], onSignal: load, pollMs: POLL_MS });
@@ -146,7 +150,7 @@ export default function KitchenDashboard() {
         <header className="flex flex-wrap items-center gap-3 border-b border-white/10 px-5 py-3">
           <ChefHat size={24} aria-hidden="true" />
           <h1 className="text-xl font-extrabold">{t("المطبخ")}</h1>
-          <LiveIndicator connected={connected} live={live} />
+          <LiveIndicator connected={connected && online} live={live} />
           {counts.late > 0 && <span className="rounded-full bg-brick px-3 py-1 text-base font-extrabold text-white">{countAr(counts.late, AR.lateOrders)}</span>}
           <span className="num ms-auto text-2xl font-extrabold tabular-nums" aria-label={t("الساعة")}>{new Date(now).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</span>
           <Button variant="secondary" onClick={leaveWall}><Minimize2 size={16} aria-hidden="true" /> {t("الخروج")}</Button>
@@ -177,7 +181,7 @@ export default function KitchenDashboard() {
       <PageHeader
         title={t("شاشة المطبخ")}
         subtitle={t("الطلبات المتأخرة تظهر أولًا. اضغط الزر في كل تذكرة لنقلها إلى المرحلة التالية.")}
-        meta={<LiveIndicator connected={connected} live={live} />}
+        meta={<LiveIndicator connected={connected && online} live={live} />}
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={load}><RefreshCw size={15} aria-hidden="true" /> {t("تحديث")}</Button>

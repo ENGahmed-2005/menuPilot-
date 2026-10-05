@@ -10,7 +10,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { login as apiLogin, logout as apiLogout, register as apiRegister, fetchCurrentUser } from "../api/auth";
 import { getToken } from "../api/client";
 import { startDemo as apiStartDemo } from "../api/demo";
-import { saveUser, savedUser } from "../offline/storage";
+import { clearOfflineData, saveUser, savedUser } from "../offline/storage";
 
 const AuthContext = createContext(null);
 
@@ -29,7 +29,10 @@ export function AuthProvider({ children }) {
     fetchCurrentUser()
       .then(setUser)
       // No connection is not a sign-out: open with the user saved on this device.
-      .catch((err) => setUser(err?.status === 0 ? savedUser() : null)) // وإلا توكن منتهي أو غير صالح
+      .catch((err) => {
+        if (err?.status === 401) clearOfflineData(); // توكن منتهي أو غير صالح: لا نعيده دون اتصال
+        setUser(err?.status === 0 ? savedUser() : null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -44,7 +47,7 @@ export function AuthProvider({ children }) {
     const refresh = () => {
       if (document.visibilityState === "hidden") return;
       // 401 = access revoked (disabled, role or password changed): back to login.
-      fetchCurrentUser().then(setUser).catch((err) => { if (err?.status === 401) setUser(null); });
+      fetchCurrentUser().then(setUser).catch((err) => { if (err?.status === 401) { clearOfflineData(); setUser(null); } });
     };
     const timer = setInterval(refresh, 30000);
     window.addEventListener("focus", refresh);
