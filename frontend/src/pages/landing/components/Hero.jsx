@@ -82,10 +82,10 @@ export default function Hero({ onNavigate }) {
             </a>
           </div>
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#F3EFE5]/70">
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> {t("طلبات QR")}</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> {t("إدارة المطبخ")}</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> {t("فواتير ومدفوعات")}</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#4B6A8A]" /> {t("تجربة مجانية 14 يومًا")}</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("طلبات QR")}</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("إدارة المطبخ")}</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("فواتير ومدفوعات")}</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("تجربة مجانية 14 يومًا")}</span>
           </div>
         </Reveal>
 

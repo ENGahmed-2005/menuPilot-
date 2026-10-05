@@ -7,7 +7,7 @@
    ========================================================================== */
 import { useEffect, useState } from "react";
 import { BarChart3, Bike, CalendarCheck, Check, ChefHat, Inbox, Palette, QrCode, Radio, Receipt, Wallet } from "lucide-react";
-import Reveal from "./Reveal";
+import SectionHeading from "./SectionHeading";
 import { t } from "../../../i18n";
 import { shot } from "./shots";
 const STEP_MS = 6500;
@@ -95,10 +95,9 @@ export default function ProductTour() {
   return (
     <section id="features" className="mx-auto max-w-7xl scroll-mt-24 px-5 py-20 sm:px-8 lg:px-10 lg:py-24"
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={() => setPaused(false)}>
-      <Reveal className="max-w-2xl">
-        <h2 className="text-3xl font-black leading-tight sm:text-4xl">{t("كل ما يحتاجه مطعمك، في نظام واحد.")}</h2>
-        <p className="mt-3 text-base leading-7 text-[#F3EFE5]/70">{t("اختر جزءًا لترى شاشته الحقيقية من النظام، من طاولة الزبون إلى أرباح الشهر.")}</p>
-      </Reveal>
+      <SectionHeading eyebrow={t("المميزات")} title={t("كل ما يحتاجه مطعمك، في نظام واحد.")}>
+        {t("اختر جزءًا لترى شاشته الحقيقية من النظام، من طاولة الزبون إلى أرباح الشهر.")}
+      </SectionHeading>
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-start lg:gap-10">
         <div role="tablist" aria-label={t("أجزاء menuPilot")} className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0">
           {FEATURES.map((x, i) => {

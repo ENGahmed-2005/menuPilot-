@@ -1,29 +1,10 @@
 /* ==========================================================================
    data.js — محتوى نصّي/بيانات ثابتة لأقسام صفحة الهبوط، منفصلة عن الأقسام
-   نفسها (Features.jsx, HowItWorks.jsx, Roles.jsx) عشان أي تعديل نصّي يصير
+   نفسها (HowItWorks.jsx, Roles.jsx, Navbar/Footer) عشان أي تعديل نصّي يصير
    من مكان واحد بدل البحث جوّا JSX.
    ========================================================================== */
-import {
-  ChefHat,
-  ClipboardList,
-  LayoutDashboard,
-  QrCode,
-  ShieldCheck,
-  Smartphone,
-  Users,
-  WalletCards,
-  Bike,
-} from "lucide-react";
+import { ChefHat, Smartphone, Users, WalletCards } from "lucide-react";
 import { t } from "../../../i18n";
-
-export const FEATURES = [
-  { icon: QrCode, title: t("طلب عبر QR"), text: t("الزبون يمسح الكود، يفتح المنيو، ويطلب مباشرة من الطاولة بدون انتظار.") },
-  { icon: LayoutDashboard, title: t("لوحة تحكم موحدة"), text: t("إدارة المنيو والطلبات والطاولات والفواتير من مكان واحد.") },
-  { icon: ChefHat, title: t("تشغيل المطبخ"), text: t("الطلبات تصل للمطبخ بشكل واضح مع متابعة حالة كل طلب لحظة بلحظة.") },
-  { icon: WalletCards, title: t("فواتير ومدفوعات"), text: t("تنظيم الفواتير والمدفوعات وتقليل الأخطاء في نهاية كل جلسة.") },
-  { icon: Bike, title: t("طلب أونلاين بلا عمولة"), text: t("استلام وتوصيل من رابط المطعم، مع تتبع حي للطلب وتأكيد الفاتورة على واتساب.") },
-  { icon: ShieldCheck, title: t("صلاحيات متعددة"), text: t("المالك والمطبخ والكاشير والنادل، لكل دور مساحة عمل مناسبة له.") },
-];
 
 export const STEPS = [
   ["01", t("امسح QR"), t("الزبون يصل إلى المنيو من خلال كود الطاولة.")],

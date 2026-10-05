@@ -6,6 +6,7 @@
    ========================================================================== */
 import { useEffect, useState } from "react";
 import { AlertTriangle, CloudUpload, RefreshCw, WifiOff } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import { useConnectivity } from "../../offline/connectivity";
 import { dismiss, retry, useOutbox } from "../../offline/outbox";
 import { applyUpdate, onUpdateWaiting, updateWaiting } from "../../offline/register";
@@ -16,7 +17,12 @@ import { locale, t } from "../../i18n";
 const pill = "pointer-events-auto flex max-w-xl items-center gap-2.5 rounded-2xl px-4 py-2.5 text-sm font-bold text-paper shadow-lg";
 
 export default function ConnectionBanner() {
-  const { online, savedAt } = useConnectivity();
+  const { isAuthenticated } = useAuth();
+  const connectivity = useConnectivity();
+  // The offline notice is for staff screens; a visitor of the landing page or a
+  // guest menu whose call failed just sees that screen's own error.
+  const online = connectivity.online || !isAuthenticated;
+  const { savedAt } = connectivity;
   const { pending, failed, syncing } = useOutbox();
   const [update, setUpdate] = useState(updateWaiting);
   useEffect(() => onUpdateWaiting(setUpdate), []);

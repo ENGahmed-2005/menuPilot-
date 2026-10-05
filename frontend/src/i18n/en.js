@@ -1905,4 +1905,5 @@ export default {
   "تم": "done",
   "ملخص الطلب": "Order summary",
   "بعض الإضافات لم تعد متاحة. حدّث المنيو وحاول مجددًا.": "Some add-ons are no longer available. Refresh the menu and try again.",
+  "اللغة": "Language",
 };
