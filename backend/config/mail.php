@@ -70,6 +70,12 @@ return [
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
         ],
 
+        // MailerSend HTTP API with an API token (app/Mail/Transport/MailerSendTransport).
+        'mailersend' => [
+            'transport' => 'mailersend',
+            'key' => env('MAILERSEND_API_KEY', ''),
+        ],
+
         'log' => [
             'transport' => 'log',
             'channel' => env('MAIL_LOG_CHANNEL'),

@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SubscriptionAccess;
+use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
@@ -37,8 +40,21 @@ class AccountController extends Controller
             'payment_methods.wallet.account_name' => 'nullable|string|max:255',
             'payment_methods.wallet.account_number' => 'nullable|string|max:100',
             'payment_methods.wallet.qr_url' => 'nullable|url|max:1000',
+            'payment_methods.cash' => 'nullable|array',
+            'payment_methods.cash.enabled' => 'nullable|boolean',
+            'payment_methods.cash.note' => 'nullable|string|max:255',
+            // Dine-in: pay before the kitchen prepares, or after eating.
+            'payment_timing' => 'nullable|in:before,after',
         ]);
 
+        // Guests must always have at least one way to pay.
+        if (isset($validated['payment_methods'])) {
+            $pm = $validated['payment_methods'];
+            $anyOn = ($pm['cash']['enabled'] ?? true) || ($pm['bank']['enabled'] ?? false) || ($pm['wallet']['enabled'] ?? false);
+            if (! $anyOn) {
+                return response()->json(['message' => 'فعّل طريقة دفع واحدة على الأقل ليستطيع الزبائن الدفع.', 'errors' => ['payment_methods' => ['none_enabled']]], 422);
+            }
+        }
         $user->update([...$validated, 'name' => $validated['restaurant_name']]);
 
         return response()->json(['data' => $user->fresh()]);
@@ -46,13 +62,30 @@ class AccountController extends Controller
 
     public function plan(Request $request)
     {
-        $v = $request->validate(['plan' => 'required|in:basic,pro,premium']);
-        $request->user()->update([
-            'plan' => $v['plan'],
-            'subscription_started_at' => now(),
+        $v = $request->validate([
+            'plan' => ['required', Rule::in(SubscriptionPlans::acceptedPlans())],
+            'addons' => ['sometimes', 'array', 'max:10'],
+            'addons.*' => ['string', 'distinct', Rule::in(array_keys(SubscriptionPlans::addons()))],
         ]);
+        [$plan, $addons] = SubscriptionPlans::normalize($v['plan'], $v['addons'] ?? []);
+        if ($conflict = SubscriptionPlans::incompatibility($plan, $addons)) {
+            return response()->json(['message' => $conflict, 'errors' => ['addons' => [$conflict]], 'code' => 'ADDON_NOT_AVAILABLE'], 422);
+        }
+        $user = $request->user();
 
-        return response()->json(['data' => $request->user()->fresh()]);
+        // The owner can't switch plans by themselves (that used to activate a
+        // paid plan without payment). The choice is recorded; the platform
+        // activates it once the payment is confirmed (admin → plan).
+        $user->forceFill(['requested_plan' => $plan, 'requested_addons' => $addons, 'plan_requested_at' => now()])->save();
+        SubscriptionAccess::event('subscription_requested', $user->id, ['plan' => $plan, 'addons' => $addons]);
+
+        $fresh = $user->fresh();
+        $fresh->setAttribute('subscription', SubscriptionAccess::for($fresh)->toArray());
+
+        return response()->json(['data' => $fresh, 'meta' => [
+            'status' => 'pending_payment',
+            'message' => 'سجّلنا اختيارك للخطة. تُفعَّل فور تأكيد الدفع من فريق menuPilot، وبياناتك محفوظة حتى ذلك الحين.',
+        ]], 202);
     }
 
     public function theme(Request $request)
@@ -65,6 +98,7 @@ class AccountController extends Controller
         // Reset is always allowed and restores the default dashboard theme.
         if ($theme === null) {
             $user->update(['theme' => null]);
+
             return response()->json(['data' => $user->fresh()]);
         }
 
@@ -80,11 +114,11 @@ class AccountController extends Controller
         $preset = $validated['theme']['preset'];
         $requiredFeature = $preset === 'custom' ? 'custom-theme' : 'theme-presets';
 
-        if (!$user->hasFeature($requiredFeature)) {
+        if (! $user->hasFeature($requiredFeature)) {
             return response()->json([
                 'message' => $preset === 'custom'
-                    ? 'Custom themes require Premium or an active Trial.'
-                    : 'Theme presets require Pro, Premium, or an active Trial.',
+                    ? 'الألوان المخصصة تحتاج إضافة «الهوية الكاملة» مع الخطة الاحترافية، أو تجربة مجانية سارية.'
+                    : 'الثيمات الجاهزة تحتاج الخطة الاحترافية، أو تجربة مجانية سارية.',
             ], 403);
         }
 

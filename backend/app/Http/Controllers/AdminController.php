@@ -3,7 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\Audit;
+use App\Support\RestaurantFeatures;
+use App\Support\SubscriptionAccess;
+use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -17,11 +26,19 @@ class AdminController extends Controller
         if (! $this->guard($r)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
-        User::where('role', 'owner')->get()->each->refreshSubscriptionStatus();
 
-        return response()->json(['data' => User::where('role', 'owner')->with('restaurantSetting')->get([
-            'id', 'restaurant_name', 'email', 'plan', 'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at', 'created_at',
-        ])]);
+        $owners = User::where('role', 'owner')->with('restaurantSetting')->get([
+            'id', 'name', 'restaurant_name', 'restaurant_phone', 'email', 'plan',
+            'trial_started_at', 'trial_ends_at', 'subscription_started_at', 'subscription_ends_at', 'created_at',
+            'is_active', 'last_active_at', 'role', 'subscription_status', 'subscription_cancelled_at',
+            'requested_plan', 'plan_requested_at', 'subscription_notices',
+        ]);
+
+        return response()->json(['data' => $owners->map(function ($u) {
+            $u->setAttribute('subscription', SubscriptionAccess::forOwner($u)->sync()->toArray());
+
+            return $u;
+        })]);
     }
 
     public function plan(Request $r, $id)
@@ -29,11 +46,97 @@ class AdminController extends Controller
         if (! $this->guard($r)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
-        $v = $r->validate(['plan' => 'required|in:basic,pro,premium']);
-        $u = User::findOrFail($id);
-        $u->update(['plan' => $v['plan'], 'subscription_started_at' => now()]);
+
+        $v = $r->validate([
+            'plan' => ['required', Rule::in(SubscriptionPlans::acceptedPlans())],
+            'addons' => ['sometimes', 'array', 'max:10'],
+            'addons.*' => ['string', 'distinct', Rule::in(array_keys(SubscriptionPlans::addons()))],
+        ]);
+        $u = User::where('role', 'owner')->findOrFail($id);
+        $explicit = array_key_exists('addons', $v);
+        [$plan, $addons] = SubscriptionPlans::normalize($v['plan'], $explicit ? $v['addons'] : ($u->addons ?? []));
+        if (! $explicit) {
+            // Plan changed alone: keep the add-ons the new plan can still take.
+            $addons = array_values(array_filter($addons, fn ($a) => ! SubscriptionPlans::incompatibility($plan, [$a])));
+        } elseif ($conflict = SubscriptionPlans::incompatibility($plan, $addons)) {
+            return response()->json(['message' => $conflict, 'errors' => ['addons' => [$conflict]], 'code' => 'ADDON_NOT_AVAILABLE'], 422);
+        }
+        $before = ['plan' => $u->plan, 'addons' => array_values($u->addons ?? [])];
+        // Manual activation after payment: full access is restored immediately.
+        $u->forceFill([
+            'plan' => $plan, 'addons' => $addons, 'subscription_started_at' => now(), 'subscription_ends_at' => null,
+            'subscription_cancelled_at' => null, 'requested_plan' => null, 'requested_addons' => null, 'plan_requested_at' => null,
+            'subscription_status' => SubscriptionAccess::ACTIVE,
+        ])->save();
+        Audit::log($r, 'admin.plan_changed', 'restaurant', $u->id, ['from' => $before['plan'], 'to' => $plan, 'addons_from' => $before['addons'], 'addons_to' => $addons], $u->id);
+        SubscriptionAccess::event('subscription_activated', $u->id, ['plan' => $plan, 'addons' => $addons, 'by' => $r->user()->id]);
 
         return response()->json(['data' => $u->fresh()]);
+    }
+
+    /** The restaurant's features: plan defaults, admin overrides, result. */
+    private function featureSheet(User $u): array
+    {
+        $defaults = SubscriptionPlans::defaultsFor($u->plan, $u->addons ?? []);
+        $overrides = RestaurantFeatures::effectiveOverrides($u->feature_overrides, $defaults);
+        $enabled = $u->entitlements();
+
+        return [
+            'plan' => $u->plan,
+            'plan_label' => $u->plan === 'trial' ? 'التجربة المجانية' : SubscriptionPlans::label($u->plan, $u->addons ?? []),
+            'overrides' => $overrides,
+            'groups' => array_map(fn ($group) => [
+                'title' => $group['title'],
+                'items' => array_map(fn ($key) => [
+                    'key' => $key,
+                    'label' => $group['items'][$key],
+                    'enabled' => in_array($key, $enabled, true),
+                    'from_plan' => in_array($key, $defaults, true),
+                    'override' => in_array($key, $overrides['grant'], true) ? 'grant' : (in_array($key, $overrides['revoke'], true) ? 'revoke' : null),
+                ], array_keys($group['items'])),
+            ], RestaurantFeatures::GROUPS),
+        ];
+    }
+
+    /** GET admin/restaurants/{id}/features */
+    public function features(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        return response()->json(['data' => $this->featureSheet(User::where('role', 'owner')->findOrFail($id))]);
+    }
+
+    /**
+     * PUT admin/restaurants/{id}/features {features: [...] | null}
+     * The full list the restaurant should have (like staff permissions);
+     * null restores the plan's defaults. Stored as grants/revokes so a later
+     * plan change keeps the admin's decisions.
+     */
+    public function updateFeatures(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $v = $r->validate([
+            'features' => ['present', 'nullable', 'array'],
+            'features.*' => ['string', 'distinct', Rule::in(RestaurantFeatures::keys())],
+        ]);
+        $u = User::where('role', 'owner')->findOrFail($id);
+        $defaults = SubscriptionPlans::defaultsFor($u->plan, $u->addons ?? []);
+        $before = RestaurantFeatures::effectiveOverrides($u->feature_overrides, $defaults);
+        $overrides = $v['features'] === null ? null : RestaurantFeatures::overridesFor($v['features'], $defaults);
+
+        $u->forceFill(['feature_overrides' => $overrides])->save();
+        Audit::log($r, 'admin.restaurant_features_changed', 'restaurant', $u->id, [
+            'before' => $before,
+            'after' => $overrides ?? ['grant' => [], 'revoke' => []],
+            'reset' => $v['features'] === null,
+        ], $u->id);
+
+        return response()->json(['data' => $this->featureSheet($u->fresh())]);
     }
 
     public function extendTrial(Request $r, $id)
@@ -41,11 +144,250 @@ class AdminController extends Controller
         if (! $this->guard($r)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
+
         $v = $r->validate(['days' => 'required|integer|min:1|max:365']);
-        $u = User::findOrFail($id);
+        $u = User::where('role', 'owner')->findOrFail($id);
         $base = $u->trial_ends_at && $u->trial_ends_at->isFuture() ? $u->trial_ends_at : now();
-        $u->update(['plan' => 'trial', 'trial_started_at' => $u->trial_started_at ?: now(), 'trial_ends_at' => $base->copy()->addDays($v['days'])]);
+        $u->update([
+            'plan' => 'trial',
+            'trial_started_at' => $u->trial_started_at ?: now(),
+            'trial_ends_at' => $base->copy()->addDays($v['days']),
+        ]);
+        $u->forceFill(['subscription_cancelled_at' => null, 'subscription_notices' => null])->save(); // milestones restart for the new end date
+        Audit::log($r, 'admin.trial_extended', 'restaurant', $u->id, ['days' => $v['days'], 'trial_ends_at' => (string) $u->trial_ends_at], $u->id);
+        SubscriptionAccess::for($u->fresh())->sync();
 
         return response()->json(['data' => $u->fresh()]);
+    }
+
+    public function updateOwner(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $u = User::where('role', 'owner')->findOrFail($id);
+        $v = $r->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,'.$u->id,
+            'restaurant_name' => 'nullable|string|max:255',
+            'restaurant_phone' => 'nullable|string|max:50',
+        ]);
+        $u->update($v);
+        Audit::log($r, 'admin.owner_updated', 'user', $u->id, ['fields' => array_keys($v)], $u->id);
+
+        return response()->json(['data' => $u->fresh()]);
+    }
+
+    /**
+     * POST admin/restaurants — create a restaurant (owner account) from the
+     * admin panel. The password is generated when not given and returned once.
+     */
+    public function storeRestaurant(Request $r)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $v = $r->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'restaurant_name' => 'required|string|max:255',
+            'restaurant_phone' => 'nullable|string|max:50',
+            'plan' => ['nullable', Rule::in(['trial', ...SubscriptionPlans::acceptedPlans()])],
+            'addons' => ['sometimes', 'array', 'max:10'],
+            'addons.*' => ['string', 'distinct', Rule::in(array_keys(SubscriptionPlans::addons()))],
+            'password' => 'nullable|string|min:8',
+        ]);
+        [$plan, $addons] = SubscriptionPlans::normalize($v['plan'] ?? 'trial', $v['addons'] ?? []);
+        if ($plan === 'trial') {
+            $addons = []; // a trial already includes everything
+        } elseif ($conflict = SubscriptionPlans::incompatibility($plan, $addons)) {
+            return response()->json(['message' => $conflict, 'errors' => ['addons' => [$conflict]], 'code' => 'ADDON_NOT_AVAILABLE'], 422);
+        }
+        $password = $v['password'] ?? 'MP-'.Str::upper(Str::random(6)).'-'.random_int(100, 999);
+        $now = now();
+
+        $owner = User::create([
+            'name' => $v['name'],
+            'email' => Str::lower(trim($v['email'])),
+            'restaurant_name' => $v['restaurant_name'],
+            'restaurant_phone' => $v['restaurant_phone'] ?? null,
+            'password' => Hash::make($password),
+            'role' => 'owner',
+            'plan' => $plan,
+            'is_active' => true,
+            'trial_started_at' => $plan === 'trial' ? $now : null,
+            'trial_ends_at' => $plan === 'trial' ? $now->copy()->addDays(14) : null,
+            'subscription_started_at' => $plan === 'trial' ? null : $now,
+        ]);
+        if ($addons) {
+            $owner->forceFill(['addons' => $addons])->save();
+        }
+        Audit::log($r, 'admin.restaurant_created', 'restaurant', $owner->id, ['restaurant' => $owner->restaurant_name, 'plan' => $plan, 'addons' => $addons], $owner->id);
+
+        return response()->json(['data' => ['restaurant' => $owner->fresh(), 'generated_password' => isset($v['password']) ? null : $password]], 201);
+    }
+
+    /**
+     * DELETE admin/restaurants/{id} {confirm_email}
+     * Permanently removes a restaurant: owner, staff accounts, tables, menu,
+     * sessions, orders and payments. Requires typing the owner's email and is
+     * refused while a table has an active dining session.
+     */
+    public function destroyRestaurant(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $owner = User::where('role', 'owner')->findOrFail($id);
+        $r->validate(['confirm_email' => 'required|string']);
+        if (Str::lower(trim($r->input('confirm_email'))) !== Str::lower($owner->email)) {
+            return response()->json(['message' => 'البريد المدخل لا يطابق بريد صاحب المطعم.', 'code' => 'CONFIRMATION_MISMATCH'], 422);
+        }
+
+        $tableIds = DB::table('restaurant_tables')->where('user_id', $owner->id)->pluck('id');
+        $sessionIds = DB::table('dining_sessions')->whereIn('restaurant_table_id', $tableIds)->pluck('id');
+        if (DB::table('dining_sessions')->whereIn('id', $sessionIds)->whereNull('closed_at')->exists()) {
+            return response()->json(['message' => 'في المطعم جلسات طاولات مفتوحة. يجب إغلاقها قبل الحذف.', 'code' => 'RESTAURANT_HAS_ACTIVE_SESSIONS'], 409);
+        }
+
+        $snapshot = ['restaurant' => $owner->restaurant_name, 'email' => $owner->email, 'plan' => $owner->plan];
+        DB::transaction(function () use ($owner, $sessionIds) {
+            // Children first, so this works whether or not every FK cascades.
+            $orderIds = DB::table('orders')->where('user_id', $owner->id)->orWhereIn('dining_session_id', $sessionIds)->pluck('id');
+            foreach (['order_status_histories' => 'order_id', 'order_items' => 'order_id'] as $table => $column) {
+                if (Schema::hasTable($table)) {
+                    DB::table($table)->whereIn($column, $orderIds)->delete();
+                }
+            }
+            if (Schema::hasTable('bill_adjustments')) {
+                DB::table('bill_adjustments')->whereIn('dining_session_id', $sessionIds)->delete();
+            }
+            DB::table('payments')->whereIn('dining_session_id', $sessionIds)->delete();
+            DB::table('orders')->whereIn('id', $orderIds)->delete();
+            DB::table('assistance_requests')->whereIn('dining_session_id', $sessionIds)->delete();
+            DB::table('dining_sessions')->whereIn('id', $sessionIds)->delete();
+
+            $staffUserIds = DB::table('staff')->where('user_id', $owner->id)->pluck('account_user_id')->filter();
+            DB::table('staff')->where('user_id', $owner->id)->delete();
+            User::whereIn('id', $staffUserIds)->where('role', '!=', 'admin')->delete();
+            $owner->delete(); // cascades tables, menu, categories, branding
+        });
+        Audit::log($r, 'admin.restaurant_deleted', 'restaurant', (int) $id, $snapshot, null);
+
+        return response()->json(['data' => ['message' => 'Deleted']]);
+    }
+
+    /** POST admin/restaurants/{id}/subscription/cancel — stops the plan now (data kept). */
+    public function cancelSubscription(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $u = User::where('role', 'owner')->findOrFail($id);
+        $u->forceFill(['subscription_cancelled_at' => now(), 'subscription_ends_at' => now(), 'subscription_status' => SubscriptionAccess::CANCELLED])->save();
+        SubscriptionAccess::event('subscription_cancelled', $u->id, ['by' => $r->user()->id, 'plan' => $u->plan]);
+        $u->setAttribute('subscription', SubscriptionAccess::forOwner($u->fresh())->toArray());
+
+        return response()->json(['data' => $u]);
+    }
+
+    /**
+     * PATCH admin/owners/{id}/status {active}
+     * Disabling an owner revokes their token and blocks their whole restaurant
+     * (staff are rejected by ApiAuth while the owner is inactive). Records are kept.
+     */
+    public function ownerStatus(Request $r, $id)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $v = $r->validate(['active' => 'required|boolean']);
+        $u = User::where('role', 'owner')->findOrFail($id);
+        $u->update(['is_active' => $v['active']] + ($v['active'] ? [] : ['api_token' => null]));
+        Audit::log($r, $v['active'] ? 'admin.owner_enabled' : 'admin.owner_disabled', 'user', $u->id, [], $u->id);
+
+        return response()->json(['data' => $u->fresh()]);
+    }
+
+    public function reports(Request $r)
+    {
+        if (! $this->guard($r)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $days = min(max((int) $r->query('days', 30), 7), 365);
+        $from = now()->startOfDay()->subDays($days - 1);
+
+        $owners = User::where('role', 'owner');
+        $totalRestaurants = (clone $owners)->count();
+        $activeRestaurants = (clone $owners)
+            ->where(function ($q) {
+                $q->whereIn('plan', SubscriptionPlans::plans())
+                    ->orWhere(function ($trial) {
+                        $trial->where('plan', 'trial')->where('trial_ends_at', '>', now());
+                    });
+            })->count();
+        $trialRestaurants = (clone $owners)->where('plan', 'trial')->count();
+        $paidRestaurants = (clone $owners)->whereIn('plan', SubscriptionPlans::plans())->count();
+
+        $ordersQuery = DB::table('orders')->where('orders.created_at', '>=', $from);
+        $totalOrders = (clone $ordersQuery)->count();
+        $completedOrders = (clone $ordersQuery)->whereIn('status', ['served', 'completed'])->count();
+        $pendingOrders = (clone $ordersQuery)->whereIn('status', ['pending', 'preparing', 'ready'])->count();
+        $cancelledOrders = (clone $ordersQuery)->where('status', 'cancelled')->count();
+
+        $paymentsQuery = DB::table('payments')->where('paid_at', '>=', $from);
+        $revenue = (float) (clone $paymentsQuery)->sum('amount');
+        $paymentsCount = (clone $paymentsQuery)->count();
+        $averagePayment = $paymentsCount ? round($revenue / $paymentsCount, 2) : 0;
+
+        $dailyOrders = DB::table('orders')
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as orders')
+            ->where('created_at', '>=', $from)
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->orderBy('date')
+            ->get();
+
+        $dailyRevenue = DB::table('payments')
+            ->selectRaw('DATE(paid_at) as date, SUM(amount) as revenue')
+            ->where('paid_at', '>=', $from)
+            ->groupBy(DB::raw('DATE(paid_at)'))
+            ->orderBy('date')
+            ->get();
+
+        $revenueByDate = $dailyRevenue->keyBy('date');
+        $trend = $dailyOrders->map(fn ($row) => [
+            'date' => $row->date,
+            'orders' => (int) $row->orders,
+            'revenue' => (float) ($revenueByDate[$row->date]->revenue ?? 0),
+        ])->values();
+
+        $plans = (clone $owners)->select('plan', DB::raw('COUNT(*) as count'))
+            ->groupBy('plan')->orderByDesc('count')->get();
+
+        $topRestaurants = DB::table('payments')
+            ->join('dining_sessions', 'dining_sessions.id', '=', 'payments.dining_session_id')
+            ->join('restaurant_tables', 'restaurant_tables.id', '=', 'dining_sessions.restaurant_table_id')
+            ->join('users', 'users.id', '=', 'restaurant_tables.user_id')
+            ->where('payments.paid_at', '>=', $from)
+            ->where('users.role', 'owner')
+            ->select('users.id', 'users.restaurant_name', DB::raw('COUNT(payments.id) as payments'), DB::raw('SUM(payments.amount) as revenue'))
+            ->groupBy('users.id', 'users.restaurant_name')
+            ->orderByDesc('revenue')->limit(10)->get();
+
+        return response()->json(['data' => [
+            'period' => ['days' => $days, 'from' => $from->toDateString(), 'to' => now()->toDateString()],
+            'restaurants' => compact('totalRestaurants', 'activeRestaurants', 'trialRestaurants', 'paidRestaurants'),
+            'orders' => compact('totalOrders', 'completedOrders', 'pendingOrders', 'cancelledOrders'),
+            'revenue' => compact('revenue', 'paymentsCount', 'averagePayment'),
+            'trend' => $trend,
+            'plans' => $plans,
+            'topRestaurants' => $topRestaurants,
+        ]]);
     }
 }

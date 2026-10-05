@@ -1,4 +1,6 @@
 import { mockRequest } from './mockServer';
+import { friendlyMessage } from '../utils/errors';
+import { sessionHeaders, sessionIdFromPath } from '../utils/sessionToken';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -27,20 +29,39 @@ export async function request(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  // Customer session endpoints need the session secret (see utils/sessionToken).
+  const sessionId = sessionIdFromPath(path);
+  if (sessionId) Object.assign(headers, sessionHeaders(sessionId));
+
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (cause) {
+    // Offline, DNS, CORS or server down: fetch rejects before any response.
+    const error = new Error(friendlyMessage(0));
+    error.status = 0;
+    error.friendly = true;
+    error.cause = cause;
+    throw error;
+  }
 
   const isJson = response.headers.get('content-type')?.includes('application/json');
   const data = isJson ? await response.json().catch(() => null) : null;
 
   if (!response.ok) {
-    const error = new Error(data?.message || `Request failed: ${response.status}`);
+    const error = new Error(friendlyMessage(response.status, data?.message));
     error.status = response.status;
+    // Tell the auth layer to re-read permissions (e.g. the owner just revoked one).
+    if (response.status === 403 && typeof window !== "undefined") window.dispatchEvent(new Event("menupilot:permission-denied"));
+    error.friendly = true;
+    error.serverMessage = data?.message || null;
     error.code = data?.code || null;
     error.errors = data?.errors || null;
+    error.data = data; // extra context (e.g. the open session behind a 409)
     throw error;
   }
 
@@ -52,5 +73,5 @@ export const api = {
   post: (p, b) => request(p, { method: 'POST', body: b }),
   put: (p, b) => request(p, { method: 'PUT', body: b }),
   patch: (p, b) => request(p, { method: 'PATCH', body: b }),
-  delete: (p) => request(p, { method: 'DELETE' }),
+  delete: (p, b) => request(p, { method: 'DELETE', body: b }),
 };

@@ -1,8 +1,9 @@
+import { t } from "../../i18n";
 /* ==========================================================================
    Spinner.jsx — مؤشر تحميل بسيط (بديل عن كل "Loading…" النصية المكرّرة
    بالسكافولد الحالي لصفحات owner/kitchen/cashier/waiter).
    ========================================================================== */
-export default function Spinner({ label = "جارِ التحميل…" }) {
+export default function Spinner({ label = t("جارِ التحميل…") }) {
   return (
     <div
       className="flex items-center justify-center gap-3 py-10 text-sm text-ink-soft"

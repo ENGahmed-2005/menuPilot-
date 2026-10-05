@@ -12,7 +12,7 @@
 
    بيانات وهمية (in-memory) — بترجع لحالتها الأصلية عند تحديث الصفحة (F5).
    ========================================================================== */
-import { SUBSCRIPTION_PLANS, getSubscriptionPlan } from "../config/subscriptions";
+import { SUBSCRIPTION_PLANS, compatibleAddons, getSubscriptionPlan, normalizePlan } from "../config/subscriptions";
 
 const SUBSCRIPTION_PLAN_IDS = Object.keys(SUBSCRIPTION_PLANS);
 
@@ -33,7 +33,7 @@ export const DEMO_ACCOUNTS = [
   {
     email: "owner@menupilot.test", password: "password123", role: "owner",
     name: "Ahmed Restaurant Group", restaurantName: "Coppertop Kitchen",
-    plan: "premium", theme: null, // null = يستخدم هوية menuPilot الافتراضية
+    plan: "pro", addons: ["delivery", "brand_plus"], theme: null, // null = يستخدم هوية menuPilot الافتراضية
   },
   // حسابان إضافيان لنفس الدور owner، كل واحد على باقة مختلفة — عشان تقدر
   // تجرّب فعليًا إزاي اللوحة والمزايا بتختلف حسب الباقة (basic/pro) بدون
@@ -135,6 +135,16 @@ let orders = [
   },
 ];
 
+const MOCK_ROLE_DEFAULTS = {
+  cashier: ["view_dashboard", "view_tables", "view_orders", "view_menu", "view_payments", "verify_payments", "record_payment", "adjust_bill", "close_session", "cancel_orders", "reassign_orders", "handle_assistance"],
+  waiter: ["view_tables", "view_orders", "view_menu", "cancel_orders", "reassign_orders", "handle_assistance"],
+  kitchen: ["view_orders", "manage_orders", "view_menu"],
+};
+const mockStaff = [
+  { id: 1, name: "Cashier Staff", email: "cashier@menupilot.test", phone: null, role: "cashier", active: true, custom_permissions: false, permissions: MOCK_ROLE_DEFAULTS.cashier, created_at: "2026-09-01T09:00:00Z", last_active_at: new Date().toISOString() },
+  { id: 2, name: "Waiter Staff", email: "waiter@menupilot.test", phone: "0599000111", role: "waiter", active: true, custom_permissions: false, permissions: MOCK_ROLE_DEFAULTS.waiter, created_at: "2026-09-03T09:00:00Z", last_active_at: null },
+  { id: 3, name: "Kitchen Staff", email: "kitchen@menupilot.test", phone: null, role: "kitchen", active: false, custom_permissions: false, permissions: MOCK_ROLE_DEFAULTS.kitchen, created_at: "2026-09-05T09:00:00Z", last_active_at: null },
+];
 const paidSessionIds = new Set(); // جلسات اتقفلت وتم دفعها
 
 function orderTotal(order) {
@@ -162,7 +172,7 @@ function sessionBillItems(sessionId) {
 function toUserPayload(account) {
   const base = { id: 1, email: account.email, role: account.role, restaurantName: account.restaurantName };
   if (account.role === "owner") {
-    return { ...base, plan: account.plan || "basic", theme: account.theme || null };
+    return { ...base, plan: account.plan || "basic", addons: account.addons || [], theme: account.theme || null };
   }
   return base;
 }
@@ -227,33 +237,59 @@ export async function mockRequest(method, rawPath, body, token) {
   }
 
   // ------- Admin: نظرة عامة على كل المطاعم (Platform Admin) -------
+  // ------- Admin: restaurants (same field names as the real API) -------
+  const adminOnly = () => { const a = decodeToken(token); if (!a || a.role !== "admin") fail(403, "ليس لديك صلاحية لتنفيذ هذا الإجراء."); };
+  const ownerRow = (o, i) => ({
+    id: i, email: o.email, name: o.name || o.email.split("@")[0], restaurant_name: o.restaurantName || null,
+    restaurant_phone: o.phone || null, plan: o.plan || "basic", addons: o.addons || [], is_active: o.active !== false,
+    trial_ends_at: o.trialEndsAt || null, created_at: o.createdAt || "2026-09-01T09:00:00Z",
+  });
   if (method === "GET" && path === "/admin/restaurants") {
-    const account = decodeToken(token);
-    if (!account || account.role !== "admin") fail(403, "Admins only.");
-    return owners.map((o, i) => ({
-      id: i,
-      email: o.email,
-      restaurantName: o.restaurantName || "—",
-      plan: o.plan || "basic",
-    }));
+    adminOnly();
+    return owners.map(ownerRow).filter((r) => !r.deleted && owners[r.id] && !owners[r.id].deleted && (owners[r.id].role || "owner") === "owner");
   }
-
+  if (method === "POST" && path === "/admin/restaurants") {
+    adminOnly();
+    if (owners.some((o) => o.email === body.email)) fail(422, "هذا البريد مستخدم بالفعل.");
+    owners.push({ email: body.email, name: body.name, restaurantName: body.restaurant_name, phone: body.restaurant_phone, plan: body.plan || "trial", role: "owner", trialEndsAt: new Date(Date.now() + 14 * 86400000).toISOString(), createdAt: new Date().toISOString() });
+    return { restaurant: ownerRow(owners[owners.length - 1], owners.length - 1), generated_password: "MP-DEMO1-234" };
+  }
+  if (seg[0] === "admin" && seg[1] === "restaurants" && seg[2] !== undefined && seg.length === 3) {
+    adminOnly();
+    const target = owners[Number(seg[2])];
+    if (!target || target.deleted) fail(404, "Restaurant not found.");
+    if (method === "PATCH") { Object.assign(target, { name: body.name, email: body.email, restaurantName: body.restaurant_name, phone: body.restaurant_phone }); return ownerRow(target, Number(seg[2])); }
+    if (method === "DELETE") {
+      if (String(body?.confirm_email || "").toLowerCase() !== target.email.toLowerCase()) fail(422, "البريد المدخل لا يطابق بريد صاحب المطعم.");
+      target.deleted = true; return { message: "Deleted" };
+    }
+  }
+  if (method === "PATCH" && seg[0] === "admin" && seg[1] === "owners" && seg[3] === "status") {
+    adminOnly();
+    const target = owners[Number(seg[2])];
+    if (!target) fail(404, "Owner not found.");
+    target.active = Boolean(body.active);
+    return ownerRow(target, Number(seg[2]));
+  }
   if (method === "PATCH" && seg[0] === "admin" && seg[1] === "restaurants" && seg[3] === "plan") {
-    const account = decodeToken(token);
-    if (!account || account.role !== "admin") fail(403, "Admins only.");
-    if (!SUBSCRIPTION_PLAN_IDS.includes(body.plan)) fail(422, "Unknown plan.");
+    adminOnly();
+    const chosen = normalizePlan(body.plan, body.addons || []);
+    if (!SUBSCRIPTION_PLAN_IDS.includes(chosen.plan) && chosen.plan !== "trial") fail(422, "Unknown plan.");
     const target = owners[Number(seg[2])];
     if (!target) fail(404, "Restaurant not found.");
-    target.plan = body.plan;
-    return { email: target.email, restaurantName: target.restaurantName, plan: target.plan };
+    target.plan = chosen.plan;
+    target.addons = compatibleAddons(chosen.plan, body.addons ? chosen.addons : [...(target.addons || []), ...chosen.addons]);
+    return ownerRow(target, Number(seg[2]));
   }
 
   // ------- Owner: تبديل باقة الاشتراك (اختبار مباشر من صفحة الاشتراك) -------
   if (method === "PATCH" && path === "/me/plan") {
     const account = decodeToken(token);
     if (!account || account.role !== "owner") fail(401, "Session expired.");
-    if (!SUBSCRIPTION_PLAN_IDS.includes(body.plan)) fail(422, "Unknown plan.");
-    account.plan = body.plan;
+    const chosen = normalizePlan(body.plan, body.addons || []);
+    if (!SUBSCRIPTION_PLAN_IDS.includes(chosen.plan)) fail(422, "Unknown plan.");
+    account.plan = chosen.plan;
+    account.addons = compatibleAddons(chosen.plan, chosen.addons);
     return toUserPayload(account);
   }
 
@@ -419,27 +455,98 @@ export async function mockRequest(method, rawPath, body, token) {
 
   // ------- Owner: orders list (FR-21) -------
   if (method === "GET" && path === "/owner/orders") {
-    return orders.map((o) => ({
+    // Same field names as the real API (order_number, table_label, submitted_at).
+    return orders.map((o, index) => ({
       id: o.id,
-      orderNumber: o.orderNumber,
-      tableLabel: o.tableLabel,
-      status: o.status,
+      order_number: o.orderNumber,
+      table_label: o.tableLabel,
+      customer_name: o.customerName || null,
+      status: String(o.status).toLowerCase(),
+      submitted_at: o.submittedAt || new Date(Date.now() - (index + 1) * 7 * 60000).toISOString(),
       total: Number(orderTotal(o).toFixed(2)),
     }));
+  }
+
+  // ------- Owner: 7-day sales trend (FR-40) — demo data for presentations -------
+  if (method === "GET" && path === "/owner/reports/sales-trend") {
+    const days = Number(url.searchParams.get("days")) || 7;
+    const trend = Array.from({ length: days }, (_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (days - 1 - i));
+      const ordersCount = 18 + ((i * 7) % 11);
+      return { date: d.toISOString().slice(0, 10), orders: ordersCount, revenue: ordersCount * 31 + ((i * 53) % 90) };
+    });
+    const revenue = trend.reduce((sum, d) => sum + d.revenue, 0);
+    const totalOrders = trend.reduce((sum, d) => sum + d.orders, 0);
+    return {
+      period: { days, from: trend[0].date, to: trend[trend.length - 1].date },
+      summary: { totalOrders, completedOrders: totalOrders - 6, pendingOrders: 4, cancelledOrders: 2, revenue, paymentsCount: totalOrders - 6, averageOrder: Math.round(revenue / (totalOrders - 6)) },
+      trend,
+      topItems: [
+        { name: "Slow-Braised Lamb Kofta", quantity: 42, revenue: 1596 },
+        { name: "Herb-Crusted Chicken", quantity: 35, revenue: 1225 },
+        { name: "Mint & Cucumber Lemonade", quantity: 31, revenue: 403 },
+        { name: "Rosemary Fries", quantity: 24, revenue: 312 },
+      ],
+    };
   }
 
   // ------- Waiter assistance (FR-41) -------
   if (method === "POST" && seg[0] === "public" && seg[1] === "sessions" && seg[3] === "assistance-requests") {
     const session = sessions.find((s) => s.id === Number(seg[2]));
     if (!session) fail(404, "Session not found.");
+    const duplicate = Boolean(session.assistanceRequested);
     session.assistanceRequested = true;
-    return { ok: true };
+    return { ok: true, duplicate };
+  }
+
+  if (method === "POST" && seg[0] === "sessions" && seg[2] === "assistance" && seg[3] === "resolve") {
+    const session = sessions.find((s) => s.id === Number(seg[1]));
+    if (!session) fail(404, "Session not found.");
+    const resolved = session.assistanceRequested ? 1 : 0;
+    session.assistanceRequested = false;
+    return { resolved };
   }
 
   if (method === "GET" && path === "/sessions" && query.status === "active") {
     return sessions
       .filter((s) => s.status !== "Closed")
-      .map((s) => ({ id: s.id, tableLabel: s.tableLabel, status: s.status, assistanceRequested: s.assistanceRequested }));
+      .map((s) => {
+        // Same lifecycle fields as the real API (SessionLifecycle) so the demo
+        // can show the close-session flow.
+        const total = orders.filter((o) => o.sessionId === s.id).reduce((sum, o) => sum + orderTotal(o), 0);
+        // Demo: the table that asked for the bill (103) is already paid, so it can be closed.
+        const paid = s.id === 103 || paidSessionIds.has(s.id) ? total : 0;
+        const outstanding = Math.max(0, Number((total - paid).toFixed(2)));
+        const canClose = outstanding === 0;
+        return {
+          id: s.id, tableLabel: s.tableLabel, status: s.status, assistanceRequested: s.assistanceRequested,
+          billRequested: String(s.status).toLowerCase().includes("bill"),
+          lifecycle: canClose && total > 0 ? "paid" : String(s.status).toLowerCase().includes("bill") ? "bill_requested" : "active",
+          billTotal: Number(total.toFixed(2)), paidTotal: paid, outstanding, canClose, closeBlocker: canClose ? null : "OUTSTANDING_BALANCE",
+        };
+      });
+  }
+
+  // ------- Staff & permissions (demo) -------
+  if (method === "GET" && path === "/staff") return mockStaff;
+  if ((method === "PUT" || method === "PATCH") && seg[0] === "staff" && seg[1]) {
+    const member = mockStaff.find((m) => m.id === Number(seg[1]));
+    if (!member) fail(404, "Staff not found");
+    if (body && "permissions" in body) {
+      member.custom_permissions = body.permissions !== null;
+      member.permissions = body.permissions ?? MOCK_ROLE_DEFAULTS[member.role];
+    }
+    if (body && "active" in body) member.active = Boolean(body.active);
+    return member;
+  }
+
+  if (method === "POST" && seg[0] === "sessions" && seg[2] === "close") {
+    const session = sessions.find((s) => s.id === Number(seg[1]));
+    if (!session) fail(404, "Session not found.");
+    session.status = "Closed";
+    const table = tables.find((t) => t.activeSessionId === session.id);
+    if (table) { table.status = "Available"; table.activeSessionId = null; }
+    return { id: session.id, status: "closed", closed_at: new Date().toISOString() };
   }
 
   // ------- Billing (FR-27..32, 36, 37) -------

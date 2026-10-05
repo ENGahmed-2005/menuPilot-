@@ -44,3 +44,12 @@ export const getOwnerOrders = (filters = {}) => {
   const qs = new URLSearchParams(filters).toString();
   return api.get(`/owner/orders${qs ? `?${qs}` : ""}`);
 };
+
+/** Owner/manager: move an order to its next status (same rules as the kitchen). */
+export const setOrderStatus = (orderId, status) => api.patch(`/orders/${orderId}/status`, { status });
+
+/** Cancel every active item of an order, with a reason (audited). */
+export const cancelOrder = (orderId, reason) => api.post(`/orders/${orderId}/cancel`, { reason });
+
+/** Order detail with items and status history. */
+export const getOwnerOrder = (orderId) => api.get(`/owner/orders/${orderId}`);

@@ -13,29 +13,32 @@ import { useNavigate } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
-import ValueStrip from "./components/ValueStrip";
-import Features from "./components/Features";
+import ProductTour from "./components/ProductTour";
 import HowItWorks from "./components/HowItWorks";
 import Roles from "./components/Roles";
+import TryDemo from "./components/TryDemo";
 import Pricing from "./components/Pricing";
 import TeamSection from "./components/TeamSection";
 import CTASection from "./components/CTASection";
 import Footer from "./components/Footer";
+import { dir } from "../../i18n";
 
 export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
     <main
-      dir="rtl"
-      className="min-h-screen scroll-smooth overflow-hidden bg-[#1F2420] text-[#F3EFE5] [cursor:url('/cursor_eat.cur'),_auto]"
+      dir={dir}
+      className="min-h-screen scroll-smooth overflow-x-hidden bg-navy text-[#F3EFE5] [cursor:url('/cursor_eat.cur'),_auto]"
     >
       <Navbar onNavigate={navigate} />
+      {/* Spacer to compensate for the fixed navbar height (4.25rem ≈ 68px) */}
+      <div className="h-[4.25rem]" aria-hidden="true" />
       <Hero onNavigate={navigate} />
-      <ValueStrip />
-      <Features />
+      <ProductTour />
       <HowItWorks />
       <Roles />
+      <TryDemo />
       <Pricing />
 
       {/* TEAM: intentionally before CTA + footer */}

@@ -1,51 +1,42 @@
 /* ==========================================================================
-   LoadingScreen.jsx — شاشة تحميل: حلقة متحركة (Canvas) + شعار menuPilot
-   نص HTML حقيقي فوقها
+   LoadingScreen.jsx — branded loading states.
    --------------------------------------------------------------------------
-   ليه مش سايبها تكتب "menuPilot" كنص متتبَّع زي المحاولة الأولى؟
-   OutlineTypeflow بيشتغل بمرحلتين منفصلتين:
-     1) يرسم mark.text على canvas مخفي، ويتتبّع محيطه (marching squares).
-     2) يرسم حروف phrase صغيرة متحركة على طول المحيط ده، كل حرف بزاوية
-        الظل المماسي للمسار في مكانه.
-   المشكلة: حروف رفيعة زي i/l/t بيبقى محيطها أجزاء قصيرة جدًا، بتتفلتر
-   بمعيار minLen جوّا traceContours وتختفي — ده سبب "جزء من النص مش
-   مبين". وحتى لو اتتبّعت كاملة، النتيجة أصلًا حروف صغيرة بتتحرك على
-   شكل الحرف الكبير، مش نص "menuPilot" مقروء — هي تقنية فنية تجريدية،
-   مش أداة لكتابة نص واضح.
-
-   الحل هنا: خليت mark.text فاضي عشان يرجع تلقائيًا للشكل الاحتياطي
-   الجاهز (حلقة + مثلث، FALLBACK_PATH داخل الملف) — شكل مضمون التتبّع
-   الكامل دايمًا لأنه مسار SVG جاهز، مش نص بيتحوّل لصورة. وحطيت
-   "menuPilot" كنص HTML عادي فوق الكانفاس — مضمون الظهور 100% مهما كان
-   أداء التتبّع، وده اللي المفروض يبان بوضوح كشعار.
+   LoadingScreen: full screen, shown while the saved session is checked on
+     first load. It fades in after a short delay, so fast loads never flash it.
+   PageLoader: in-page version used while a route's code downloads.
+   Pure CSS (no canvas / three.js), ~1 KB, and static under reduced motion.
    ========================================================================== */
-import OutlineTypeflow from "./OutlineTypeflow";
+import Logo from "../brand/Logo";
+import { t, dir } from "../../i18n";
 
-export default function LoadingScreen() {
+function Bar({ tone = "dark" }) {
   return (
-    <div className="fixed inset-0 z-[999] bg-[#1F2420]">
-      {/* الحلقة المتحركة — شكل احتياطي ثابت (مش نص) عشان تتبّعها مضمون دايمًا */}
-      <OutlineTypeflow
-        background="#1F2420"
-        baseColor="#EEA122"
-        phrase="menupilot"
-        mark={{ source: "text", text: "" }}
-        flow={{ markSize: 60, spacing: 140, kick: 60, light: 220 }}
-        glyphSize={70}
-        speed={20}
-        hover={150}
-        style={{ minWidth: 0, minHeight: 0, width: "100%", height: "100%" }}
-      />
+    <span aria-hidden="true" className={`relative block h-1 w-40 overflow-hidden rounded-full ${tone === "dark" ? "bg-paper/10" : "bg-ink/10"}`}>
+      <span className="loader-bar absolute inset-y-0 w-1/3 rounded-full bg-copper" />
+    </span>
+  );
+}
 
-      {/* الشعار الفعلي — نص HTML حقيقي، مش جزء من الرسم المتحرك، فمضمون
-          إنه يبان واضح ومقروء دايمًا. */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
-        <span className="font-display text-4xl tracking-tight text-[#F3EFE5] sm:text-5xl">
-          menu<span className="text-[#EEA122]">Pilot</span>
-        </span>
-        <span className="text-xs font-medium tracking-[0.3em] text-[#F3EFE5]/40">
-          جارِ التحميل…
-        </span>
+export default function LoadingScreen({ label = t("جارِ تجهيز لوحتك…") }) {
+  return (
+    <div role="status" aria-live="polite" dir={dir} className="loader-delay fixed inset-0 z-[999] grid place-items-center bg-navy text-paper">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, #f4efe6 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
+      <div className="relative flex flex-col items-center gap-7">
+        <span className="loader-mark"><Logo layout="stacked" on="dark" height={132} priority alt="" /></span>
+        <Bar />
+        <span className="text-sm font-bold text-paper/70">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+export function PageLoader({ label = t("جارِ فتح الصفحة…") }) {
+  return (
+    <div role="status" aria-live="polite" className="loader-delay grid min-h-[60vh] place-items-center bg-paper-2">
+      <div className="flex flex-col items-center gap-5">
+        <span className="loader-mark"><Logo layout="mark" height={56} priority alt="" /></span>
+        <Bar tone="light" />
+        <span className="text-sm font-bold text-muted">{label}</span>
       </div>
     </div>
   );

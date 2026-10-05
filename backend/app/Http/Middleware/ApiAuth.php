@@ -2,9 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Staff;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ApiAuth
 {
@@ -23,8 +25,45 @@ class ApiAuth
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
+        // Disabled accounts lose API access immediately, not at next login:
+        // a disabled owner/admin, an inactive staff member, or staff whose
+        // restaurant owner has been disabled by the platform admin.
+        if (isset($user->is_active) && ! $user->is_active) {
+            return response()->json(['message' => 'تم تعطيل هذا الحساب. تواصل مع إدارة المطعم.', 'code' => 'ACCOUNT_DISABLED'], 403);
+        }
+        if (! in_array($user->role, ['owner', 'admin'], true)) {
+            $staff = Staff::where('account_user_id', $user->id)->first();
+            $ownerActive = $staff ? User::where('id', $staff->user_id)->value('is_active') : null;
+            if (! $staff || ! $staff->active || $staff->role !== $user->role || $ownerActive === false || $ownerActive === 0) {
+                return response()->json(['message' => 'تم تعطيل هذا الحساب. تواصل مع إدارة المطعم.', 'code' => 'ACCOUNT_DISABLED'], 403);
+            }
+        }
+
+        // "Last activity" for staff management, written at most every 5 minutes.
+        if (! $user->last_active_at || $user->last_active_at->lt(now()->subMinutes(5))) {
+            User::where('id', $user->id)->update(['last_active_at' => now()]);
+        }
+
         $request->setUserResolver(static fn () => $user);
 
+        // The demo restaurant can be used freely, but not its accounts, plan,
+        // payments or restaurant details (App\Support\DemoRestaurant).
+        if ($user->is_demo && ! $request->isMethodSafe() && self::closedInDemo((string) $request->route()?->uri())) {
+            return response()->json(['message' => 'هذا الإجراء غير متاح في المطعم التجريبي. أنشئ حسابك لتجربته كاملًا.', 'code' => 'DEMO_READ_ONLY'], 403);
+        }
+
         return $next($request);
+    }
+
+    private static function closedInDemo(string $uri): bool
+    {
+        $uri = Str::after($uri, 'api/');
+        foreach (['staff', 'me/plan', 'me/restaurant', 'subscription/', 'online-ordering/settings', 'accounting/settings'] as $prefix) {
+            if (str_starts_with($uri, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

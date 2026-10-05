@@ -10,11 +10,12 @@ class Staff extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'account_user_id', 'name', 'email', 'role', 'active',
+        'user_id', 'account_user_id', 'name', 'email', 'phone', 'role', 'active', 'permissions',
     ];
 
     protected $casts = [
         'active' => 'boolean',
+        'permissions' => 'array',
     ];
 
     public function user()

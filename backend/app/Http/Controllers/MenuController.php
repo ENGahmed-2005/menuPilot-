@@ -4,11 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\RestaurantSetting;
 use App\Models\Staff;
+use App\Support\Audit;
+use App\Support\MediaStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MenuController extends Controller
 {
+    /** Audit a menu_item change for this restaurant (secrets never included). */
+    private function auditChange(Request $request, string $action, $id, array $metadata = []): void
+    {
+        Audit::log($request, $action, 'menu_item', $id === null ? null : (int) $id, $metadata, $this->restaurantId($request));
+    }
+
     private function out($d, $s = 200)
     {
         return response()->json(['data' => $d], $s);
@@ -26,23 +36,97 @@ class MenuController extends Controller
 
     private function q(Request $r)
     {
-        return DB::table('menu_items')->where('user_id', $this->restaurantId($r));
+        return DB::table('menu_items')->where('user_id', $this->restaurantId($r))->whereNull('deleted_at');
+    }
+
+    /**
+     * Store a base64 image sent by the current frontend as a real file and
+     * return a short public URL. This keeps image_url small and avoids the
+     * previous 2048-character validation/database limitation.
+     */
+    private function storeImage(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        // Already a stored URL/path: keep it unchanged.
+        if (! Str::startsWith($value, 'data:image/')) {
+            return $value;
+        }
+
+        if (! preg_match('/^data:image\/(jpeg|jpg|png|webp|gif);base64,(.+)$/s', $value, $matches)) {
+            throw new \InvalidArgumentException('Invalid image data.');
+        }
+
+        $extension = $matches[1] === 'jpeg' ? 'jpg' : $matches[1];
+        $decoded = base64_decode($matches[2], true);
+
+        if ($decoded === false) {
+            throw new \InvalidArgumentException('Invalid image data.');
+        }
+
+        // Keep the same 3 MB limit already shown by the Owner UI.
+        if (strlen($decoded) > 3 * 1024 * 1024) {
+            throw new \InvalidArgumentException('Image must not be larger than 3 MB.');
+        }
+
+        // Database-backed so images survive redeploys (Render's disk is ephemeral).
+        return MediaStore::put($decoded, 'image/'.($extension === 'jpg' ? 'jpeg' : $extension), request()->user()?->id);
+    }
+
+    private function deleteStoredImage(?string $value): void
+    {
+        if (! $value || Str::startsWith($value, 'data:image/')) {
+            return;
+        }
+
+        MediaStore::forget($value);
+
+        $prefix = rtrim(asset('storage/'), '/').'/';
+        if (Str::startsWith($value, $prefix)) {
+            $path = Str::after($value, $prefix);
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+    }
+
+    private function normalizeItem($item)
+    {
+        if (! $item) {
+            return null;
+        }
+
+        $item->imageUrl = $item->image_url;
+        unset($item->image_url);
+        $item->prepTimeMinutes = (int) ($item->prep_time_minutes ?? 15);
+
+        return $item;
     }
 
     public function index(Request $r)
     {
-        return $this->out($this->q($r)->latest()->get());
+        return $this->out($this->q($r)->latest()->get()->map(fn ($item) => $this->normalizeItem($item)));
     }
 
     public function store(Request $r)
     {
         $v = $r->validate([
             'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
+            'price' => 'required|numeric|gt:0',
             'category' => 'nullable|string',
             'description' => 'nullable|string',
-            'imageUrl' => 'nullable|string|max:2048',
-        ]);
+            'imageUrl' => 'nullable|string',
+            'prepTimeMinutes' => 'nullable|integer|min:1|max:240',
+            'sku' => 'nullable|string|max:64',
+        ], ['price.gt' => 'Price must be greater than zero.']);
+
+        try {
+            $imageUrl = $this->storeImage($v['imageUrl'] ?? null);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $id = DB::table('menu_items')->insertGetId([
             'user_id' => $this->restaurantId($r),
@@ -50,17 +134,24 @@ class MenuController extends Controller
             'price' => $v['price'],
             'category' => $v['category'] ?? null,
             'description' => $v['description'] ?? null,
-            'image_url' => $v['imageUrl'] ?? null,
+            'image_url' => $imageUrl,
             'is_available' => true,
+            'prep_time_minutes' => $v['prepTimeMinutes'] ?? 15,
+            'sku' => $v['sku'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        return $this->out(DB::table('menu_items')->find($id), 201);
+        $this->auditChange($r, 'menu_item.created', $id, array_intersect_key($r->all(), array_flip(['name', 'price', 'category', 'description', 'is_available', 'prep_time_minutes', 'prepTimeMinutes'])));
+
+        return $this->out($this->normalizeItem(DB::table('menu_items')->find($id)), 201);
     }
 
     public function update(Request $r, $id)
     {
+        // Before-values for the audit trail.
+        $auditBefore = (array) ($this->q($r)->where('id', $id)->first() ?? []);
+
         $item = $this->q($r)->find($id);
         if (! $item) {
             return response()->json(['message' => 'Menu item not found'], 404);
@@ -68,45 +159,87 @@ class MenuController extends Controller
 
         $v = $r->validate([
             'name' => 'sometimes|required|string|max:255',
-            'price' => 'sometimes|required|numeric|min:0',
+            'price' => 'sometimes|required|numeric|gt:0',
             'category' => 'nullable|string',
             'description' => 'nullable|string',
-            'imageUrl' => 'nullable|string|max:2048',
+            'imageUrl' => 'nullable|string',
             'is_available' => 'sometimes|boolean',
-        ]);
+            'prepTimeMinutes' => 'sometimes|nullable|integer|min:1|max:240',
+            'sku' => 'sometimes|nullable|string|max:64',
+        ], ['price.gt' => 'Price must be greater than zero.']);
 
         $data = [];
-        foreach (['name', 'price', 'category', 'description', 'is_available'] as $k) {
+        foreach (['name', 'price', 'category', 'description', 'is_available', 'sku'] as $k) {
             if (array_key_exists($k, $v)) {
                 $data[$k] = $v[$k];
             }
         }
-        if (array_key_exists('imageUrl', $v)) {
-            $data['image_url'] = $v['imageUrl'];
-        }
-        $data['updated_at'] = now();
 
+        if (array_key_exists('prepTimeMinutes', $v) && $v['prepTimeMinutes'] !== null) {
+            $data['prep_time_minutes'] = $v['prepTimeMinutes'];
+        }
+
+        if (array_key_exists('imageUrl', $v)) {
+            try {
+                $newImageUrl = $this->storeImage($v['imageUrl']);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            if ($newImageUrl !== $item->image_url) {
+                $this->deleteStoredImage($item->image_url);
+            }
+            $data['image_url'] = $newImageUrl;
+        }
+
+        $data['updated_at'] = now();
         $this->q($r)->where('id', $id)->update($data);
-        return $this->out(DB::table('menu_items')->find($id));
+
+        $auditKeys = array_intersect(array_keys($r->all()), ['name', 'price', 'category', 'description', 'is_available', 'prep_time_minutes', 'prepTimeMinutes']);
+        $this->auditChange($r, 'menu_item.updated', $id, ['before' => array_intersect_key($auditBefore, array_flip($auditKeys)), 'after' => array_intersect_key($r->all(), array_flip($auditKeys))]);
+
+        return $this->out($this->normalizeItem(DB::table('menu_items')->find($id)));
     }
 
     public function destroy(Request $r, $id)
     {
-        $n = $this->q($r)->where('id', $id)->delete();
-        return $n
-            ? $this->out(['message' => 'Deleted'])
-            : response()->json(['message' => 'Menu item not found'], 404);
+        $auditBefore = (array) ($this->q($r)->where('id', $id)->first() ?? []);
+
+        $item = $this->q($r)->where('id', $id)->first();
+        if (! $item) {
+            return response()->json(['message' => 'Menu item not found'], 404);
+        }
+
+        // Soft-delete the item so historical order_items keep their menu_item_id.
+        // The item is automatically excluded from owner/public menu queries by q()/whereNull(deleted_at).
+        DB::table('menu_items')->where('id', $id)->update([
+            'is_available' => false,
+            'deleted_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->auditChange($r, 'menu_item.deleted', $id, array_intersect_key($auditBefore, array_flip(['name', 'price', 'category', 'description', 'is_available', 'prep_time_minutes', 'prepTimeMinutes'])));
+
+        return $this->out(['message' => 'Deleted']);
     }
 
     public function publicMenu($code)
     {
         $t = DB::table('restaurant_tables')->where('table_code', $code)->first();
         if (! $t) {
-            return response()->json(['message' => 'Invalid table code'], 404);
+            return response()->json(['message' => 'This QR code is invalid or no longer active. Please ask a staff member for help.'], 404);
         }
 
         $owner = DB::table('users')->where('id', $t->user_id)->first();
         $branding = RestaurantSetting::where('user_id', $t->user_id)->first();
+        $items = DB::table('menu_items')
+            ->where('user_id', $t->user_id)
+            ->whereNull('deleted_at')
+            ->where('is_available', true)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($item) => $this->normalizeItem($item));
 
         return $this->out([
             'table' => $t,
@@ -115,13 +248,9 @@ class MenuController extends Controller
                 'name' => $owner?->restaurant_name,
                 'theme' => $owner?->theme,
                 'branding' => $branding,
+                'is_demo' => (bool) ($owner?->is_demo ?? false), // guests skip the location check
             ],
-            'items' => DB::table('menu_items')
-                ->where('user_id', $t->user_id)
-                ->where('is_available', true)
-                ->orderBy('category')
-                ->orderBy('name')
-                ->get(),
+            'items' => $items,
         ]);
     }
 }

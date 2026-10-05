@@ -11,6 +11,7 @@ import PasswordField from "../../components/auth/PasswordField";
 import FormAlert from "../../components/auth/FormAlert";
 import AuthSubmitButton from "../../components/auth/AuthSubmitButton";
 import { resetPassword } from "../../api/auth";
+import { t } from "../../i18n";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -31,7 +32,7 @@ export default function ResetPassword() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("كلمتا المرور غير متطابقتين.");
+      setError(t("كلمتا المرور غير متطابقتين."));
       return;
     }
 
@@ -41,7 +42,7 @@ export default function ResetPassword() {
       setDone(true);
       setTimeout(() => navigate("/login", { replace: true }), 2000);
     } catch (err) {
-      setError(err.message || "تعذّر تحديث كلمة المرور. الرجاء طلب رابط جديد.");
+      setError(err.message || t("تعذّر تحديث كلمة المرور. الرجاء طلب رابط جديد."));
     } finally {
       setLoading(false);
     }
@@ -49,26 +50,26 @@ export default function ResetPassword() {
 
   return (
     <AuthLayout
-      eyebrow="كلمة مرور جديدة"
-      title="خلّينا نجدّدها."
-      subtitle="اختر كلمة مرور جديدة وقوية لحسابك."
+      eyebrow={t("كلمة مرور جديدة")}
+      title={t("خلّينا نجدّدها.")}
+      subtitle={t("اختر كلمة مرور جديدة وقوية لحسابك.")}
     >
-      <h1 className="mb-7 font-display text-3xl text-ink">تعيين كلمة مرور جديدة</h1>
+      <h1 className="mb-7 font-display text-3xl text-ink">{t("تعيين كلمة مرور جديدة")}</h1>
 
       {done ? (
-        <FormAlert tone="success">تم تحديث كلمة المرور بنجاح. جارِ تحويلك لصفحة تسجيل الدخول…</FormAlert>
+        <FormAlert tone="success">{t("تم تحديث كلمة المرور بنجاح. جارِ تحويلك لصفحة تسجيل الدخول…")}</FormAlert>
       ) : (
         <>
           {!token && (
             <div className="mb-6">
-              <FormAlert>رابط إعادة التعيين ناقص أو غير صالح. الرجاء طلب رابط جديد من صفحة استرجاع كلمة المرور.</FormAlert>
+              <FormAlert>{t("رابط إعادة التعيين ناقص أو غير صالح. الرجاء طلب رابط جديد من صفحة استرجاع كلمة المرور.")}</FormAlert>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <FormField
               id="email"
-              label="البريد الإلكتروني"
+              label={t("البريد الإلكتروني")}
               icon={Mail}
               type="email"
               value={email}
@@ -79,7 +80,7 @@ export default function ResetPassword() {
 
             <PasswordField
               id="password"
-              label="كلمة المرور الجديدة"
+              label={t("كلمة المرور الجديدة")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -88,7 +89,7 @@ export default function ResetPassword() {
 
             <PasswordField
               id="confirmPassword"
-              label="تأكيد كلمة المرور"
+              label={t("تأكيد كلمة المرور")}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
@@ -96,7 +97,7 @@ export default function ResetPassword() {
             />
 
             <AuthSubmitButton loading={loading} disabled={!token}>
-              {loading ? "جارِ التحديث…" : "تحديث كلمة المرور"}
+              {loading ? t("جارِ التحديث…") : t("تحديث كلمة المرور")}
             </AuthSubmitButton>
 
             {error && <FormAlert>{error}</FormAlert>}
@@ -104,7 +105,7 @@ export default function ResetPassword() {
 
           <p className="mt-6 text-center text-sm text-ink-soft">
             <Link to="/login" className="font-medium text-ink transition-colors hover:text-copper">
-              الرجوع لتسجيل الدخول
+              {t("الرجوع لتسجيل الدخول")}
             </Link>
           </p>
         </>

@@ -1,103 +1,144 @@
-/* ==========================================================================
-   index.css — نقطة الدخول الوحيدة لـ Tailwind + هوية menuPilot البصرية
-   --------------------------------------------------------------------------
-   @import "tailwindcss" يجلب base/components/utilities دفعة واحدة (v4).
-   @theme يعرّف متغيرات التصميم (ألوان/خطوط) كـ utility classes جاهزة:
-   مثلاً --color-ink يصير bg-ink / text-ink / border-ink تلقائيًا.
-   الباليت والخطوط منسوخة من صفحة الـ Landing (src/pages/landing/landing.jsx)
-   عشان يبقى شكل التطبيق كله متسق مع هوية العلامة.
-   ========================================================================== */
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #1f2420;
-  --color-ink-soft: #4b5147;
-  --color-paper: #f3efe5;
-  --color-paper-2: #f3efe5;
-  --color-copper: #eea122;
-  --color-copper-deep: #e67e22;
-  --color-herb: #5b7a52;
-  --color-brick: #b33f32;
+  /* ── Brand (unchanged identity) ─────────────────────────────────────── */
+  --color-ink: #172331;          /* deep navy TEXT on light surfaces (13.9:1) */
+  /* Dark SURFACES (sidebar, headers, dark buttons, landing sections): a
+     lighter forest green than the text colour, so large areas don't feel
+     heavy. Cream text stays AAA (8.5:1); faint text needs ≥ 70% opacity. */
+  /* Brand navy — the colour of the "menu" wordmark in the logo; complementary
+     to the brand orange. Cream text 12.2:1, faint (70%) cream 6.8:1, and
+     orange text 4.9:1 on it. */
+  --color-navy: #1f2d3d;
+  --color-navy-deep: #172331;    /* hover / pressed / footer */
+  --color-navy-raised: #2a3b50;  /* cards on navy */
+  /* Legacy names kept so nothing styled with them breaks. */
+  --color-forest: var(--color-navy);
+  --color-forest-deep: var(--color-navy-deep);
+  --color-ink-soft: #3e4b5b;     /* body text on light surfaces (7.4:1) */
+  --color-paper: #f4efe6;        /* cream background */
+  --color-paper-2: #f4efe6;
+  --color-copper: #e67e22;       /* brand orange: primary actions, accents */
+  --color-copper-deep: #cf6410;  /* hover / pressed orange */
+  --color-herb: #1c714b;         /* success STATUS only (not brand) */
+  --color-brick: #b94736;        /* danger */
+  --color-brand-green: #1f2d3d;  /* legacy alias → navy */
+  --color-brand-orange: #e67e22;
+  --color-brand-cream: #f4efe6;
 
+  /* ── Semantic tokens (design system) ───────────────────────────────── */
+  --color-surface: #fffdf9;      /* cards, inputs, dialogs */
+  --color-surface-2: #faf6ef;    /* subtle fills: table headers, wells */
+  --color-line: #e3dccf;         /* borders and dividers */
+  --color-muted: #5a6574;        /* secondary text, AA on cream (5.1:1) */
+  /* Orange for TEXT on light surfaces. Derived from --color-copper so an
+     owner's custom theme still applies, but dark enough for AA contrast. */
+  --color-copper-ink: color-mix(in srgb, var(--color-copper) 70%, #000);
+  --color-info: #33648c;
+  --color-success: var(--color-herb);
+  --color-warning: var(--color-copper-ink);
+  --color-danger: var(--color-brick);
+
+  /* ── Radii: controls < cards < panels ──────────────────────────────── */
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+  --radius-panel: 1.5rem;
+
+  /* ── Elevation ─────────────────────────────────────────────────────── */
+  --shadow-card: 0 1px 2px rgb(23 35 49 / 0.05), 0 1px 1px rgb(23 35 49 / 0.03);
+  --shadow-raised: 0 8px 24px -8px rgb(23 35 49 / 0.18);
+  --shadow-dialog: 0 24px 60px -12px rgb(23 35 49 / 0.35);
+
+  /* ── Type ──────────────────────────────────────────────────────────── */
   --font-display: "Instrument Serif", serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-arabic: "Cairo", sans-serif;
-  --font-arabic-display: "Aref Ruqaa", serif;
+  --font-arabic: "Tajawal", sans-serif;
+  --font-arabic-display: "Tajawal", sans-serif;
   --font-mono-ticket: "Space Mono", monospace;
+
+  --animate-fade-in: fade-in 160ms ease-out both;
+  --animate-dialog-in: dialog-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+body { margin: 0; background: var(--color-forest); color: var(--color-paper); font-family: var(--font-body); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
+img, svg { display: block; max-width: 100%; }
+[dir="rtl"], .lang-ar { font-family: var(--font-arabic); }
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, .lang-ar h1, .lang-ar h2, .lang-ar h3 { font-family: var(--font-arabic-display); font-weight: 800; letter-spacing: 0; }
+/* English: headings in bold Inter, matching the weight of the Arabic design. */
+[dir="ltr"] h1, [dir="ltr"] h2, [dir="ltr"] h3 { font-family: var(--font-body); font-weight: 800; letter-spacing: -0.015em; }
+/* The UI was drawn right to left: in English, horizontal arrows point the other way. */
+[dir="ltr"] .lucide-arrow-left, [dir="ltr"] .lucide-arrow-right, [dir="ltr"] .lucide-chevron-left, [dir="ltr"] .lucide-chevron-right,
+[dir="ltr"] .lucide-chevrons-left, [dir="ltr"] .lucide-chevrons-right { transform: scaleX(-1); }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+:focus-visible { outline: 2px solid var(--color-copper); outline-offset: 3px; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes shimmer { 100% { transform: translateX(-100%); } }
+/* Loading screen: indeterminate bar (RTL: travels right → left), a gentle
+   lift on the logo, and a delayed fade-in so quick loads never flash. */
+@keyframes loader-bar { 0% { right: -35%; } 100% { right: 100%; } }
+@keyframes loader-lift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes loader-appear { from { opacity: 0; } to { opacity: 1; } }
+.loader-bar { animation: loader-bar 1.15s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+.loader-mark { display: inline-flex; animation: loader-lift 2.4s ease-in-out infinite; }
+.loader-delay { animation: loader-appear 240ms ease-out 180ms both; }
+@media (prefers-reduced-motion: reduce) { .loader-bar { right: 33%; } .loader-delay { opacity: 1; } }
+
+/* ── Design-system primitives ─────────────────────────────────────────── */
+@layer components {
+  /* Loading placeholder. RTL-aware shimmer that stops under reduced motion. */
+  .skeleton { position: relative; overflow: hidden; border-radius: var(--radius-control); background: rgb(23 35 49 / 0.07); }
+  .skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(100%); background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent); animation: shimmer 1.4s infinite; }
+  /* Tabular figures keep prices, timers and counters from jittering. */
+  .num { font-variant-numeric: tabular-nums; }
 }
 
-/* box-sizing: border-box لكل العناصر — أساسي قبل أي تخطيط. */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* Visually hidden but available to screen readers (skip links, live regions). */
+.sr-only-focusable:not(:focus):not(:focus-within) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Minimum readable size for Arabic UI text in dashboards and customer pages. */
+[dir="rtl"] { text-rendering: optimizeLegibility; }
+
+/* Legacy palette aliases */
+.bg-\[\#1F2420\] { background-color: var(--color-navy) !important; }
+.bg-\[\#1F2420\]\/98 { background-color: color-mix(in srgb, var(--color-forest) 98%, transparent) !important; }
+/* Landing footer / raised cards on dark: same family, lighter than before. */
+.bg-\[\#1A1E1B\] { background-color: var(--color-forest-deep) !important; }
+.bg-\[\#2A3129\] { background-color: var(--color-navy-raised) !important; }
+.bg-\[\#EEA122\] { background-color: #E67E22 !important; }
+.bg-\[\#E67E22\] { background-color: #E67E22 !important; }
+.bg-\[\#F3EFE5\] { background-color: #F4EFE6 !important; }
+.text-\[\#1F2420\] { color: var(--color-ink) !important; }
+.text-\[\#F3EFE5\] { color: #F4EFE6 !important; }
+.text-\[\#EEA122\] { color: #E67E22 !important; }
+.text-\[\#E67E22\] { color: #E67E22 !important; }
+.border-\[\#F3EFE5\] { border-color: #F4EFE6 !important; }
+.hover\:text-\[\#EEA122\]:hover { color: #E67E22 !important; }
+.hover\:bg-\[\#E67E22\]:hover { background-color: #CF6410 !important; }
+
+
+/* Touch screens: small and icon buttons grow to a 44px finger target. */
+@media (pointer: coarse) {
+  .btn-touch { min-height: 44px; }
+  .btn-touch-square { min-width: 44px; }
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
-}
-
-body {
-  margin: 0;
-  background: var(--color-ink);
-  color: var(--color-paper);
-  font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  font-weight: 400;
-}
-
-img,
-svg {
-  display: block;
-  max-width: 100%;
-}
-
-/* نسخة عربي: خط Cairo للنصوص، Aref Ruqaa للعناوين — يُفعَّل بـ dir="rtl" أو class="lang-ar" */
-[dir="rtl"],
-.lang-ar {
-  font-family: var(--font-arabic);
-}
-[dir="rtl"] h1,
-[dir="rtl"] h2,
-[dir="rtl"] h3,
-.lang-ar h1,
-.lang-ar h2,
-.lang-ar h3 {
-  font-family: var(--font-arabic-display);
-  letter-spacing: 0;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  html {
-    scroll-behavior: smooth;
-  }
-}
-
+/* Landing: the hero screenshot levels out, tour screens fade in, the tour's
+   progress bar fills. All off for reduced motion. */
+@keyframes hero-level { from { transform: perspective(1800px) rotateX(12deg) scale(.95); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes hero-phone { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tour-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes tour-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.hero-level { animation: hero-level 1.1s .25s cubic-bezier(.2,.8,.2,1) both; transform-origin: 50% 100%; }
+.hero-phone { animation: hero-phone .8s .9s cubic-bezier(.2,.8,.2,1) both; }
+.tour-in { animation: tour-in .45s ease-out both; }
+.tour-progress { animation-name: tour-progress; animation-timing-function: linear; animation-fill-mode: both; transform-origin: left; }
+[dir="rtl"] .tour-progress { transform-origin: right; }
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
-  }
-}
-
-:focus-visible {
-  outline: 2px solid var(--color-copper);
-  outline-offset: 3px;
-}
-
-/* حركة "float" لبطاقة معاينة الـ Hero في صفحة الهبوط (LandingPage.jsx) —
-   Tailwind مفيهوش keyframe جاهز بالاسم ده، فعرّفناه هنا واستخدمناه بصيغة
-   animate-[float_6s_ease-in-out_infinite]. */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  .hero-level, .hero-phone, .tour-in, .tour-progress { animation: none; }
 }

@@ -1,57 +1,25 @@
-import { useOutletContext } from "react-router-dom";
-import { StatCard } from "./adminShared";
-import { FileText } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CalendarPlus, CheckCircle2, FileText, RefreshCw, Search, XCircle } from "lucide-react";
+import { api } from "../../api/client";
+import AdminPageShell from "../../components/layout/AdminPageShell";
+import SubscriptionPaymentsReview from "./SubscriptionPaymentsReview";
+import AddonToggles from "../../components/subscription/AddonToggles";
+import { PLAN_ORDER as plans } from "../../config/subscriptions";
+import { t, locale } from "../../i18n";
 
-const PLANS = ["Standard", "Pro", "Enterprise"];
+const labels = { basic: "Basic", pro: "Pro", delivery_only: t("التوصيل فقط"), trial: "Trial" };
+const date = value => value ? new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" }).format(new Date(value)) : "—";
 
 export default function AdminSubscriptions() {
-  const { restaurants } = useOutletContext();
-
-  return (
-    <>
-      <section className="admin-heading">
-        <div>
-          <p className="admin-overline">إدارة الحسابات</p>
-          <h1>الاشتراكات</h1>
-          <p>باقة كل مطعم وحالة اشتراكه.</p>
-        </div>
-      </section>
-
-      <section className="admin-stats-grid">
-        {PLANS.map((plan) => (
-          <StatCard
-            key={plan}
-            title={`باقة ${plan}`}
-            value={`${restaurants.filter((r) => r.plan === plan).length} مطاعم`}
-            icon={FileText}
-            color="orange"
-          />
-        ))}
-      </section>
-
-      <section className="admin-table-card">
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr><th>المطعم</th><th>المالك</th><th>الباقة الحالية</th><th>حالة الاشتراك</th></tr>
-            </thead>
-            <tbody>
-              {restaurants.map((r) => (
-                <tr key={r.id}>
-                  <td><strong>{r.name}</strong></td>
-                  <td>{r.owner}</td>
-                  <td><span className="admin-plan">{r.plan}</span></td>
-                  <td>
-                    <span className={`admin-status ${r.active ? "active" : "inactive"}`}>
-                      <i /> {r.active ? "فعّال" : "متوقف"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </>
-  );
+  const [rows, setRows] = useState([]), [query, setQuery] = useState(""), [loading, setLoading] = useState(true), [busy, setBusy] = useState(null), [error, setError] = useState(""), [success, setSuccess] = useState("");
+  async function load() { setLoading(true); setError(""); try { setRows(await api.get("/admin/restaurants") || []); } catch (e) { setError(e.message || t("تعذر تحميل الاشتراكات")); } finally { setLoading(false); } }
+  useEffect(() => { load(); }, []);
+  const filtered = useMemo(() => rows.filter(r => `${r.restaurant_name || ""} ${r.email || ""} ${r.plan || ""}`.toLowerCase().includes(query.toLowerCase())), [rows, query]);
+  async function changePlan(id, plan, addons) { setBusy(id); setError(""); setSuccess(""); try { const updated = await api.patch(`/admin/restaurants/${id}/plan`, addons ? { plan, addons } : { plan }); setRows(xs => xs.map(x => x.id === id ? { ...x, ...updated } : x)); setSuccess(t("تم تحديث الاشتراك بنجاح.")); } catch (e) { setError(e.message || t("تعذر تحديث الاشتراك")); } finally { setBusy(null); } }
+  async function extendTrial(row) { const raw = window.prompt(t("عدد أيام التمديد؟"), "14"); const days = Number(raw); if (!days) return; setBusy(row.id); setError(""); setSuccess(""); try { const updated = await api.post(`/admin/restaurants/${row.id}/trial/extend`, { days }); setRows(xs => xs.map(x => x.id === row.id ? { ...x, ...updated } : x)); setSuccess(t("تم تمديد تجربة {0} لمدة {1} يومًا.", { 0: row.restaurant_name || "المطعم", 1: days })); } catch (e) { setError(e.message || t("تعذر تمديد التجربة")); } finally { setBusy(null); } }
+  return <AdminPageShell title={t("الاشتراكات")}><SubscriptionPaymentsReview onChanged={load} /><section className="admin-heading"><div><p className="admin-overline"><FileText size={14} /> {t("إدارة الفوترة والخطط")}</p><h1>{t("الاشتراكات")}</h1><p>{t("متابعة الباقات، التجارب المجانية وتواريخ انتهاء المطاعم من نفس لوحة الإدارة.")}</p></div><button className="admin-primary-button" onClick={load} disabled={loading}><RefreshCw size={15} className={loading ? "animate-spin" : ""} /> {t("تحديث")}</button></section>
+    {error && <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, background: "#fff0eb", color: "#bd725c", fontSize: 11, fontWeight: 700 }}>{error}</div>}
+    {success && <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, background: "#f1fbf4", color: "#3e9b75", fontSize: 11, fontWeight: 700 }}>{success}</div>}
+    <section className="admin-table-card"><div className="admin-toolbar" style={{ padding: 18 }}><div className="admin-search"><Search size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder={t("ابحث باسم المطعم أو البريد أو الباقة...")} />{query && <button onClick={() => setQuery("")} aria-label={t("مسح البحث")}><XCircle size={15} /></button>}</div><span>{filtered.length} {t("اشتراك")}</span></div><div className="admin-table-wrapper"><table className="admin-table"><thead><tr><th>{t("المطعم")}</th><th>{t("البريد")}</th><th>{t("الباقة")}</th><th>{t("الإضافات")}</th><th>{t("الحالة")}</th><th>{t("انتهاء التجربة")}</th><th>{t("بداية الاشتراك")}</th><th>{t("إجراء")}</th></tr></thead><tbody>{filtered.map(r => { const trial = r.plan === "trial"; const active = trial ? r.trial_ends_at && new Date(r.trial_ends_at) > new Date() : plans.includes(r.plan); return <tr key={r.id}><td><strong>{r.restaurant_name || t("بدون اسم")}</strong></td><td>{r.email}</td><td><select value={r.plan} disabled={busy === r.id || trial} onChange={e => changePlan(r.id, e.target.value)} style={{ border: 0, borderRadius: 6, padding: "6px 8px", background: "#f0f1ff", fontSize: 10, fontWeight: 700 }}><option value="trial">Trial</option>{plans.map(p => <option key={p} value={p}>{labels[p]}</option>)}</select></td><td><AddonToggles row={r} disabled={busy === r.id} onChange={addons => changePlan(r.id, r.plan, addons)} /></td><td><span className={`admin-status ${active ? "active" : "inactive"}`}><i />{active ? t("نشط") : t("منتهي")}</span></td><td>{trial ? date(r.trial_ends_at) : "—"}</td><td>{date(r.subscription_started_at)}</td><td>{trial ? <button className="admin-edit" disabled={busy === r.id} onClick={() => extendTrial(r)}><CalendarPlus size={14} /> {t("تمديد")}</button> : "—"}</td></tr>})}</tbody></table>{loading && <div className="admin-empty">{t("جارٍ تحميل الاشتراكات...")}</div>}{!loading && !filtered.length && <div className="admin-empty">{t("لا توجد اشتراكات مطابقة.")}</div>}</div></section>
+  </AdminPageShell>;
 }

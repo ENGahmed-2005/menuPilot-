@@ -5,9 +5,11 @@
    سؤال يحتاجه أكثر من مكوّن بعيد عن بعضه (Navbar، ProtectedRoute، لوحات
    التحكم)، فتمرير الحالة عبر props يدويًا (prop drilling) يصبح مزعجًا.
    ========================================================================== */
+import { ROLE_DEFAULTS } from "../config/permissions";
 import { createContext, useContext, useEffect, useState } from "react";
 import { login as apiLogin, logout as apiLogout, register as apiRegister, fetchCurrentUser } from "../api/auth";
 import { getToken } from "../api/client";
+import { startDemo as apiStartDemo } from "../api/demo";
 
 const AuthContext = createContext(null);
 
@@ -29,8 +31,31 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Keep permissions current: when the owner changes an employee's permissions
+  // (or disables the account), the employee's screen follows within ~30 s,
+  // on returning to the tab, or right after the API refuses an action.
+  useEffect(() => {
+    if (!user) return undefined;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      // 401 = access revoked (disabled, role or password changed): back to login.
+      fetchCurrentUser().then(setUser).catch((err) => { if (err?.status === 401) setUser(null); });
+    };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("menupilot:permission-denied", refresh);
+    return () => { clearInterval(timer); window.removeEventListener("focus", refresh); window.removeEventListener("menupilot:permission-denied", refresh); };
+  }, [Boolean(user)]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function login(payload) {
     const data = await apiLogin(payload);
+    setUser(data.user);
+    return data;
+  }
+
+  /** «Try it»: log in to the demo restaurant as owner, kitchen, cashier or waiter. */
+  async function startDemo(role) {
+    const data = await apiStartDemo(role);
     setUser(data.user);
     return data;
   }
@@ -53,16 +78,23 @@ export function AuthProvider({ children }) {
     setUser((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
+  // Permissions come from the API (GET /auth/me, login). They only drive what
+  // the UI shows; Laravel enforces every one of them on the server.
+  const permissions = user?.permissions || ROLE_DEFAULTS[user?.role] || [];
+  // No role shortcuts: the platform admin only holds platform permissions.
+  const can = (permission) => permissions.includes(permission);
+
   const value = {
     user,
-    role: user?.role ?? null, // "owner" | "kitchen" | "cashier" | "waiter"
+    role: user?.role ?? null, // "owner" | "manager" | "kitchen" | "cashier" | "waiter" | "admin"
+    permissions,
+    can,
     isAuthenticated: Boolean(user),
     loading,
     login,
     register,
     logout,
-    updateUser,
-  };
+    updateUser, startDemo };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\RestaurantSetting;
+use App\Support\MediaStore;
+use App\Support\MenuStyle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class BrandingController extends Controller
 {
@@ -25,7 +28,7 @@ class BrandingController extends Controller
 
         if (! $user->hasFeature('branding')) {
             return response()->json([
-                'message' => 'Branding customization requires an active trial or paid plan.',
+                'message' => 'تخصيص هوية المنيو يحتاج الخطة الاحترافية، أو تجربة مجانية سارية.',
             ], 403);
         }
 
@@ -43,27 +46,41 @@ class BrandingController extends Controller
 
         if (array_key_exists('font_family', $validated) && $validated['font_family'] !== 'system' && ! $user->hasFeature('custom-font')) {
             return response()->json([
-                'message' => 'Custom fonts require Premium or an active Trial.',
+                'message' => 'الخط المخصص يحتاج إضافة «الهوية الكاملة» مع الخطة الاحترافية، أو تجربة مجانية سارية.',
             ], 403);
         }
 
         if (array_key_exists('show_menupilot_branding', $validated) && $validated['show_menupilot_branding'] === false && ! $user->hasFeature('remove-branding')) {
             return response()->json([
-                'message' => 'Removing menuPilot branding requires Premium or an active Trial.',
+                'message' => 'إخفاء شعار menuPilot يحتاج إضافة «الهوية الكاملة» مع الخطة الاحترافية، أو تجربة مجانية سارية.',
             ], 403);
         }
         $settings = $this->settings($user->id);
 
+        // menu_style arrives as JSON text from a multipart form, or as an object.
+        if ($request->has('menu_style')) {
+            $raw = $request->input('menu_style');
+            $style = is_string($raw) ? json_decode($raw, true) : $raw;
+            Validator::make(['menu_style' => is_array($style) ? $style : null], MenuStyle::rules(), [
+                'menu_style.required' => 'شكل المنيو غير صالح.',
+                'menu_style.*.in' => 'هذا الخيار غير متاح لشكل المنيو.',
+                'menu_style.*.regex' => 'اللون يجب أن يكون بصيغة ‎#RRGGBB.',
+                'menu_style.tagline.max' => 'العبارة التعريفية يجب ألا تتجاوز 80 حرفاً.',
+            ])->validate();
+            $validated['menu_style'] = MenuStyle::merge($settings->menu_style, $style);
+        }
+
         foreach (['logo' => 'logo_url', 'background' => 'background_url'] as $file => $column) {
             if ($request->hasFile($file)) {
-                if ($settings->{$column}) {
-                    $old = parse_url($settings->{$column}, PHP_URL_PATH);
-                    if ($old) {
-                        Storage::disk('public')->delete(ltrim(str_replace('/storage/', '', $old), '/'));
-                    }
+                $old = $settings->{$column};
+                if ($old && str_contains($old, '/storage/')) {
+                    // Legacy file on the local disk.
+                    Storage::disk('public')->delete(ltrim(str_replace('/storage/', '', (string) parse_url($old, PHP_URL_PATH)), '/'));
                 }
-                $path = $request->file($file)->store('restaurant-branding', 'public');
-                $validated[$column] = Storage::url($path);
+                MediaStore::forget($old);
+                // Database-backed so the logo/background survive redeploys.
+                $upload = $request->file($file);
+                $validated[$column] = MediaStore::put((string) file_get_contents($upload->getRealPath()), (string) $upload->getMimeType(), $user->id);
             }
         }
 
@@ -80,12 +97,13 @@ class BrandingController extends Controller
 
         $settings->update([
             'primary_color' => '#B8793E',
-            'secondary_color' => '#5B7A52',
-            'text_color' => '#171717',
-            'button_color' => '#171717',
+            'secondary_color' => '#4B6A8A', // slate blue (brand: navy + orange, no green)
+            'text_color' => '#172331',
+            'button_color' => '#1F2D3D',
             'card_style' => 'rounded',
             'font_family' => 'system',
             'show_menupilot_branding' => true,
+            'menu_style' => null,
         ]);
 
         return response()->json(['data' => $settings->fresh()]);

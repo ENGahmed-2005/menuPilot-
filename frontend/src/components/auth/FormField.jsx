@@ -8,24 +8,26 @@
 export default function FormField({ id, label, icon: Icon, error, endAdornment, className = "", ...rest }) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-ink-soft">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-bold text-ink">
         {label}
       </label>
       <div
-        className={`flex items-center gap-2.5 rounded-xl border bg-white/70 px-3.5 transition-colors focus-within:border-copper focus-within:ring-2 focus-within:ring-copper/20 ${
-          error ? "border-brick" : "border-ink/15"
+        className={`flex min-h-11 items-center gap-2.5 rounded-[var(--radius-control)] border bg-surface px-3.5 transition-colors focus-within:border-copper focus-within:ring-2 focus-within:ring-copper/20 ${
+          error ? "border-brick" : "border-line hover:border-ink/25"
         }`}
       >
-        {Icon && <Icon size={17} className="shrink-0 text-ink-soft/60" aria-hidden="true" />}
+        {Icon && <Icon size={17} className="shrink-0 text-muted" aria-hidden="true" />}
         <input
           id={id}
-          className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-ink outline-none placeholder:text-ink-soft/40"
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-ink outline-none placeholder:text-muted"
           {...rest}
         />
         {endAdornment}
       </div>
       {error && (
-        <span className="mt-1 block text-xs text-brick" role="alert">
+        <span id={`${id}-error`} className="mt-1 block text-xs font-bold text-brick" role="alert">
           {error}
         </span>
       )}
