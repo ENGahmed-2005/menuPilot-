@@ -3,9 +3,17 @@
    ========================================================================== */
 import { api } from "./client";
 
-const normalizeMenuItem = (item) => ({
+/**
+ * شكل موحّد للصنف في كل الواجهات. الإضافات (options) دائمًا مصفوفة —
+ * حتى لو رجعت null من بيانات قديمة — وسعرها رقم جاهز للجمع في السلة.
+ * مُصدَّرة ليستخدمها أي مسار آخر يرجّع أصنافًا (مثل منيو الطلب أونلاين).
+ */
+export const normalizeMenuItem = (item) => ({
   ...item,
   imageUrl: item.imageUrl ?? item.image_url ?? null,
+  options: Array.isArray(item.options)
+    ? item.options.map((option) => ({ ...option, price: Number(option.price) || 0 }))
+    : [],
 });
 
 export const getMenuItems = async () => {

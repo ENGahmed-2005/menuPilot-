@@ -11,6 +11,8 @@ import { errorText } from "../../utils/errors";
 import { money, orderNo } from "../../utils/format";
 import { t as tr, dir, locale } from "../../i18n";
 import { useLive } from "../../realtime";
+import ItemOptions from "../../components/orders/ItemOptions";
+import { withOptions } from "../../components/menu/cartLine";
 
 const STEPS = {
   pickup: [["awaiting_acceptance", tr("استُلم طلبك")], ["accepted", tr("قبِل المطعم الطلب")], ["preparing", tr("قيد التحضير")], ["ready", tr("جاهز للاستلام")], ["completed", tr("تم الاستلام")]],
@@ -26,7 +28,7 @@ function invoiceText(o, link) {
   const lines = [
     tr("مرحبًا {0} 👋", { 0: o.restaurant?.name || "" }),
     tr("أؤكد طلبي رقم {0} ({1})", { 0: orderNo(o.order_number), 1: o.channel === "delivery" ? "توصيل" : "استلام" }),
-    ...o.items.map((i) => `• ${i.quantity}× ${i.name} — ${money(i.quantity * i.unit_price)}`),
+    ...o.items.map((i) => `• ${i.quantity}× ${withOptions(i)} — ${money(i.quantity * i.unit_price)}`),
     ...(o.delivery_fee > 0 ? [tr("التوصيل: {0}", { 0: money(o.delivery_fee) })] : []),
     tr("الإجمالي: {0}", { 0: money(o.total) }),
     tr("الدفع: {0}", { 0: o.payment_method === "transfer" ? "تحويل مسبق" : o.channel === "delivery" ? "نقدًا عند التوصيل" : "نقدًا عند الاستلام" }),
@@ -97,7 +99,7 @@ export default function OnlineOrderTracking() {
         )}
         <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5">
           <p className="mb-2 text-sm font-black">{tr("الفاتورة ·")} {orderNo(o.order_number)}</p>
-          <ul className="divide-y divide-line text-sm">{o.items.map((i) => <li key={i.id} className="flex justify-between py-2"><span><b className="num">{i.quantity}×</b> {i.name}</span><span className="num">{money(i.quantity * i.unit_price)}</span></li>)}</ul>
+          <ul className="divide-y divide-line text-sm">{o.items.map((i) => <li key={i.id} className="flex justify-between py-2"><span><b className="num">{i.quantity}×</b> {i.name}<ItemOptions options={i.options} /></span><span className="num">{money(i.quantity * i.unit_price)}</span></li>)}</ul>
           <dl className="mt-3 space-y-1 border-t border-dashed border-line pt-3 text-sm">
             {o.delivery_fee > 0 && <div className="flex justify-between"><dt>{tr("التوصيل")}</dt><dd className="num">{money(o.delivery_fee)}</dd></div>}
             <div className="flex justify-between text-base font-black"><dt>{tr("الإجمالي")}</dt><dd className="num">{money(o.total)}</dd></div>

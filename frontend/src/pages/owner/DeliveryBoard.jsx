@@ -20,6 +20,7 @@ import OwnerStatusControl from "../../components/delivery/OwnerStatusControl";
 import { useToast } from "../../components/ui/Toast";
 import { t as tr } from "../../i18n";
 import { restaurantChannel, useLive } from "../../realtime";
+import ItemOptions from "../../components/orders/ItemOptions";
 
 export default function DeliveryBoard() {
   const toast = useToast();
@@ -95,7 +96,7 @@ export default function DeliveryBoard() {
                     {loc?.accuracy ? <p className="mt-1 text-[11px] text-muted">{tr("دقة الموقع ≈")} {loc.accuracy} {tr("م")}</p> : null}
                   </div>
 
-                  <ul className="text-sm">{o.items.map((i) => <li key={i.id}><b className="num">{i.quantity}×</b> {i.name}</li>)}</ul>
+                  <ul className="text-sm">{o.items.map((i) => <li key={i.id}><b className="num">{i.quantity}×</b> {i.name}<ItemOptions options={i.options} /></li>)}</ul>
                   <p className="num text-sm font-black">{money(o.total)} · <span className="font-bold">{o.payment_method === "transfer" ? (o.payment_status === "paid" ? tr("مدفوع بالتحويل") : tr("تحويل · يحتاج تحقق")) : tr("تحصيل نقدي عند التسليم")}</span></p>
 
                   <div className="mt-auto flex flex-wrap gap-2 border-t border-line pt-3">

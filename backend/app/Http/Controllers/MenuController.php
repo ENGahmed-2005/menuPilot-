@@ -6,6 +6,7 @@ use App\Models\RestaurantSetting;
 use App\Models\Staff;
 use App\Support\Audit;
 use App\Support\MediaStore;
+use App\Support\MenuOptions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -101,6 +102,7 @@ class MenuController extends Controller
         $item->imageUrl = $item->image_url;
         unset($item->image_url);
         $item->prepTimeMinutes = (int) ($item->prep_time_minutes ?? 15);
+        $item->options = MenuOptions::decode($item->options ?? null);
 
         return $item;
     }
@@ -120,7 +122,7 @@ class MenuController extends Controller
             'imageUrl' => 'nullable|string',
             'prepTimeMinutes' => 'nullable|integer|min:1|max:240',
             'sku' => 'nullable|string|max:64',
-        ], ['price.gt' => 'Price must be greater than zero.']);
+        ] + MenuOptions::rules(), ['price.gt' => 'Price must be greater than zero.']);
 
         try {
             $imageUrl = $this->storeImage($v['imageUrl'] ?? null);
@@ -138,6 +140,7 @@ class MenuController extends Controller
             'is_available' => true,
             'prep_time_minutes' => $v['prepTimeMinutes'] ?? 15,
             'sku' => $v['sku'] ?? null,
+            'options' => MenuOptions::encode(MenuOptions::normalize($v['options'] ?? null)),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -166,7 +169,7 @@ class MenuController extends Controller
             'is_available' => 'sometimes|boolean',
             'prepTimeMinutes' => 'sometimes|nullable|integer|min:1|max:240',
             'sku' => 'sometimes|nullable|string|max:64',
-        ], ['price.gt' => 'Price must be greater than zero.']);
+        ] + MenuOptions::rules(), ['price.gt' => 'Price must be greater than zero.']);
 
         $data = [];
         foreach (['name', 'price', 'category', 'description', 'is_available', 'sku'] as $k) {
@@ -177,6 +180,10 @@ class MenuController extends Controller
 
         if (array_key_exists('prepTimeMinutes', $v) && $v['prepTimeMinutes'] !== null) {
             $data['prep_time_minutes'] = $v['prepTimeMinutes'];
+        }
+
+        if (array_key_exists('options', $v)) {
+            $data['options'] = MenuOptions::encode(MenuOptions::normalize($v['options']));
         }
 
         if (array_key_exists('imageUrl', $v)) {

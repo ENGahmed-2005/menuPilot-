@@ -3,9 +3,13 @@
    Prices, fees and statuses are always computed by the API.
    ========================================================================== */
 import { api } from "./client";
+import { normalizeMenuItem } from "./menu";
 
-// Public (customer)
-export const getOnlineRestaurant = (slug) => api.get(`/public/restaurants/${encodeURIComponent(slug)}`);
+// Public (customer). Dishes get the same shape as the table menu (imageUrl, options).
+export const getOnlineRestaurant = async (slug) => {
+  const data = await api.get(`/public/restaurants/${encodeURIComponent(slug)}`);
+  return { ...data, items: (data?.items || []).map(normalizeMenuItem) };
+};
 export const placeOnlineOrder = (slug, payload) => api.post(`/public/restaurants/${encodeURIComponent(slug)}/orders`, payload);
 export const trackOnlineOrder = (id, token) => api.get(`/public/outside-orders/${id}?token=${encodeURIComponent(token)}`);
 

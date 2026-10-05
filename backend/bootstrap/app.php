@@ -6,6 +6,7 @@ use App\Http\Middleware\Cors;
 use App\Http\Middleware\EnsureRestaurantFeature;
 use App\Http\Middleware\EnsureSessionToken;
 use App\Http\Middleware\EnsureSubscriptionAccess;
+use App\Http\Middleware\Idempotency;
 use App\Http\Middleware\PermissionAccess;
 use App\Http\Middleware\RoleAccess;
 use Illuminate\Foundation\Application;
@@ -31,5 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(Cors::class);
         // After a successful change, signal the screens that care (App\Support\Realtime).
         $middleware->appendToGroup('api', BroadcastChanges::class);
+        // Offline queue retries: the same Idempotency-Key never runs a change twice (docs/offline.md).
+        $middleware->appendToGroup('api', Idempotency::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {})->create();

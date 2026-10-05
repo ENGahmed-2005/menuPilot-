@@ -19,6 +19,7 @@ import CloseSessionButton from "../../components/billing/CloseSessionButton";
 import IdleHint from "../../components/billing/IdleHint";
 import { money, tableName } from "../../utils/format";
 import { t as tr } from "../../i18n";
+import { SYNCED, queuedRefs, useOutbox } from "../../offline/outbox";
 
 // The API returns "available" / "occupied"; older mocks used "Available".
 const isAvailable = (table) => String(table.status || "").toLowerCase() === "available";
@@ -32,14 +33,19 @@ const FILTERS = [
 ];
 
 export default function TableStatus() {
-  const [tables, setTables] = useState([]);
+  const [fetchedTables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [error, setError] = useState(null);
 
-  const { sessions, setSessions, connected } = useWaiterRealtime();
+  const { sessions: liveSessions, setSessions, connected } = useWaiterRealtime();
+  // A close saved offline is not on the server yet: show those tables as free meanwhile.
+  const outbox = useOutbox();
+  const closing = useMemo(() => queuedRefs(outbox, "close"), [outbox]);
+  const sessions = useMemo(() => liveSessions.filter((s) => !closing.has(String(s.id))), [liveSessions, closing]);
+  const tables = useMemo(() => fetchedTables.map((t) => (closing.has(String(t.activeSessionId)) ? { ...t, status: "available", activeSessionId: null } : t)), [fetchedTables, closing]);
   const prevSessionCount = useRef(null);
   // bill summaries keyed by sessionId, fetched when billRequested is true
   const [bills, setBills] = useState({});
@@ -61,6 +67,10 @@ export default function TableStatus() {
 
   useEffect(() => {
     loadTables();
+    // A close saved offline was just sent: re-read the tables.
+    const refresh = () => loadTables(true);
+    window.addEventListener(SYNCED, refresh);
+    return () => window.removeEventListener(SYNCED, refresh);
   }, [loadTables]);
 
   // Auto-refresh tables when sessions open or close

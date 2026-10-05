@@ -14,6 +14,8 @@ import { money } from "../../utils/format";
 import { waLink } from "../../utils/whatsapp";
 import { t, dir, locale } from "../../i18n";
 import { useLive, useSessionChannel } from "../../realtime";
+import ItemOptions from "../../components/orders/ItemOptions";
+import { withOptions } from "../../components/menu/cartLine";
 
 const STATE = {
   closed: { icon: CheckCircle2, tone: "bg-herb/10 text-herb", title: t("تم الدفع، شكرًا لزيارتك"), note: t("أُغلقت جلسة الطاولة. نتمنى أن تكون وجبتك قد أعجبتك.") },
@@ -90,6 +92,7 @@ export default function BillRequest() {
                     <li key={item.id} className="flex items-start justify-between gap-3 py-3 text-sm">
                       <div className="min-w-0">
                         <p className="font-bold"><span className="tabular-nums text-muted">{item.quantity}×</span> {item.name}</p>
+                        <ItemOptions options={item.options} />
                         {item.note && <p className="mt-0.5 text-xs text-copper-ink">{item.note}</p>}
                         <p className="mt-0.5 text-xs text-muted tabular-nums">{money(item.unit_price)} {t("للواحد")}</p>
                       </div>
@@ -108,7 +111,7 @@ export default function BillRequest() {
 
             <div className="mt-5 grid gap-3 print:hidden">
               {bill.restaurant_whatsapp && (
-                <a href={waLink(bill.restaurant_whatsapp, [t("مرحبًا {0} 👋", { 0: bill.restaurant || "" }), t("فاتورة {0} · جلسة #{1}", { 0: bill.session.table_label ? `طاولة ${bill.session.table_label}` : "طاولتي", 1: bill.session.id }), ...bill.items.map((i) => `• ${i.quantity}× ${i.name} — ${money(i.total)}`), t("الإجمالي: {0}", { 0: money(bill.total) }), t("المتبقي: {0}", { 0: money(bill.outstanding) })].join("\n"))}
+                <a href={waLink(bill.restaurant_whatsapp, [t("مرحبًا {0} 👋", { 0: bill.restaurant || "" }), t("فاتورة {0} · جلسة #{1}", { 0: bill.session.table_label ? `طاولة ${bill.session.table_label}` : "طاولتي", 1: bill.session.id }), ...bill.items.map((i) => `• ${i.quantity}× ${withOptions(i)} — ${money(i.total)}`), t("الإجمالي: {0}", { 0: money(bill.total) }), t("المتبقي: {0}", { 0: money(bill.outstanding) })].join("\n"))}
                   target="_blank" rel="noopener noreferrer" className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#1f9d55] text-sm font-bold text-white">
                   <MessageCircle size={17} aria-hidden="true" /> {t("تأكيد الفاتورة على واتساب")}
                 </a>

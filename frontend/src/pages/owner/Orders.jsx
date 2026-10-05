@@ -24,6 +24,7 @@ import { useToast } from "../../components/ui/Toast";
 import { t, locale } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import { restaurantChannel, useLive } from "../../realtime";
+import ItemOptions from "../../components/orders/ItemOptions";
 
 const NEXT = { pending: ["preparing", t("ابدأ التحضير")], preparing: ["ready", t("جاهز للتقديم")], ready: ["served", t("تم التقديم")] };
 const FILTERS = [
@@ -169,7 +170,7 @@ export default function Orders() {
             <ul className="divide-y divide-line rounded-xl border border-line text-sm">
               {(detail.order.items || []).map((i) => (
                 <li key={i.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
-                  <span className={i.status === "cancelled" ? "text-muted line-through" : "font-bold"}>{i.quantity}× {i.name}{i.note && <span className="block text-xs font-medium text-copper-ink">{i.note}</span>}{i.cancel_reason && <span className="block text-xs font-medium text-brick">{t("سبب الإلغاء:")} {i.cancel_reason}</span>}</span>
+                  <span className={i.status === "cancelled" ? "text-muted line-through" : "font-bold"}>{i.quantity}× {i.name}<ItemOptions options={i.options} className="font-medium" />{i.note && <span className="block text-xs font-medium text-copper-ink">{i.note}</span>}{i.cancel_reason && <span className="block text-xs font-medium text-brick">{t("سبب الإلغاء:")} {i.cancel_reason}</span>}</span>
                   <span className="num shrink-0">{money(i.quantity * i.unit_price)}</span>
                 </li>
               ))}

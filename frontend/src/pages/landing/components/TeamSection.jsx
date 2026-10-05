@@ -1,67 +1,46 @@
-import { Code2, Database, UsersRound } from "lucide-react";
+/* TeamSection.jsx — the people behind menuPilot, inside LandingPage's #team
+   section: five equal cards (one row on wide screens; two columns on phones,
+   the lead on its own row), each with initials and the person's role. */
+import SectionHeading from "./SectionHeading";
 import { t } from "../../../i18n";
 
 const TEAM = [
-  {
-    name: t("أحمد الكحلوت"),
-    role: t("صاحب المشروع · قائد الفريق"),
-    icon: UsersRound,
-  },
-  {
-    name: t("علي عابد"),
-    role: t("مطوّر الخادم (Laravel)"),
-    icon: Database,
-  },
-  {
-    name: t("عمار يحيى عمر العرعير"),
-    role: t("شريك · مطوّر الخادم (Laravel)"),
-    icon: Database,
-  },
-  {
-    name: t("سجى سقالله"),
-    role: t("مطوّرة الواجهات (React)"),
-    icon: Code2,
-  },
-  {
-    name: t("رنين ريان"),
-    role: t("مطوّرة الواجهات (React)"),
-    icon: Code2,
-  },
+  { name: t("أحمد الكحلوت"), role: t("صاحب المشروع · قائد الفريق"), lead: true },
+  { name: t("علي عابد"), role: t("مطوّر الخادم (Laravel)") },
+  { name: t("عمار يحيى عمر العرعير"), role: t("شريك · مطوّر الخادم (Laravel)") },
+  { name: t("سجى سقالله"), role: t("مطوّرة الواجهات (React)") },
+  { name: t("رنين ريان"), role: t("مطوّرة الواجهات (React)") },
 ];
+
+// First letters of the first and last name: «أحمد الكحلوت» → «أ ك».
+const initials = (name) => {
+  const words = name.replace(/^ال/, "").split(/\s+/).filter(Boolean);
+  const pick = (word) => word.replace(/^ال/, "").charAt(0);
+  return words.length > 1 ? `${pick(words[0])} ${pick(words[words.length - 1])}` : pick(words[0] || "");
+};
 
 export default function TeamSection() {
   return (
-    <section id="team" className="relative overflow-hidden border-t border-[#F3EFE5]/10 py-24">
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_0%,rgba(238,161,34,0.10),transparent_45%)]" />
+    <div className="relative overflow-hidden py-16 lg:py-20">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(238,161,34,0.10),transparent_45%)]" aria-hidden="true" />
 
-      <div className="relative mx-auto max-w-6xl px-6">
-        <div className="mx-auto mb-14 max-w-2xl text-center">
-          <span className="mb-4 inline-block font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#EEA122]">
-            {t("فريق العمل")}
-          </span>
-          <h2 className="font-[Aref_Ruqaa] text-4xl font-normal leading-tight text-[#F3EFE5] md:text-5xl">
-            {t("فريق menuPilot")}
-          </h2>
-          <p className="mt-5 text-sm leading-7 text-[#F3EFE5]/65 md:text-base">
-            {t("فريق شغوف يجمع خبرات تطوير الواجهات والخلفيات لابتكار حلول رقمية ذكية تجعل إدارة المطاعم أكثر سهولة وكفاءة.")}
-          </p>
-        </div>
+      <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+        <SectionHeading center eyebrow={t("فريق العمل")} title={t("فريق menuPilot")}>
+          {t("فريق شغوف يجمع خبرات تطوير الواجهات والخلفيات لابتكار حلول رقمية ذكية تجعل إدارة المطاعم أكثر سهولة وكفاءة.")}
+        </SectionHeading>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {TEAM.map(({ name, role, icon: Icon }, index) => (
-            <article
-              key={name}
-              className={`group rounded-2xl border border-[#F3EFE5]/10 bg-[#F3EFE5]/[0.035] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#EEA122]/40 hover:bg-[#F3EFE5]/[0.06] ${index === 0 ? "lg:col-span-2" : ""}`}
-            >
-              <div className="mb-8 flex h-11 w-11 items-center justify-center rounded-xl bg-[#EEA122]/15 text-[#EEA122] transition group-hover:bg-[#EEA122] group-hover:text-[#172331]">
-                <Icon size={21} strokeWidth={1.8} />
-              </div>
-              <h3 className="text-lg font-bold text-[#F3EFE5]">{name}</h3>
-              <p className="mt-2 text-sm leading-6 text-[#F3EFE5]/70">{role}</p>
-            </article>
+        <ul className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+          {TEAM.map(({ name, role, lead }) => (
+            <li key={name} className={`flex flex-col items-center rounded-2xl border p-5 text-center transition-colors ${lead ? "col-span-2 border-[#EEA122]/35 bg-[#EEA122]/[.06] lg:col-span-1" : "border-paper/10 bg-paper/[.03] hover:border-paper/20"}`}>
+              <span className={`grid h-14 w-14 place-items-center rounded-full text-lg font-black ${lead ? "bg-[#EEA122] text-navy-deep" : "bg-paper/10 text-paper"}`} aria-hidden="true">
+                {initials(name)}
+              </span>
+              <h3 className="mt-4 text-base font-black leading-6 text-paper">{name}</h3>
+              <p className="mt-1 text-sm leading-6 text-paper/70">{role}</p>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
-    </section>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PaymentStatus;
 use App\Models\Staff;
 use App\Support\Audit;
+use App\Support\MenuOptions;
 use App\Support\OrderWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +57,7 @@ class PaymentController extends Controller
     {
         $payload = $request->all();
         $payload['items'] = json_decode($request->input('items', '[]'), true);
-        $v = validator($payload, ['items' => 'required|array|min:1', 'items.*.menuItemId' => 'required|integer', 'items.*.quantity' => 'required|integer|min:1', 'items.*.note' => 'nullable|string|max:500', 'method' => 'required|in:cash,bank,wallet', 'provider' => 'nullable|string|max:100', 'payer_name' => 'required|string|min:2|max:255', 'payer_phone' => 'required|string|min:7|max:50', 'proof' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120'])->validate();
+        $v = validator($payload, ['items' => 'required|array|min:1', 'items.*.menuItemId' => 'required|integer', 'items.*.quantity' => 'required|integer|min:1', 'items.*.note' => 'nullable|string|max:500', 'method' => 'required|in:cash,bank,wallet', 'provider' => 'nullable|string|max:100', 'payer_name' => 'required|string|min:2|max:255', 'payer_phone' => 'required|string|min:7|max:50', 'proof' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120'] + MenuOptions::orderRules())->validate();
         $session = $this->sessionWithRestaurant($sessionId);
         if (! $session) {
             return response()->json(['message' => 'Session not found'], 404);
@@ -87,13 +88,15 @@ class PaymentController extends Controller
         $result = DB::transaction(function () use ($v, $sessionId, $session, $proofPath) {
             $orderId = OrderWorkflow::createOrder((int) $sessionId, (int) $session->restaurant_user_id, 'payment_pending');
             $validItems = 0;
-            foreach ($v['items'] as $item) {
+            foreach ($v['items'] as $n => $item) {
                 $menuItem = DB::table('menu_items')->where('id', $item['menuItemId'])->where('user_id', $session->restaurant_user_id)->where('is_available', true)->first();
                 if (! $menuItem) {
                     continue;
                 }
                 $validItems++;
-                DB::table('order_items')->insert(['order_id' => $orderId, 'menu_item_id' => $menuItem->id, 'quantity' => $item['quantity'], 'unit_price' => $menuItem->price, 'note' => $item['note'] ?? null, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
+                // Dish price + its current extras; a removed extra rolls the order back (422).
+                $priced = MenuOptions::orderLine($menuItem, $item['options'] ?? [], "items.$n.options");
+                DB::table('order_items')->insert(['order_id' => $orderId, 'menu_item_id' => $menuItem->id, 'quantity' => $item['quantity'], 'note' => $item['note'] ?? null, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()] + $priced);
             }
             if ($validItems === 0) {
                 abort(422, 'لا توجد أصناف متاحة في الطلب.');

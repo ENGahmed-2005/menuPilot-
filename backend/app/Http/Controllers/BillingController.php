@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\PaymentStatus;
 use App\Support\Audit;
+use App\Support\MenuOptions;
 use App\Support\ResolvesRestaurant;
 use App\Support\SessionLifecycle;
 use Illuminate\Http\Request;
@@ -32,7 +33,7 @@ class BillingController extends Controller
             ->first();
     }
 
-    /** Active items from every non-cancelled order in the session (FR-29). */
+    /** Active items from every non-cancelled order in the session (FR-29), extras decoded. */
     private function billItems($sid)
     {
         return DB::table('order_items')
@@ -50,10 +51,14 @@ class BillingController extends Controller
                 'order_items.quantity',
                 'order_items.unit_price',
                 'order_items.note',
+                'order_items.options',
                 DB::raw('(order_items.quantity * order_items.unit_price) as total')
             )
             ->orderBy('order_items.id')
-            ->get();
+            ->get()
+            ->each(function ($item) {
+                $item->options = MenuOptions::decode($item->options);
+            });
     }
 
     private function summary(object $session): array
@@ -136,6 +141,7 @@ class BillingController extends Controller
                 'unit_price' => (float) $i->unit_price,
                 'total' => round((float) $i->total, 2),
                 'note' => $i->note,
+                'options' => $i->options,
             ])->values(),
             'payments' => collect($bill['payments'])->map(fn ($p) => [
                 'method' => $p->method,

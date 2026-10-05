@@ -2,29 +2,29 @@
    Menu.jsx — the customer's QR menu (route /t/:tableCode/menu).
    --------------------------------------------------------------------------
    Mobile-first, like a delivery app:
-     restaurant header → sticky search + category chips (tap = jump to the
-     category, the one in view lights up) → dishes grouped by category →
-     product sheet (big image, quantity, note for the kitchen) →
-     floating cart bar with count and total.
+     restaurant header (the default band holds the search) → sticky category
+     chips (tap = jump to the category, the one in view lights up) → dishes
+     grouped by category → product sheet (photo, quantity, paid extras, a
+     note for the kitchen) → floating cart bar with count and total.
    The restaurant's branding (colours, logo, cover, card style, font) and
    menu style (layout, header, logo shape, chips… components/menu/menuStyle)
    are applied on top. Product images come from item.imageUrl (the API field);
    a broken or missing image falls back to a tinted placeholder.
    ========================================================================== */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, Minus, Plus, Search, ShoppingBag, Utensils, X } from "lucide-react";
+import { AlertCircle, ArrowRight, Search, ShoppingBag, Utensils, X } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import BrandLogo from "../../components/brand/Logo";
 import { getPublicMenuByTableCode } from "../../api/menu";
 import { useCart } from "../../context/CartContext";
 import { getThemePreset } from "../../config/themes";
-import Modal from "../../components/ui/Modal";
 import { useToast } from "../../components/ui/Toast";
 import { money } from "../../utils/format";
 import MenuItemCard from "../../components/menu/MenuItemCard";
+import ProductSheet from "../../components/menu/ProductSheet";
 import { markDemoTable, tableSession } from "../../utils/tableSession";
 import { AR, countAr } from "../../utils/plural";
-import { DEFAULT_TAGLINE, cardRadius, logoRadius, resolveMenuStyle } from "../../components/menu/menuStyle";
+import { DEFAULT_TAGLINE, cardRadius, headerColor, logoRadius, resolveMenuStyle, tint } from "../../components/menu/menuStyle";
 import { t, dir } from "../../i18n";
 import LanguageSwitch from "../../components/ui/LanguageSwitch";
 
@@ -46,30 +46,6 @@ function themeColors(theme) {
   return preset ? { primary_color: preset.primary, secondary_color: preset.secondary, background_color: preset.background } : {};
 }
 
-/** Product image with a graceful placeholder (missing file, old upload, bad URL). */
-function MenuImage({ src, alt, tint, className = "", iconSize = 26 }) {
-  const [failed, setFailed] = useState(false);
-  if (!src || failed) {
-    return (
-      <div className={`grid place-items-center ${className}`} style={{ background: `${tint}1f` }} aria-hidden="true">
-        <Utensils size={iconSize} style={{ color: tint }} />
-      </div>
-    );
-  }
-  return <img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} className={`object-cover ${className}`} />;
-}
-
-function Stepper({ value, onMinus, onPlus, color, label, size = "md" }) {
-  const box = size === "lg" ? "h-12 w-12" : "h-9 w-9";
-  return (
-    <div className="inline-flex items-center gap-1 rounded-full bg-black/[0.05] p-1">
-      <button type="button" onClick={onMinus} aria-label={t("إنقاص {0}", { 0: label })} className={`grid ${box} place-items-center rounded-full bg-white shadow-sm`}><Minus size={16} aria-hidden="true" /></button>
-      <span className="min-w-8 text-center text-base font-black tabular-nums" aria-live="polite">{value}</span>
-      <button type="button" onClick={onPlus} aria-label={t("زيادة {0}", { 0: label })} className={`grid ${box} place-items-center rounded-full text-white shadow-sm`} style={{ background: color }}><Plus size={16} aria-hidden="true" /></button>
-    </div>
-  );
-}
-
 export default function Menu() {
   const { tableCode } = useParams();
   const navigate = useNavigate();
@@ -87,7 +63,7 @@ export default function Menu() {
   const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState(ALL);
-  const [sheet, setSheet] = useState(null); // { item, quantity, note }
+  const [sheetItem, setSheetItem] = useState(null); // the dish whose details are open
   const listTop = useRef(null);
 
   useEffect(() => {
@@ -138,6 +114,25 @@ export default function Menu() {
   const sectionId = (category) => `cat-${categories.indexOf(category)}`;
   const chipsBar = useRef(null);
 
+  const solid = style.header === "solid";
+  const cover = style.header === "cover";
+  const minimal = style.header === "minimal";
+  // Cover headers sit on a photo; the solid band uses the brand colour, deepened for readable white text.
+  const band = solid ? headerColor(brand.primary_color) : brand.primary_color;
+  const roundBtn = `grid h-11 w-11 shrink-0 place-items-center rounded-full ${minimal ? "bg-black/[0.05]" : "bg-black/15 backdrop-blur"}`;
+
+  // The search lives in the solid band (translucent on the colour) or in the sticky bar.
+  const searchField = (tone) => (
+    <label className={`flex h-12 items-center gap-3 rounded-2xl px-4 ${tone === "band" ? "bg-white/15 text-white ring-1 ring-white/20 focus-within:bg-white/20 focus-within:ring-white/50" : "text-ink shadow-sm ring-1 ring-black/5"}`}
+      style={tone === "band" ? undefined : { background: style.surface_color }}>
+      <Search size={18} className="shrink-0 opacity-70" aria-hidden="true" />
+      <span className="sr-only">{t("ابحث في المنيو")}</span>
+      <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("ابحث عن طبق أو مشروب…")}
+        className={`min-w-0 flex-1 bg-transparent text-[15px] outline-none ${tone === "band" ? "placeholder:text-white/70" : ""}`} />
+      {query && <button onClick={() => setQuery("")} aria-label={t("مسح البحث")} className="-m-2 grid h-9 w-9 place-items-center rounded-full"><X size={16} aria-hidden="true" /></button>}
+    </label>
+  );
+
   function chooseCategory(category) {
     const target = category === ALL ? listTop.current : document.getElementById(sectionId(category));
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -166,15 +161,17 @@ export default function Menu() {
     chipsBar.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [activeCategory]);
 
+  // A dish with extras opens its details, so the guest can choose them.
   function quickAdd(item) {
+    if (item.options?.length) { setSheetItem(item); return; }
     addItem(item, 1, "");
     toast.success(t("أُضيف «{0}» إلى السلة", { 0: item.name }));
   }
 
-  function addFromSheet() {
-    addItem(sheet.item, sheet.quantity, sheet.note.trim());
-    toast.success(t("أُضيف {0} × «{1}» إلى السلة", { 0: sheet.quantity, 1: sheet.item.name }));
-    setSheet(null);
+  function addFromSheet({ quantity, note, options }) {
+    addItem(sheetItem, quantity, note, options);
+    toast.success(t("أُضيف {0} × «{1}» إلى السلة", { 0: quantity, 1: sheetItem.name }));
+    setSheetItem(null);
   }
 
   if (loading) {
@@ -206,53 +203,48 @@ export default function Menu() {
     <div dir={dir} className={`min-h-screen ${cartCount ? "pb-28" : "pb-10"}`}
       style={{ color: brand.text_color, backgroundColor: brand.background_color, fontFamily: brand.font_family && brand.font_family !== "system" ? brand.font_family : undefined }}>
 
-      {/* ── Restaurant header: cover, solid band, or minimal ───────────── */}
-      {(() => {
-        const minimal = style.header === "minimal";
-        const cover = style.header === "cover";
-        const roundBtn = `grid h-11 w-11 place-items-center rounded-full ${minimal ? "bg-black/[0.05]" : "bg-black/25 backdrop-blur"}`;
-        return (
-          <header className={`relative ${minimal ? "" : "text-white"}`} style={minimal ? undefined : { backgroundColor: brand.primary_color }}>
-            {cover && brand.background_url && <img src={brand.background_url} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
-            {cover && <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60" aria-hidden="true" />}
-            <div className={`relative mx-auto max-w-3xl px-4 pt-4 ${cover ? "pb-6" : "pb-4"}`}>
-              <div className="flex items-center justify-between">
-                <button onClick={() => navigate(-1)} aria-label={t("رجوع")} className={roundBtn}><ArrowRight size={20} aria-hidden="true" /></button>
-                <LanguageSwitch tone={minimal ? "light" : "dark"} className={minimal ? "" : "bg-black/25 backdrop-blur"} />
-                <button onClick={() => navigate(withSession(`/t/${tableCode}/cart`))} aria-label={cartCount ? t("السلة، {0}", { 0: countAr(cartCount, AR.items) }) : t("السلة فارغة")} className={`relative ${roundBtn}`}>
-                  <ShoppingBag size={20} aria-hidden="true" />
-                  {cartCount > 0 && <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-black" style={minimal ? { background: brand.primary_color, color: "#fff" } : { background: "#fff", color: brand.primary_color }}>{cartCount}</span>}
-                </button>
+      {/* ── Restaurant header: solid band (with the search), cover, or minimal ── */}
+      <header className={`relative ${minimal ? "" : "text-white"}`} style={minimal ? undefined : { backgroundColor: band }}>
+        {cover && brand.background_url && <img src={brand.background_url} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
+        {cover && <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60" aria-hidden="true" />}
+        <div className={`relative mx-auto max-w-3xl px-4 pt-4 ${cover ? "pb-6" : "pb-4"}`}>
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate(-1)} aria-label={t("رجوع")} className={roundBtn}><ArrowRight size={20} aria-hidden="true" /></button>
+            <span className="flex-1" />
+            <LanguageSwitch tone={minimal ? "light" : "dark"} className={minimal ? "" : "bg-black/15 backdrop-blur"} />
+            <button onClick={() => navigate(withSession(`/t/${tableCode}/cart`))} aria-label={cartCount ? t("السلة، {0}", { 0: countAr(cartCount, AR.items) }) : t("السلة فارغة")} className={`relative ${roundBtn}`}>
+              <ShoppingBag size={20} aria-hidden="true" />
+              {cartCount > 0 && <span className="absolute -end-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-black" style={minimal ? { background: brand.primary_color, color: "#fff" } : { background: "#fff", color: band }}>{cartCount}</span>}
+            </button>
+          </div>
+          <div className={`flex items-center gap-3 ${cover ? "mt-8" : "mt-4"}`}>
+            {(brand.logo_url || !solid) && (
+              <div className={`grid shrink-0 place-items-center overflow-hidden bg-white shadow-lg ${solid ? "h-14 w-14" : "h-16 w-16"}`} style={{ borderRadius: logoRadius(style.logo_shape) }}>
+                {brand.logo_url ? <img src={brand.logo_url} alt={restaurantName} className="h-full w-full object-cover" /> : <Utensils size={26} style={{ color: brand.primary_color }} aria-hidden="true" />}
               </div>
-              <div className={`flex items-end gap-4 ${cover ? "mt-8" : "mt-3"}`}>
-                <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden bg-white shadow-lg" style={{ borderRadius: logoRadius(style.logo_shape) }}>
-                  {brand.logo_url ? <img src={brand.logo_url} alt={restaurantName} className="h-full w-full object-cover" /> : <Utensils size={26} style={{ color: brand.primary_color }} aria-hidden="true" />}
-                </div>
-                <div className="min-w-0 pb-0.5">
-                  <h1 className={`truncate text-2xl font-black leading-tight ${minimal ? "" : "drop-shadow-sm"}`}>{restaurantName}</h1>
-                  <p className={`mt-1 text-sm font-bold ${minimal ? "opacity-70" : "text-white/85"}`}>{tableLabel} · {style.tagline || DEFAULT_TAGLINE}</p>
-                </div>
-              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className={`truncate text-2xl font-black leading-tight ${minimal ? "" : "drop-shadow-sm"}`}>{restaurantName}</h1>
+              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm font-bold">
+                <span className={`rounded-full px-3 py-1 text-xs ${minimal ? "bg-black/[0.06]" : "bg-white/15"}`}>{tableLabel}</span>
+                <span className={minimal ? "opacity-70" : "text-white/85"}>{style.tagline || DEFAULT_TAGLINE}</span>
+              </p>
             </div>
-          </header>
-        );
-      })()}
+          </div>
+          {solid && <div className="mt-4">{searchField("band")}</div>}
+        </div>
+      </header>
 
-      {/* ── Sticky search + categories ────────────────────────────────── */}
+      {/* ── Sticky categories (and the search, when the header has none) ── */}
       <div ref={chipsBar} className="sticky top-0 z-30 border-b border-black/5 backdrop-blur" style={{ backgroundColor: `${brand.background_color}f0` }}>
-        <div className="mx-auto max-w-3xl px-4 pt-3">
-          <label className="flex h-12 items-center gap-3 rounded-2xl px-4 text-ink shadow-sm ring-1 ring-black/5" style={{ background: style.surface_color }}>
-            <Search size={18} className="shrink-0 opacity-60" aria-hidden="true" />
-            <span className="sr-only">{t("ابحث في المنيو")}</span>
-            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("ابحث عن طبق أو مشروب…")} className="min-w-0 flex-1 bg-transparent text-[15px] outline-none" />
-            {query && <button onClick={() => setQuery("")} aria-label={t("مسح البحث")} className="-m-2 grid h-9 w-9 place-items-center rounded-full"><X size={16} aria-hidden="true" /></button>}
-          </label>
+        <div className={`mx-auto max-w-3xl px-4 ${solid ? "" : "pt-3"}`}>
+          {!solid && searchField("surface")}
           <nav aria-label={t("تصنيفات المنيو")} className={`-mx-4 flex overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${style.chips === "underline" ? "gap-5 pt-2" : "gap-2 py-3"}`}>
             {categories.map((category) => {
               const active = activeCategory === category;
               const look = style.chips === "underline"
                 ? { className: "h-11 shrink-0 whitespace-nowrap border-b-[3px] text-sm font-bold transition-colors", style: { borderColor: active ? brand.primary_color : "transparent", color: active ? brand.primary_color : brand.text_color, opacity: active ? 1 : 0.75 } }
-                : { className: "h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-bold transition-colors", style: active ? { background: brand.primary_color, color: "#fff" } : { background: style.surface_color, color: brand.text_color, boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.08)" } };
+                : { className: "h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-bold transition-colors", style: active ? { background: brand.primary_color, color: "#fff" } : { background: tint(brand.primary_color), color: brand.text_color } };
               return (
                 <button key={category} onClick={() => chooseCategory(category)} aria-current={active ? "true" : undefined} className={look.className} style={look.style}>
                   {category}
@@ -300,7 +292,7 @@ export default function Menu() {
                   {list.map((item) => (
                     <li key={item.id}>
                       <MenuItemCard item={item} style={style} brand={brand} radius={radius} count={inCart(item.id)}
-                        onOpen={(it) => setSheet({ item: it, quantity: 1, note: "" })} onAdd={quickAdd} />
+                        onOpen={setSheetItem} onAdd={quickAdd} />
                     </li>
                   ))}
                 </ul>
@@ -316,45 +308,18 @@ export default function Menu() {
         )}
       </main>
 
-      {/* ── Product sheet ─────────────────────────────────────────────── */}
-      <Modal open={Boolean(sheet)} onClose={() => setSheet(null)} title={sheet?.item.name} size="md"
-        footer={sheet && (
-          <button onClick={addFromSheet} className="flex h-14 w-full items-center justify-between rounded-2xl px-5 text-base font-black text-white" style={{ background: brand.button_color }}>
-            <span>{t("أضف إلى السلة")}</span>
-            <span className="tabular-nums">{money(Number(sheet.item.price) * sheet.quantity)}</span>
-          </button>
-        )}>
-        {sheet && (
-          <div className="space-y-5 text-ink">
-            <MenuImage src={sheet.item.imageUrl} alt={sheet.item.name} tint={brand.primary_color} iconSize={40} className="aspect-[4/3] w-full rounded-2xl" />
-            <div>
-              {sheet.item.description && <p className="text-sm leading-7 text-ink-soft">{sheet.item.description}</p>}
-              <p className="mt-2 text-xl font-black tabular-nums" style={{ color: brand.primary_color }}>{money(sheet.item.price)}</p>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold">{t("الكمية")}</span>
-              <Stepper size="lg" value={sheet.quantity} label={sheet.item.name} color={brand.button_color}
-                onMinus={() => setSheet((s) => ({ ...s, quantity: Math.max(1, s.quantity - 1) }))}
-                onPlus={() => setSheet((s) => ({ ...s, quantity: Math.min(99, s.quantity + 1) }))} />
-            </div>
-            <label className="block">
-              <span className="text-sm font-bold">{t("ملاحظة للمطبخ")} <span className="font-normal text-muted">{t("(اختياري)")}</span></span>
-              <textarea rows={2} maxLength={500} value={sheet.note} onChange={(e) => setSheet((s) => ({ ...s, note: e.target.value }))}
-                placeholder={t("مثل: بدون بصل، الصوص جانبًا")} className="mt-2 w-full resize-none rounded-xl border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-copper" />
-            </label>
-          </div>
-        )}
-      </Modal>
+      <ProductSheet key={sheetItem?.id} item={sheetItem} brand={brand} onAdd={addFromSheet} onClose={() => setSheetItem(null)} />
 
       {/* ── Floating cart ─────────────────────────────────────────────── */}
       {cartCount > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-2">
           <button onClick={() => navigate(withSession(`/t/${tableCode}/cart`))}
-            className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between rounded-2xl px-5 text-white shadow-xl transition-transform active:scale-[0.99]"
+            className="mx-auto flex h-14 w-full max-w-3xl items-center justify-center gap-2.5 rounded-2xl px-5 text-base font-black text-white shadow-xl transition-transform active:scale-[0.99]"
             style={{ background: brand.button_color }}>
-            <span className="grid h-8 min-w-8 place-items-center rounded-full bg-white/20 px-2 text-sm font-black tabular-nums">{cartCount}</span>
-            <span className="text-base font-black">{t("عرض السلة")}</span>
-            <span className="text-base font-black tabular-nums">{money(cartTotal)}</span>
+            <ShoppingBag size={20} aria-hidden="true" />
+            <span>{countAr(cartCount, AR.dishes)}</span>
+            <span aria-hidden="true">•</span>
+            <span className="tabular-nums">{money(cartTotal)}</span>
           </button>
         </div>
       )}

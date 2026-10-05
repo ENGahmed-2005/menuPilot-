@@ -49,10 +49,11 @@ export default function TryDemo() {
   }
 
   return (
-    <section id="demo" className="mx-auto max-w-7xl scroll-mt-24 px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
+    <section id="demo" className="mx-auto max-w-7xl scroll-mt-24 px-5 py-10 sm:px-8 lg:px-10 lg:py-12">
       <Reveal className="rounded-3xl border border-[#EEA122]/30 bg-[#EEA122]/[.06] p-6 sm:p-10">
-        <h2 className="text-3xl font-black tracking-tight sm:text-4xl">{t("جرّبه الآن، دون تسجيل.")}</h2>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-[#F3EFE5]/75">{t("مطعم تجريبي حي فيه طلبات وطاولات ومبيعات أشهر. اختر من تريد أن تكون. تُعاد بياناته كل يوم.")}</p>
+        <span className="text-xs font-black tracking-[.12em] text-[#EEA122]">{t("جرّبه")}</span>
+        <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-4xl">{t("جرّبه الآن، دون تسجيل.")}</h2>
+        <p className="mt-3 max-w-2xl text-base leading-7 text-paper/70">{t("مطعم تجريبي حي فيه طلبات وطاولات ومبيعات أشهر. اختر من تريد أن تكون. تُعاد بياناته كل يوم.")}</p>
         <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {ROLES.map((role) => {
             const Icon = role.icon;

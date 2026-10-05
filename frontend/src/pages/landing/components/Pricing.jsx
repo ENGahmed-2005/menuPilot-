@@ -162,10 +162,10 @@ function DeliveryOnly({ annual }) {
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
   return (
-    <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
+    <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
       <Reveal className="mx-auto max-w-2xl text-center">
-        <span className="text-[11px] font-black tracking-[.18em] text-[#EEA122] uppercase">{t("الأسعار")}</span>
-        <h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{t("باقة تناسب حجم مطعمك.")}</h2>
+        <span className="text-xs font-black tracking-[.12em] text-[#EEA122]">{t("الأسعار")}</span>
+        <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-4xl">{t("باقة تناسب حجم مطعمك.")}</h2>
         <p className="mt-4 text-base leading-7 text-[#F3EFE5]/70">
           {t("ابدأ بالباقة المناسبة، وارتقِ في أي وقت مع نمو مطعمك.")}
         </p>

@@ -8,7 +8,7 @@
    on this device; Esc or the button leaves it.
    ========================================================================== */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlarmClock, ChefHat, Clock3, Maximize2, MessageSquareText, Minimize2, RefreshCw } from "lucide-react";
+import { AlarmClock, ChefHat, Clock3, CloudUpload, Maximize2, MessageSquareText, Minimize2, RefreshCw } from "lucide-react";
 import { getKitchenOrders, updateOrderStatus } from "../../api/orders";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
@@ -25,6 +25,9 @@ import { AR, countAr } from "../../utils/plural";
 import { t, locale } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import { restaurantChannel, useLive } from "../../realtime";
+import { SYNCED, queuedOrderStatuses, useOutbox } from "../../offline/outbox";
+import { useConnectivity } from "../../offline/connectivity";
+import ItemOptions from "../../components/orders/ItemOptions";
 
 const FLOW = ["pending", "preparing", "ready", "served"];
 const NEXT_ACTION = { pending: t("ابدأ التحضير"), preparing: t("جاهز للتقديم"), ready: t("تم التقديم") };
@@ -64,18 +67,28 @@ export default function KitchenDashboard() {
   useEffect(() => {
     load();
     const clock = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(clock);
+    window.addEventListener(SYNCED, load); // status changes saved offline were just sent
+    return () => { clearInterval(clock); window.removeEventListener(SYNCED, load); };
   }, [load]);
+  // Saved data shown offline is not "live", whatever the last call said.
+  const { online } = useConnectivity();
   // New and changed orders arrive the moment they happen (timer until the socket is up).
   const { user } = useAuth();
   const live = useLive({ channel: restaurantChannel(user), isPrivate: true, topics: ["orders"], onSignal: load, pollMs: POLL_MS });
 
-  const enriched = useMemo(() => orders.map((o) => {
+  // Status changes saved offline show at once, marked "waiting to sync", even while
+  // the list still comes from the saved copy.
+  const outbox = useOutbox();
+  const queuedStatuses = useMemo(() => queuedOrderStatuses(outbox), [outbox]);
+
+  const enriched = useMemo(() => orders.map((order) => {
+    const queued = queuedStatuses.get(String(order.id));
+    const o = queued ? { ...order, status: queued, waiting: true } : order;
     const elapsed = minutesSince(o.submittedAt, now);
     const limit = Number(o.expectedPrepMinutes || o.avgPrepTimeMinutes || 15);
     // Only tickets still in the kitchen can be late; "ready" is waiting on a waiter.
     return { ...o, elapsed, limit, late: ["pending", "preparing"].includes(o.status) && elapsed > limit };
-  }), [orders, now]);
+  }), [orders, now, queuedStatuses]);
 
   const counts = useMemo(() => ({
     active: enriched.filter((o) => o.status !== "served").length,
@@ -137,7 +150,7 @@ export default function KitchenDashboard() {
         <header className="flex flex-wrap items-center gap-3 border-b border-white/10 px-5 py-3">
           <ChefHat size={24} aria-hidden="true" />
           <h1 className="text-xl font-extrabold">{t("المطبخ")}</h1>
-          <LiveIndicator connected={connected} live={live} />
+          <LiveIndicator connected={connected && online} live={live} />
           {counts.late > 0 && <span className="rounded-full bg-brick px-3 py-1 text-base font-extrabold text-white">{countAr(counts.late, AR.lateOrders)}</span>}
           <span className="num ms-auto text-2xl font-extrabold tabular-nums" aria-label={t("الساعة")}>{new Date(now).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</span>
           <Button variant="secondary" onClick={leaveWall}><Minimize2 size={16} aria-hidden="true" /> {t("الخروج")}</Button>
@@ -168,7 +181,7 @@ export default function KitchenDashboard() {
       <PageHeader
         title={t("شاشة المطبخ")}
         subtitle={t("الطلبات المتأخرة تظهر أولًا. اضغط الزر في كل تذكرة لنقلها إلى المرحلة التالية.")}
-        meta={<LiveIndicator connected={connected} live={live} />}
+        meta={<LiveIndicator connected={connected && online} live={live} />}
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={load}><RefreshCw size={15} aria-hidden="true" /> {t("تحديث")}</Button>
@@ -217,7 +230,10 @@ function Ticket({ o, busyId, onAdvance, big = false }) {
           <p className={`num font-extrabold leading-none text-ink ${big ? "text-3xl" : "text-2xl"}`}>{orderNo(o.orderNumber)}</p>
           <p className={`mt-1.5 font-bold text-ink-soft ${big ? "text-base" : "text-sm"}`}>{tableName(o.tableLabel)}{o.customerName ? <span className="font-medium text-muted">{t("،")} {o.customerName}</span> : null}</p>
         </div>
-        <StatusBadge type="order" status={o.status} />
+        <div className="flex flex-col items-end gap-1.5">
+          <StatusBadge type="order" status={o.status} />
+          {o.waiting && <span className="inline-flex items-center gap-1 text-xs font-bold text-copper-ink"><CloudUpload size={13} aria-hidden="true" />{t("بانتظار المزامنة")}</span>}
+        </div>
       </div>
       <div className={`flex items-center gap-2 px-4 pt-3 font-bold ${o.late ? "text-brick" : "text-muted"} ${big ? "text-base" : "text-sm"}`}>
         {o.late ? <AlarmClock size={16} aria-hidden="true" /> : <Clock3 size={16} aria-hidden="true" />}
@@ -231,6 +247,7 @@ function Ticket({ o, busyId, onAdvance, big = false }) {
           <li key={item.id || index} className={big ? "text-lg leading-7" : "text-[0.95rem] leading-6"}>
             <span className={`num ml-1.5 inline-grid min-w-7 place-items-center rounded-md bg-navy px-1.5 font-extrabold text-paper ${big ? "text-base" : "text-sm"}`}>{item.quantity}×</span>
             <span className="font-bold text-ink">{item.name}</span>
+            <ItemOptions options={item.options} size={big ? "lg" : "md"} className="ms-9 mt-0.5" />
             {item.note && (
               <span className="mt-1 flex items-start gap-1.5 rounded-lg bg-copper/10 px-2 py-1 text-sm font-bold text-copper-ink">
                 <MessageSquareText size={14} className="mt-1 shrink-0" aria-hidden="true" />{item.note}

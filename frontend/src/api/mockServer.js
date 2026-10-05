@@ -91,15 +91,31 @@ let tables = [
 let menuItems = [
   { id: 1, name: "Grilled Halloumi Skewers", price: 8.5, category: "Starters", description: "Charred halloumi, lemon-herb oil, toasted pistachio." },
   { id: 2, name: "Roasted Red Pepper Hummus", price: 6, category: "Starters", description: "Smoky hummus, warm flatbread, chili oil." },
-  { id: 3, name: "Herb-Crusted Chicken", price: 15.5, category: "Mains", description: "Free-range chicken breast, rosemary jus, seasonal veg." },
-  { id: 4, name: "Slow-Braised Lamb Kofta", price: 17, category: "Mains", description: "Spiced lamb kofta, tahini yogurt, pickled onion." },
-  { id: 5, name: "Falafel Wrap", price: 11, category: "Mains", description: "Crispy falafel, pickles, herb sauce, flatbread." },
+  { id: 3, name: "Herb-Crusted Chicken", price: 15.5, category: "Mains", description: "Free-range chicken breast, rosemary jus, seasonal veg.",
+    options: [{ id: "cheese", name: "Extra cheese", price: 3 }, { id: "fries", name: "French fries", price: 4 }, { id: "sauce", name: "Garlic sauce", price: 0 }] },
+  { id: 4, name: "Slow-Braised Lamb Kofta", price: 17, category: "Mains", description: "Spiced lamb kofta, tahini yogurt, pickled onion.",
+    options: [{ id: "rice", name: "Spiced rice", price: 5 }, { id: "salad", name: "Side salad", price: 4 }] },
+  { id: 5, name: "Falafel Wrap", price: 11, category: "Mains", description: "Crispy falafel, pickles, herb sauce, flatbread.",
+    options: [{ id: "cheese", name: "Extra cheese", price: 3 }, { id: "hot", name: "Hot sauce", price: 0 }] },
   { id: 6, name: "Wild Mushroom Risotto", price: 14, category: "Mains", description: "Arborio rice, wild mushrooms, parmesan, truffle oil." },
   { id: 7, name: "Charred Corn Salad", price: 5.5, category: "Sides", description: "Charred corn, feta, lime, coriander." },
   { id: 8, name: "Rosemary Fries", price: 4.5, category: "Sides", description: "Hand-cut fries, rosemary salt, garlic aioli." },
   { id: 9, name: "Pistachio Baklava", price: 6.5, category: "Desserts", description: "Layered filo, pistachio, honey syrup." },
   { id: 10, name: "Mint & Cucumber Lemonade", price: 4, category: "Drinks", description: "Fresh mint, cucumber, lemon, sparkling water." },
 ];
+
+/* Extras («الإضافات»), priced like App\Support\MenuOptions: dish price + the
+   chosen extras' current prices, with a snapshot on the order line. */
+// The server gives new extras an id; the mock does the same.
+const withOptionIds = (options = []) => options.map((o) => ({ ...o, id: o.id || Math.random().toString(36).slice(2, 10), price: Number(o.price) || 0 }));
+
+function priceLine(it) {
+  const menuItem = menuItems.find((m) => m.id === it.menuItemId);
+  const options = (menuItem?.options || []).filter((o) => (it.options || []).includes(o.id));
+  if (options.length !== (it.options || []).length) fail(422, "بعض الإضافات لم تعد متاحة. حدّث المنيو وحاول مجددًا.");
+  const unitPrice = (menuItem?.price || 0) + options.reduce((sum, o) => sum + o.price, 0);
+  return { menuItemId: it.menuItemId, name: menuItem?.name || "Item", note: it.note || "", quantity: it.quantity, price: unitPrice, unit_price: unitPrice, options, category: menuItem?.category || null, image_url: menuItem?.imageUrl || null, status: "active" };
+}
 
 let sessions = [
   { id: 101, tableId: 2, tableCode: "T02", tableLabel: "Table 2", name: "Sara Youssef", phone: "0599123456", status: "Ordering", assistanceRequested: false, createdAt: new Date(Date.now() - 12 * 60000).toISOString() },
@@ -355,14 +371,14 @@ export async function mockRequest(method, rawPath, body, token) {
     if (menuItems.length >= plan.limits.menuItems) {
       fail(403, `وصلت للحد الأقصى لعدد أصناف القائمة في باقة ${plan.name} (${plan.limits.menuItems}). رقّي باقتك لإضافة المزيد.`);
     }
-    const item = { id: nextIds.menuItem++, ...body };
+    const item = { id: nextIds.menuItem++, ...body, options: withOptionIds(body.options) };
     menuItems.push(item);
     return item;
   }
 
   if (method === "PUT" && seg[0] === "menu-items" && seg.length === 2) {
     const id = Number(seg[1]);
-    menuItems = menuItems.map((m) => (m.id === id ? { ...m, ...body } : m));
+    menuItems = menuItems.map((m) => (m.id === id ? { ...m, ...body, options: body.options === undefined ? m.options : withOptionIds(body.options) } : m));
     return menuItems.find((m) => m.id === id);
   }
 
@@ -416,10 +432,7 @@ export async function mockRequest(method, rawPath, body, token) {
       orderNumber: `ORD-${nextIds.order}`,
       tableLabel: sessions.find((s) => s.id === sessionId)?.tableLabel || "—",
       status: "Pending",
-      items: body.items.map((it) => {
-        const menuItem = menuItems.find((m) => m.id === it.menuItemId);
-        return { menuItemId: it.menuItemId, name: menuItem?.name || "Item", note: it.note || "", quantity: it.quantity, price: menuItem?.price || 0 };
-      }),
+      items: body.items.map((it, index) => ({ id: `${nextIds.order}-${index}`, ...priceLine(it) })),
       submittedAt: new Date().toISOString(),
       avgPrepTimeMinutes: 15,
     };

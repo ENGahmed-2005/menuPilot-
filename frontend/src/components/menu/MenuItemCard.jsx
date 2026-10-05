@@ -1,7 +1,8 @@
-/* One dish on the customer menu, in the layout the restaurant chose:
-   compact (small horizontal card, the default on phones), photo, grid or
-   text. The whole card opens the details; the + button adds one. Used by
-   the menu and by the branding preview. */
+/* One dish on the customer menu, in the layout the restaurant chose: grid
+   (two photo cards per row, the default), compact (small horizontal card),
+   photo or text. The whole card opens the details; the + button adds one
+   (the menu opens the details instead when the dish has extras). Used by the
+   menu and by the branding preview. */
 import { useState } from "react";
 import { Plus, Utensils } from "lucide-react";
 import { money } from "../../utils/format";
@@ -25,15 +26,17 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
   const showImage = style.show_images && Boolean(item.imageUrl);
   const showDescription = style.show_descriptions && item.description;
   const surface = { background: style.surface_color, borderRadius: radius };
+  // Grid cards use the reference's small rounded-square button; the others a round one.
+  const square = style.layout === "grid";
   const add = (
     <button type="button" onClick={() => onAdd(item)} aria-label={t("إضافة {0} إلى السلة", { 0: item.name })}
-      className="pointer-events-auto relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-full text-white shadow-sm transition-transform active:scale-90"
+      className={`pointer-events-auto relative z-10 grid shrink-0 place-items-center text-white shadow-sm transition-transform active:scale-90 ${square ? "h-10 w-10 rounded-xl" : "h-11 w-11 rounded-full"}`}
       style={{ background: brand.button_color }}>
-      <Plus size={20} aria-hidden="true" />
+      <Plus size={square ? 19 : 20} strokeWidth={2.5} aria-hidden="true" />
     </button>
   );
   const open = <button type="button" onClick={() => onOpen(item)} className="absolute inset-0 z-0" style={{ borderRadius: radius }} aria-label={t("تفاصيل {0}", { 0: item.name })} />;
-  const badge = count > 0 && <span className="absolute right-1.5 top-1.5 z-[1] rounded-full bg-black/70 px-1.5 py-0.5 text-[11px] font-black leading-none text-white">×{count}</span>;
+  const badge = count > 0 && <span className="absolute start-2 top-2 z-[1] rounded-full bg-black/70 px-2 py-1 text-xs font-black leading-none text-white">×{count}</span>;
   const price = <span className="text-[15px] font-black tabular-nums" style={{ color: priceColor }}>{money(item.price)}</span>;
 
   if (style.layout === "text") {
@@ -60,12 +63,12 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
         {open}
         {style.show_images && (
           <div className="pointer-events-none relative">
-            <Thumb src={item.imageUrl} alt={item.name} tint={brand.primary_color} className={`w-full ${grid ? "aspect-square" : "aspect-[16/10]"}`} iconSize={grid ? 26 : 32} />
+            <Thumb src={item.imageUrl} alt={item.name} tint={brand.primary_color} className={`w-full ${grid ? "aspect-[4/3]" : "aspect-[16/10]"}`} iconSize={grid ? 26 : 32} />
             {badge}
           </div>
         )}
-        <div className={`pointer-events-none flex flex-1 flex-col ${grid ? "p-2.5" : "p-3.5"}`}>
-          <h3 className={`line-clamp-2 font-black ${grid ? "text-[14px] leading-5" : "text-base leading-6"}`}>{item.name}</h3>
+        <div className={`pointer-events-none flex flex-1 flex-col ${grid ? "p-3" : "p-3.5"}`}>
+          <h3 className={`line-clamp-2 font-black ${grid ? "min-h-10 text-[15px] leading-5" : "text-base leading-6"}`}>{item.name}</h3>
           {showDescription && !grid && <p className="mt-1 line-clamp-2 text-[13px] leading-5 opacity-70">{item.description}</p>}
           <div className="mt-auto flex items-center justify-between gap-2 pt-2">{price}{add}</div>
         </div>

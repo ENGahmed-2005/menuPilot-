@@ -7,12 +7,13 @@
    need the «الهوية الكاملة» add-on.
    ========================================================================== */
 import { useEffect, useMemo, useState } from 'react';
-import { ImageUp, Lock, RotateCcw, Utensils, Wand2 } from 'lucide-react';
+import { ImageUp, Lock, RotateCcw, Search, ShoppingBag, Utensils, Wand2 } from 'lucide-react';
 import { getBranding, resetBranding, saveBranding } from '../../api/branding';
 import { useAuth } from '../../context/AuthContext';
 import { SUBSCRIPTION_ADDONS, subscriptionOf, userHasFeature } from '../../config/subscriptions';
 import MenuItemCard from '../../components/menu/MenuItemCard';
-import { DEFAULT_TAGLINE, MENU_STYLE_DEFAULTS, MENU_STYLE_OPTIONS, cardRadius, logoRadius, resolveMenuStyle } from '../../components/menu/menuStyle';
+import { money } from '../../utils/format';
+import { DEFAULT_TAGLINE, MENU_STYLE_DEFAULTS, MENU_STYLE_OPTIONS, cardRadius, headerColor, logoRadius, resolveMenuStyle, tint } from '../../components/menu/menuStyle';
 import { t, dir } from "../../i18n";
 
 const defaults = { primary_color: '#B8793E', secondary_color: '#4B6A8A', text_color: '#172331', button_color: '#1F2D3D', background_color: '#F7F3E9', card_style: 'rounded', font_family: 'system', show_menupilot_branding: true };
@@ -82,28 +83,46 @@ function Preview({ settings, style, logoSrc, coverSrc }) {
   const brand = { ...settings, background_color: style.background_color || settings.background_color };
   const radius = cardRadius(settings.card_style);
   const items = useMemo(() => sample(settings.primary_color), [settings.primary_color]);
-  const minimal = style.header === 'minimal', cover = style.header === 'cover';
+  const minimal = style.header === 'minimal', cover = style.header === 'cover', solid = style.header === 'solid';
+  // Same band colour as the real menu (Menu.jsx): deepened for readable white text.
+  const band = solid ? headerColor(settings.primary_color) : settings.primary_color;
   const listClass = { compact: 'grid gap-2', photo: 'grid gap-3', grid: 'grid grid-cols-2 gap-2', text: 'divide-y divide-black/[0.06] overflow-hidden ring-1 ring-black/5' }[style.layout];
+  const search = (onBand) => (
+    <span className={`flex h-9 items-center gap-2 rounded-xl px-3 text-xs ${onBand ? 'bg-white/15 text-white/80 ring-1 ring-white/20' : 'text-ink/60 ring-1 ring-black/5'}`} style={onBand ? undefined : { background: style.surface_color }}>
+      <Search size={13} aria-hidden="true" /> {t("ابحث عن طبق أو مشروب…")}
+    </span>
+  );
   return (
     <div className="mx-auto w-full max-w-[340px] overflow-hidden rounded-[2.2rem] border-[9px] border-ink shadow-xl" aria-label={t("معاينة المنيو كما يراه الزبون")}>
-      <div className="h-[600px] overflow-y-auto" dir={dir} style={{ background: brand.background_color, color: brand.text_color, fontFamily: settings.font_family !== 'system' ? settings.font_family : undefined }}>
-        <div className={`relative ${minimal ? '' : 'text-white'}`} style={minimal ? undefined : { background: settings.primary_color }}>
+      <div className="relative h-[600px] overflow-y-auto" dir={dir} style={{ background: brand.background_color, color: brand.text_color, fontFamily: settings.font_family !== 'system' ? settings.font_family : undefined }}>
+        <div className={`relative ${minimal ? '' : 'text-white'}`} style={minimal ? undefined : { background: band }}>
           {cover && coverSrc && <img src={coverSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />}
           {cover && <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />}
-          <div className={`relative flex items-end gap-3 px-4 ${cover ? 'pb-5 pt-16' : 'py-4'}`}>
-            <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden bg-white shadow" style={{ borderRadius: logoRadius(style.logo_shape) }}>
-              {logoSrc ? <img src={logoSrc} alt="" className="h-full w-full object-cover" /> : <Utensils size={20} style={{ color: settings.primary_color }} />}
-            </span>
-            <span className="min-w-0">
-              <b className="block truncate text-lg">{t("اسم مطعمك")}</b>
-              <span className={`block truncate text-xs font-bold ${minimal ? 'opacity-70' : 'text-white/85'}`}>{t("طاولة 4 ·")} {style.tagline || DEFAULT_TAGLINE}</span>
-            </span>
+          <div className={`relative px-4 ${cover ? 'pb-5 pt-16' : 'py-4'}`}>
+            <div className="flex items-center gap-3">
+              {(logoSrc || !solid) && (
+                <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden bg-white shadow" style={{ borderRadius: logoRadius(style.logo_shape) }}>
+                  {logoSrc ? <img src={logoSrc} alt="" className="h-full w-full object-cover" /> : <Utensils size={20} style={{ color: settings.primary_color }} />}
+                </span>
+              )}
+              <span className="min-w-0">
+                <b className="block truncate text-lg">{t("اسم مطعمك")}</b>
+                <span className="mt-1 flex items-center gap-1.5 text-[11px] font-bold">
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 ${minimal ? 'bg-black/[0.06]' : 'bg-white/15'}`}>{t("طاولة 4")}</span>
+                  <span className={`truncate ${minimal ? 'opacity-70' : 'text-white/85'}`}>{style.tagline || DEFAULT_TAGLINE}</span>
+                </span>
+              </span>
+            </div>
+            {solid && <div className="mt-3">{search(true)}</div>}
           </div>
         </div>
-        <div className={`flex border-b border-black/5 px-3 ${style.chips === 'underline' ? 'gap-4 pt-1' : 'gap-1.5 py-2.5'}`}>
-          {[t("الكل"), t("الرئيسية"), t("السلطات"), t("الحلويات")].map((c, i) => style.chips === 'underline'
-            ? <span key={c} className="whitespace-nowrap border-b-[3px] py-2 text-xs font-bold" style={{ borderColor: i === 0 ? settings.primary_color : 'transparent', color: i === 0 ? settings.primary_color : undefined }}>{c}</span>
-            : <span key={c} className="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold" style={i === 0 ? { background: settings.primary_color, color: '#fff' } : { background: style.surface_color, boxShadow: 'inset 0 0 0 1px rgb(0 0 0 / .08)' }}>{c}</span>)}
+        <div className="border-b border-black/5 px-3">
+          {!solid && <div className="pt-2.5">{search(false)}</div>}
+          <div className={`flex ${style.chips === 'underline' ? 'gap-4 pt-1' : 'gap-1.5 py-2.5'}`}>
+            {[t("الكل"), t("الرئيسية"), t("السلطات"), t("الحلويات")].map((c, i) => style.chips === 'underline'
+              ? <span key={c} className="whitespace-nowrap border-b-[3px] py-2 text-xs font-bold" style={{ borderColor: i === 0 ? settings.primary_color : 'transparent', color: i === 0 ? settings.primary_color : undefined }}>{c}</span>
+              : <span key={c} className="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold" style={i === 0 ? { background: settings.primary_color, color: '#fff' } : { background: tint(settings.primary_color) }}>{c}</span>)}
+          </div>
         </div>
         <div className="px-3 pb-6 pt-4">
           <b className="mb-2 block text-sm">{t("الأطباق")}</b>
@@ -113,6 +132,11 @@ function Preview({ settings, style, logoSrc, coverSrc }) {
             ))}
           </ul>
           {settings.show_menupilot_branding && <p className="mt-6 text-center text-[11px] font-bold opacity-50" dir="ltr">{t("مدعوم من menuPilot")}</p>}
+        </div>
+        <div className="sticky bottom-0 px-3 pb-3 pt-1">
+          <span className="flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-black text-white shadow-lg" style={{ background: settings.button_color }}>
+            <ShoppingBag size={16} aria-hidden="true" /> {t("صنفان")} • {money(47)}
+          </span>
         </div>
       </div>
     </div>

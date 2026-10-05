@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\MenuStyle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 
@@ -50,6 +51,10 @@ it('reaches the customer menu, and reset clears it', function () {
         ->assertJsonPath('data.restaurant.branding.menu_style.chips', 'underline');
 
     $this->postJson('/api/me/branding/reset', [], authAs($owner))->assertOk()->assertJsonPath('data.menu_style', null);
+});
+
+it('defaults to the two-column grid under a solid header (same as the frontend)', function () {
+    expect(MenuStyle::DEFAULTS)->toMatchArray(['layout' => 'grid', 'header' => 'solid']);
 });
 
 it('needs the branding feature (Pro or a trial)', function () {

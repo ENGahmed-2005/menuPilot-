@@ -4,47 +4,18 @@
    trigger on close, Tab stays inside, and the page behind doesn't scroll.
    size: sm | md | lg | xl
    ========================================================================== */
-import { useEffect, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import { X } from "lucide-react";
 import { t, dir } from "../../i18n";
+import { useDialog } from "../../hooks/useDialog";
 
 const SIZES = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-2xl", xl: "max-w-5xl" };
-const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export default function Modal({ open, onClose, title, description, size = "md", footer, bodyClassName = "px-6 py-5", children }) {
   const panelRef = useRef(null);
-  // Latest onClose without re-running the focus effect: parents usually pass
-  // a new arrow function on every render, which used to move the focus back
-  // to the close button on each keystroke.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const titleId = useId();
   const descId = useId();
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const previouslyFocused = document.activeElement;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-    const first = panelRef.current?.querySelector(FOCUSABLE);
-    (first || panelRef.current)?.focus();
-
-    function onKey(event) {
-      if (event.key === "Escape") { event.stopPropagation(); onCloseRef.current?.(); return; }
-      if (event.key !== "Tab" || !panelRef.current) return;
-      const nodes = [...panelRef.current.querySelectorAll(FOCUSABLE)];
-      if (!nodes.length) return;
-      const [firstNode, lastNode] = [nodes[0], nodes[nodes.length - 1]];
-      if (event.shiftKey && document.activeElement === firstNode) { event.preventDefault(); lastNode.focus(); }
-      else if (!event.shiftKey && document.activeElement === lastNode) { event.preventDefault(); firstNode.focus(); }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = overflow;
-      previouslyFocused?.focus?.();
-    };
-  }, [open]);
+  useDialog(open, panelRef, onClose);
 
   if (!open) return null;
 

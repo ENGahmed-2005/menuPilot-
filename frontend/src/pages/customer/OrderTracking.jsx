@@ -1,11 +1,19 @@
+/* ==========================================================================
+   OrderTracking.jsx — the guest's order status (route /order-tracking).
+   Each order: its number, a vertical timeline (received → preparing → ready
+   → served; a pay-first order waits for the cashier first) and a summary of
+   its dishes with their extras, category and price. Updates live; the guest
+   can call the waiter, ask for the bill or order more for the same table.
+   ========================================================================== */
 import { useEffect, useMemo, useState } from "react";
-import BrandLogo from "../../components/brand/Logo";
-import { BellRing, Check, ChevronRight, Clock3, FileText, Loader2, Plus, Utensils, X } from "lucide-react";
+import { ArrowRight, BellRing, Check, Clock3, FileText, Loader2, Plus, Utensils, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOrderTracking } from "../../hooks/useOrderTracking";
 import { getSession, leaveSession, requestWaiterAssistance } from "../../api/sessions";
 import { requestBill } from "../../api/billing";
 import Spinner from "../../components/ui/Spinner";
+import ItemOptions from "../../components/orders/ItemOptions";
+import { money } from "../../utils/format";
 import { t, dir } from "../../i18n";
 
 const STATUS_META = {
@@ -19,14 +27,12 @@ const STATUS_META = {
 };
 
 const STEPS = [
-  { key: "pending", label: t("تم الاستلام") },
-  { key: "preparing", label: t("قيد التحضير") },
+  { key: "pending", label: t("تم استلام الطلب") },
+  { key: "preparing", label: t("المطبخ يحضّر طلبك") },
   { key: "ready", label: t("جاهز") },
   { key: "served", label: t("تم التقديم") },
 ];
-
-// payment_pending: no kitchen step is reached yet.
-const STATUS_ORDER = { payment_pending: -1, pending: 0, preparing: 1, ready: 2, served: 3 };
+const PAYMENT_STEP = { key: "payment_pending", label: t("بانتظار تأكيد الدفع") };
 
 function normalizeStatus(status) {
   return String(status || "").trim().toLowerCase();
@@ -37,19 +43,73 @@ function statusMeta(status) {
   return STATUS_META[normalized] || { label: status || t("غير معروف"), description: t("يتم تحديث حالة طلبك.") };
 }
 
-function OrderProgress({ status }) {
-  const normalized = normalizeStatus(status);
-  if (normalized === "cancelled") {
-    return <div className="flex items-center gap-3 rounded-2xl border border-brick/15 bg-brick/5 p-4 text-brick"><X size={18} /><span className="text-sm font-semibold">{t("تم إلغاء هذا الطلب")}</span></div>;
+/* Done steps: a filled circle with a check; the current one: a filled dot
+   with a soft ring; the rest: hollow. The line between them fills as it goes. */
+function OrderTimeline({ status }) {
+  if (status === "cancelled") {
+    return <div className="mt-5 flex items-center gap-3 rounded-2xl border border-brick/15 bg-brick/5 p-4 text-brick"><X size={18} aria-hidden="true" /><span className="text-sm font-semibold">{t("تم إلغاء هذا الطلب")}</span></div>;
   }
+  const steps = status === "payment_pending" ? [PAYMENT_STEP, ...STEPS] : STEPS;
+  const current = Math.max(0, steps.findIndex((step) => step.key === status));
+  const finished = status === "served";
 
-  const current = STATUS_ORDER[normalized] ?? 0;
   return (
-    <div className="mt-5 grid grid-cols-4 gap-2">
-      {STEPS.map((step, index) => {
-        const active = index <= current;
-        return <div key={step.key} className="min-w-0 text-center"><div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full border text-xs font-bold transition ${active ? "border-copper bg-copper text-ink" : "border-ink/10 bg-paper text-muted"}`}>{active ? <Check size={16} strokeWidth={3} /> : index + 1}</div><p className={`mt-2 truncate text-xs font-semibold sm:text-xs ${active ? "text-ink" : "text-muted"}`}>{step.label}</p></div>;
+    <ol className="mt-5" aria-label={t("مراحل الطلب")}>
+      {steps.map((step, index) => {
+        const done = index < current || finished;
+        const now = index === current && !finished;
+        return (
+          <li key={step.key} className="relative flex gap-3 pb-5 last:pb-0" aria-current={now ? "step" : undefined}>
+            {index < steps.length - 1 && <span aria-hidden="true" className={`absolute start-[11px] top-6 bottom-0 w-0.5 ${index < current || finished ? "bg-navy" : "bg-ink/15"}`} />}
+            <span aria-hidden="true" className={`relative grid h-6 w-6 shrink-0 place-items-center rounded-full ${done ? "bg-navy text-paper" : now ? "bg-navy ring-4 ring-navy/15" : "border-2 border-ink/20 bg-white"}`}>
+              {done && <Check size={14} strokeWidth={3} />}
+              {now && <span className="h-2 w-2 rounded-full bg-paper motion-safe:animate-pulse" />}
+            </span>
+            <span className={`pt-0.5 text-[15px] leading-5 ${now ? "font-black text-ink" : done ? "font-bold text-ink" : "text-muted"}`}>
+              {step.label}
+              {done && <span className="sr-only"> — {t("تم")}</span>}
+            </span>
+          </li>
+        );
       })}
+    </ol>
+  );
+}
+
+function Thumb({ src, alt }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-copper/10 text-copper" aria-hidden="true"><Utensils size={18} /></span>;
+  return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-xl object-cover" />;
+}
+
+/* The order's dishes; cancelled ones are struck through and left out of the total. */
+function OrderSummary({ items = [] }) {
+  if (!items.length) return null;
+  const active = (item) => item.status !== "cancelled";
+  const total = items.filter(active).reduce((sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 0), 0);
+  return (
+    <div className="mt-6 border-t border-line pt-5">
+      <h3 className="text-base font-black">{t("ملخص الطلب")}</h3>
+      <ul className="mt-3 space-y-3">
+        {items.map((item) => (
+          <li key={item.id} className="flex items-start gap-3">
+            <Thumb src={item.image_url} alt={item.name} />
+            <div className="min-w-0 flex-1">
+              <p className={`text-[15px] font-bold leading-6 ${active(item) ? "" : "text-muted line-through"}`}>
+                {Number(item.quantity) > 1 && <span className="tabular-nums text-muted">{item.quantity}× </span>}{item.name}
+              </p>
+              <ItemOptions options={item.options} />
+              {item.note && <p className="text-xs leading-5 text-muted">{item.note}</p>}
+              {item.category && <span className="mt-1 inline-block rounded-full bg-copper/10 px-2.5 py-0.5 text-[11px] font-bold text-copper-ink">{item.category}</span>}
+            </div>
+            <span className={`shrink-0 pt-0.5 text-[15px] font-black tabular-nums ${active(item) ? "" : "text-muted line-through"}`}>{money(Number(item.unit_price || 0) * Number(item.quantity || 0))}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 flex items-center justify-between border-t border-line pt-4 text-lg font-black">
+        <span>{t("الإجمالي")}</span>
+        <span className="tabular-nums">{money(total)}</span>
+      </div>
     </div>
   );
 }
@@ -159,13 +219,16 @@ export default function OrderTracking() {
 
   return (
     <main dir={dir} className="min-h-screen bg-paper-2 pb-40 text-ink">
-      <header className="bg-navy text-paper">
-        <div className="mx-auto max-w-3xl px-5 pb-8 pt-6 sm:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-copper text-ink"><Utensils size={20} /></div><div><BrandLogo on="dark" height={22} /><p className="mt-0.5 text-xs text-paper/70">{t("تتبع طلبك")}</p></div></div>
-            <div className="flex items-center gap-2 rounded-full border border-paper/10 bg-paper/5 px-3 py-2 text-xs text-paper/65"><span className="h-2 w-2 animate-pulse rounded-full bg-herb" /> {t("تحديث تلقائي")}</div>
-          </div>
-          <div className="mt-8"><p className="text-sm text-paper/70">{t("جلسة الطعام #")}{sessionId}</p><h1 className="mt-1 font-display text-4xl">{normalizedOrders.length > 1 ? t("طلباتك ({0})", { 0: normalizedOrders.length }) : t("طلبك في الطريق إليك")}</h1></div>
+      <header className="sticky top-0 z-30 bg-navy text-paper shadow-sm">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
+          <button onClick={() => (tableCode ? addAnotherOrder() : navigate(-1))} aria-label={tableCode ? t("العودة للقائمة") : t("رجوع")} className="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-paper/10">
+            <ArrowRight size={20} aria-hidden="true" />
+          </button>
+          <h1 className="flex-1 text-center text-lg font-black">{t("حالة الطلب")}</h1>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center" title={t("تحديث تلقائي")}>
+            <span className="h-2.5 w-2.5 rounded-full bg-herb motion-safe:animate-pulse" aria-hidden="true" />
+            <span className="sr-only">{t("تحديث تلقائي")}</span>
+          </span>
         </div>
       </header>
 
@@ -179,7 +242,19 @@ export default function OrderTracking() {
             {normalizedOrders.map((order) => {
               const meta = statusMeta(order.normalizedStatus);
               const isActive = activeOrder?.id === order.id;
-              return <article key={order.id} className={`rounded-[2rem] border bg-white p-5 shadow-sm transition sm:p-6 ${isActive ? "border-copper/30 shadow-md" : "border-ink/10"}`}><div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-xs font-bold text-muted"><span>{t("طلب")}</span><span className="text-ink">#{order.orderNumber}</span></div><h2 className="mt-2 text-lg font-bold">{meta.label}</h2><p className="mt-1 text-sm leading-6 text-ink-soft">{meta.description}</p></div><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-copper/10 text-copper">{order.normalizedStatus === "ready" ? <BellRing size={20} /> : <Clock3 size={20} />}</div></div><OrderProgress status={order.normalizedStatus} /></article>;
+              return (
+                <article key={order.id} className={`rounded-[1.75rem] border bg-white p-5 shadow-sm transition sm:p-6 ${isActive ? "border-copper/30 shadow-md" : "border-ink/10"}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl font-black">{t("طلب")} <span className="tabular-nums">#{order.orderNumber}</span></h2>
+                      <p className="mt-1 text-sm leading-6 text-ink-soft">{meta.description}</p>
+                    </div>
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-copper/10 text-copper" aria-hidden="true">{order.normalizedStatus === "ready" ? <BellRing size={20} /> : <Clock3 size={20} />}</div>
+                  </div>
+                  <OrderTimeline status={order.normalizedStatus} />
+                  <OrderSummary items={order.items} />
+                </article>
+              );
             })}
           </div>
         )}
@@ -192,7 +267,6 @@ export default function OrderTracking() {
           </div>
         </section>
 
-        <div className="mt-5 flex items-center justify-center gap-1 text-xs text-muted"><span>{t("تحديث حالة الطلب تلقائيًا")}</span><ChevronRight size={13} className="rotate-180" /></div>
       </div>
 
       {/* Order more without leaving the session: back to the same table's menu. */}

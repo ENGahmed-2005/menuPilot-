@@ -6,6 +6,7 @@ import { getSession, updateCustomer } from "../../api/sessions";
 import { getPaymentOptions, submitPayment } from "../../api/payments";
 import Spinner from "../../components/ui/Spinner";
 import { t, dir } from "../../i18n";
+import { toOrderItem } from "../../components/menu/cartLine";
 
 const METHODS = [
   { id: "bank", icon: CreditCard, title: t("تحويل بنكي"), text: t("حوّل المبلغ إلى حساب المطعم ثم أرسل البيانات.") },
@@ -62,7 +63,7 @@ export default function PaymentFlow() {
     if (form.payerName.trim().length < 2 || form.payerPhone.trim().length < 7) { setError(t("أدخل اسم صاحب التحويل ورقم الجوال.")); return; }
     setSaving(true); setError("");
     try {
-      await submitPayment(sessionId, { items: items.map((item) => ({ menuItemId: item.menuItemId, quantity: item.quantity, note: item.note || "" })), method, provider: selectedOption?.name || "", payer_name: form.payerName.trim(), payer_phone: form.payerPhone.trim(), proof });
+      await submitPayment(sessionId, { items: items.map(toOrderItem), method, provider: selectedOption?.name || "", payer_name: form.payerName.trim(), payer_phone: form.payerPhone.trim(), proof });
       clearCart();
       navigate(`/order-tracking?session=${encodeURIComponent(sessionId)}`, { replace: true });
     } catch (err) {

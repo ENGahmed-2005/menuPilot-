@@ -18,6 +18,7 @@ import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import CloseSessionButton from "../../components/billing/CloseSessionButton";
 import { usePermissions } from "../../hooks/usePermissions";
+import { SYNCED, queuedRefs, useOutbox } from "../../offline/outbox";
 import Input from "../../components/ui/Input";
 import PageHeader from "../../components/dashboard/PageHeader";
 import Card from "../../components/dashboard/Card";
@@ -29,6 +30,8 @@ import {
   rejectPayment,
 } from "../../api/billing";
 import { t, dir } from "../../i18n";
+import ItemOptions from "../../components/orders/ItemOptions";
+import { withOptions } from "../../components/menu/cartLine";
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
@@ -44,6 +47,7 @@ function mapBill(data, sessionId) {
     price: Number(item.unit_price),
     total: Number(item.total),
     note: item.note,
+    options: item.options || [],
   }));
   const payments = data?.payments || [];
   const pendingPayments = payments.filter((p) => p.status === "pending");
@@ -106,7 +110,7 @@ function downloadExcelCompatible(bill) {
   const headers = [t("رقم الفاتورة"), t("التاريخ"), t("الطاولة"), t("الصنف"), t("كود الصنف"), t("التصنيف"), t("الكمية"), t("سعر الوحدة"), t("الإجمالي")];
   const rows = bill.items.map((item) => [
     bill.invoiceNumber, bill.date, bill.table,
-    item.name, item.code, item.category,
+    withOptions(item), item.code, item.category,
     item.quantity, item.price, item.total,
   ]);
   const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n");
@@ -158,6 +162,12 @@ export default function Billing() {
   }
 
   useEffect(() => { loadBill(); }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A payment saved offline was just sent: show the bill as the server has it now.
+  useEffect(() => {
+    const refresh = () => loadBill(true);
+    window.addEventListener(SYNCED, refresh);
+    return () => window.removeEventListener(SYNCED, refresh);
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleVerify(paymentId) {
     setVerifying(paymentId);
@@ -226,6 +236,11 @@ export default function Billing() {
 
     try {
       const payment = await recordPayment(sessionId, method);
+      if (payment?.queued) {
+        // No connection: saved on this device, sent when it returns (offline/outbox.js).
+        setNotice({ type: "success", text: t("لا يوجد اتصال: حُفظ الدفع على هذا الجهاز وسيُرسل تلقائيًا عند عودة الإنترنت.") });
+        return;
+      }
       setNotice({
         type: "success",
         text: payment?.status === "pending_reconciliation"
@@ -240,10 +255,13 @@ export default function Billing() {
     }
   }
 
+  const outbox = useOutbox();
   if (loading) return <Spinner label={t("جارِ تحميل الفاتورة…")} />;
   if (!bill) return null;
 
   const isPaid = bill.closed || bill.outstanding <= 0;
+  // A payment saved offline is not on the server yet: never offer to take it twice.
+  const queuedPayment = queuedRefs(outbox, "payment").has(String(sessionId));
   const hasPending = bill.pendingPayments?.length > 0;
 
   return (
@@ -358,6 +376,7 @@ export default function Billing() {
               <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-ink/[0.015]">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{item.name}</p>
+                  <ItemOptions options={item.options} />
                   <p className="mt-0.5 text-xs text-muted">
                     {item.code} · {item.category} · {money(item.price)} {t("للوحدة")}
                   </p>
@@ -399,7 +418,15 @@ export default function Billing() {
       </Card>
 
       {/* ── Payment section ────────────────────────────────────────────── */}
-      {!isPaid && !can("record_payment") ? (
+      {queuedPayment ? (
+        <Card className="flex items-center gap-3 p-5 text-herb">
+          <CheckCircle2 size={22} aria-hidden="true" />
+          <div>
+            <p className="font-bold">{t("حُفظ الدفع على هذا الجهاز")}</p>
+            <p className="mt-0.5 text-xs text-muted">{t("سيُرسل تلقائيًا عند عودة الإنترنت، وتُغلق الجلسة معه.")}</p>
+          </div>
+        </Card>
+      ) : !isPaid && !can("record_payment") ? (
         <Card className="p-5 text-sm text-muted">{t("تسجيل الدفع يحتاج صلاحية «تسجيل الدفع». اطلبها من صاحب المطعم إذا كانت ضمن عملك.")}</Card>
       ) : !isPaid ? (
         <Card className="p-5">

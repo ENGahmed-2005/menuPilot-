@@ -11,6 +11,7 @@ import { CartProvider } from "./context/CartContext";
 import AppRoutes from "./routes/AppRoutes";
 import LoadingScreen from "./components/loading/LoadingScreen";
 import { ToastProvider } from "./components/ui/Toast";
+import ConnectionBanner from "./components/ui/ConnectionBanner";
 
 function DirectionController() {
   const { lang, dir } = useLanguage();
@@ -43,6 +44,7 @@ export default function App() {
               {/* App-level so a toast survives navigation (e.g. close session → tables). */}
               <ToastProvider>
                 <AppRoutes />
+                <ConnectionBanner />
               </ToastProvider>
             </CartProvider>
           </LanguageProvider>
