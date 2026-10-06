@@ -13,12 +13,14 @@ import { useNavigate } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
+import WhyUs from "./components/WhyUs";
 import ProductTour from "./components/ProductTour";
 import HowItWorks from "./components/HowItWorks";
 import Roles from "./components/Roles";
 import TryDemo from "./components/TryDemo";
 import Pricing from "./components/Pricing";
 import TeamSection from "./components/TeamSection";
+import FAQ from "./components/FAQ";
 import CTASection from "./components/CTASection";
 import Footer from "./components/Footer";
 import { dir } from "../../i18n";
@@ -35,6 +37,7 @@ export default function LandingPage() {
       {/* Spacer to compensate for the fixed navbar height (4.25rem ≈ 68px) */}
       <div className="h-[4.25rem]" aria-hidden="true" />
       <Hero onNavigate={navigate} />
+      <WhyUs />
       <ProductTour />
       <HowItWorks />
       <Roles />
@@ -45,6 +48,8 @@ export default function LandingPage() {
       <section id="team" className="border-t border-[#F3EFE5]/10 bg-[#F3EFE5]/[.02]">
         <TeamSection />
       </section>
+
+      <FAQ />
 
       <CTASection onNavigate={navigate} />
       <Footer />

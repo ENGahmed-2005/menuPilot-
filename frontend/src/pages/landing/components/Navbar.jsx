@@ -17,6 +17,17 @@ export default function Navbar({ onNavigate }) {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
+  // The link of the section in the middle of the screen is lit; sections
+  // without a link (the hero, «why») light none.
+  const [current, setCurrent] = useState("");
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) setCurrent(`#${e.target.id}`); });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    document.querySelectorAll("main > section").forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   const go = (path) => { setMobileOpen(false); onNavigate(path); };
 
   return (
@@ -64,12 +75,13 @@ export default function Navbar({ onNavigate }) {
             </button>
 
             {/* Desktop nav */}
-            <nav className="hidden items-center gap-7 text-sm text-[#F3EFE5]/65 md:flex">
+            <nav className="hidden items-center gap-6 whitespace-nowrap text-sm text-[#F3EFE5]/65 xl:flex">
               {NAV_LINKS.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
-                  className="relative py-1 transition-colors duration-200 hover:text-[#EEA122] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:scale-x-0 after:bg-[#EEA122] after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100"
+                  aria-current={current === link.href ? "true" : undefined}
+                  className={`relative py-1 transition-colors duration-200 hover:text-[#EEA122] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:bg-[#EEA122] after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 ${current === link.href ? "text-[#EEA122] after:scale-x-100" : "after:scale-x-0"}`}
                 >
                   {link.label}
                 </a>
@@ -77,7 +89,7 @@ export default function Navbar({ onNavigate }) {
             </nav>
 
             {/* CTA */}
-            <div className="hidden items-center gap-3 sm:flex">
+            <div className="ms-auto me-3 hidden items-center gap-3 whitespace-nowrap sm:flex xl:m-0">
               <LanguageSwitch tone="dark" />
               <button
                 onClick={() => go("/login")}
@@ -96,7 +108,7 @@ export default function Navbar({ onNavigate }) {
             {/* Mobile toggle */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="grid h-10 w-10 place-items-center rounded-xl border border-[#F3EFE5]/12 transition hover:bg-[#F3EFE5]/5 md:hidden"
+              className="grid h-10 w-10 place-items-center rounded-xl border border-[#F3EFE5]/12 transition hover:bg-[#F3EFE5]/5 xl:hidden"
               aria-label={t("القائمة")}
             >
               {mobileOpen ? <X size={19} /> : <MenuSquare size={19} />}
@@ -105,7 +117,7 @@ export default function Navbar({ onNavigate }) {
 
           {/* Mobile drawer */}
           {mobileOpen && (
-            <div className="border-t border-[#F3EFE5]/8 bg-navy/98 px-5 py-5 backdrop-blur-xl md:hidden"
+            <div className="border-t border-[#F3EFE5]/8 bg-navy/98 px-5 py-5 backdrop-blur-xl xl:hidden"
               style={{ borderBottomLeftRadius: scrolled ? "16px" : "0", borderBottomRightRadius: scrolled ? "16px" : "0" }}
             >
               <nav className="flex flex-col gap-1">
@@ -114,7 +126,8 @@ export default function Navbar({ onNavigate }) {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className="rounded-xl px-4 py-3 text-sm font-medium text-[#F3EFE5]/70 transition hover:bg-[#F3EFE5]/5 hover:text-[#EEA122]"
+                    aria-current={current === link.href ? "true" : undefined}
+                    className={`rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-[#F3EFE5]/5 hover:text-[#EEA122] ${current === link.href ? "bg-[#F3EFE5]/5 text-[#EEA122]" : "text-[#F3EFE5]/70"}`}
                   >
                     {link.label}
                   </a>
