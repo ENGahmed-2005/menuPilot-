@@ -142,3 +142,16 @@ img, svg { display: block; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .hero-level, .hero-phone, .tour-in, .tour-progress { animation: none; }
 }
+
+/* Landing: the hero's live notifications, the order that runs from the table
+   to the kitchen, and the connection pill that drops and syncs. The global
+   reduced-motion rule above stops them; each shows a sensible still frame. */
+@keyframes toast-in { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: none; } }
+.toast-in { animation: toast-in .45s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes run-dot { 0% { inset-inline-start: 0; opacity: 0; } 12%, 85% { opacity: 1; } 100% { inset-inline-start: calc(100% - .5rem); opacity: 0; } }
+.run-dot { inset-inline-start: 50%; animation: run-dot 2.2s cubic-bezier(.45,0,.25,1) infinite; }
+@keyframes cycle-3 { 0%, 30% { opacity: 1; transform: none; } 34%, 96% { opacity: 0; transform: translateY(4px); } 100% { opacity: 1; transform: none; } }
+.cycle-3 > * { grid-area: 1 / 1; justify-self: start; animation: cycle-3 7.2s ease-in-out infinite; }
+.cycle-3 > :not(:first-child) { opacity: 0; }
+.cycle-3 > :nth-child(2) { animation-delay: -4.8s; }
+.cycle-3 > :nth-child(3) { animation-delay: -2.4s; }

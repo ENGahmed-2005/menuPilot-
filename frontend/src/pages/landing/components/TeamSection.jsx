@@ -6,15 +6,16 @@ import { t } from "../../../i18n";
 
 const TEAM = [
   { name: t("أحمد الكحلوت"), role: t("صاحب المشروع · قائد الفريق"), lead: true },
-  { name: t("علي عابد"), role: t("مطوّر الخادم (Laravel)") },
+  { name: t("علي أبو سويلم"), role: t("مطوّر الخادم (Laravel)") },
   { name: t("عمار يحيى عمر العرعير"), role: t("شريك · مطوّر الخادم (Laravel)") },
-  { name: t("سجى سقالله"), role: t("مطوّرة الواجهات (React)") },
+  { name: t("سجى ساق الله"), role: t("مطوّرة الواجهات (React)") },
   { name: t("رنين ريان"), role: t("مطوّرة الواجهات (React)") },
 ];
 
-// First letters of the first and last name: «أحمد الكحلوت» → «أ ك».
+// First letters of the first and last name: «أحمد الكحلوت» → «أ ك». A family
+// name ending in «الله» counts as one word: «سجى ساق الله» → «س س».
 const initials = (name) => {
-  const words = name.replace(/^ال/, "").split(/\s+/).filter(Boolean);
+  const words = name.replace(/^ال/, "").replace(/\s+الله$/, "الله").split(/\s+/).filter(Boolean);
   const pick = (word) => word.replace(/^ال/, "").charAt(0);
   return words.length > 1 ? `${pick(words[0])} ${pick(words[words.length - 1])}` : pick(words[0] || "");
 };

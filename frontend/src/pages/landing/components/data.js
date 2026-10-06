@@ -27,4 +27,5 @@ export const NAV_LINKS = [
   { href: "#demo", label: t("جرّبه") },
   { href: "#pricing", label: t("الأسعار") },
   { href: "#team", label: t("الفريق") },
+  { href: "#faq", label: t("الأسئلة") },
 ];

@@ -4,6 +4,7 @@
 import { ArrowLeft, Check, QrCode, UtensilsCrossed } from "lucide-react";
 import { lazy, Suspense } from "react";
 import Reveal from "./Reveal";
+import LiveFeed from "./LiveFeed";
 import { shot } from "./shots";
 import { t } from "../../../i18n";
 
@@ -92,6 +93,8 @@ export default function Hero({ onNavigate }) {
         {/* The product itself: the owner dashboard and the guest menu, captured from the app. */}
         <Reveal delay={150} className="relative mx-auto w-full max-w-xl pb-10 lg:max-w-none">
           <div className="absolute -inset-6 rounded-[2rem] bg-[#EEA122]/10 blur-3xl" aria-hidden="true" />
+          {/* What happens to orders, live, over the owner's dashboard. */}
+          <LiveFeed className="absolute -top-7 start-6 z-10 hidden sm:block lg:start-[-1.5rem]" />
           <div className="hero-level relative overflow-hidden rounded-2xl border border-[#F3EFE5]/10 bg-[#0d1620] shadow-2xl">
             <div className="flex h-7 items-center gap-1.5 border-b border-white/10 bg-[#0a1118] px-3" aria-hidden="true">
               <i className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><i className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><i className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
