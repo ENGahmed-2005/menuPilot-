@@ -172,6 +172,15 @@ pres.defineSlideMaster({
 });
 
 pres.defineSlideMaster({
+  title: "DIVIDER",
+  background: { color: C.text2 },
+  objects: [
+    { placeholder: { options: { name: "eyebrow", type: "body", x: 6.0, y: 2.7, w: 6.733, h: 0.45, fontSize: 20, bold: true, color: C.accent1, align: "right", valign: "middle", margin: 0, rtlMode: true }, text: "" } },
+    { placeholder: { options: { name: "title", type: "title", x: 6.0, y: 3.2, w: 6.733, h: 0.95, fontSize: 46, color: C.background2, align: "right", valign: "top", margin: 0, rtlMode: true }, text: "" } },
+  ],
+});
+
+pres.defineSlideMaster({
   title: "STATEMENT",
   background: { color: C.text2 },
   objects: [
@@ -306,10 +315,10 @@ async function build() {
     const dh = dw / 1.6;
     card(s, M, 1.95, dw, dh, { r: 0.12, name: "kitchen-frame" });
     s.addImage({ data: await roundedImage(SHOT("deck_kitchen.png"), 44), x: M, y: 1.95, w: dw, h: dh, altText: "شاشة المطبخ في menuPilot: تذاكر الطلبات مرتّبة حسب الوقت", objectName: "kitchen-screen" });
-    const ph = 3.45;
+    const ph = 3.3;
     const pw = ph * (780 / 1688);
-    const px = M + dw - 0.75;
-    const py = 2.3;
+    const px = M + dw - 0.85;
+    const py = 1.95 + dh - ph - 0.07;
     s.addShape(ROUND, { x: px - 0.07, y: py - 0.07, w: pw + 0.14, h: ph + 0.14, rectRadius: 0.22, fill: { color: C.text1 }, shadow: { type: "outer", color: HEX.ink, opacity: 0.25, blur: 14, offset: 4, angle: 90 }, objectName: "phone-frame" });
     s.addImage({ data: await roundedImage(SHOT("deck_menu_phone.png"), 80), x: px, y: py, w: pw, h: ph, altText: "منيو الزبون على الجوال بعد مسح رمز الطاولة", objectName: "phone-menu" });
 
@@ -345,7 +354,7 @@ async function build() {
     const cols = columns(3);
     const cards = [
       { icon: "store", stat: "3,450", label: "منشأة مطاعم ومقاهٍ دُمّرت في غزة… وكل واحدة بتعيد البناء من الصفر" },
-      { icon: "badge-dollar-sign", stat: [{ text: "$1.2", options: {} }, { text: " مليون", options: { fontSize: 30 } }], label: "إيراد سنوي ممكن في غزة وحدها (3,450 مطعمًا × $29 × 12 شهرًا)" },
+      { icon: "badge-dollar-sign", stat: [{ text: "$1.2", options: {} }, { text: " مليون", options: { fontSize: 30 } }], label: "إيراد سنوي ممكن في غزة وحدها: 3,450\u00A0مطعمًا × 29\u00A0دولارًا × 12\u00A0شهرًا" },
       { icon: "trending-up", stat: "19.4%", label: "نمو سنوي لسوق برمجيات إدارة المطاعم عالميًا حتى 2030" },
     ];
     for (let i = 0; i < 3; i++) {
@@ -372,13 +381,11 @@ async function build() {
 
   /* 7. نموذج الربح */
   {
-    const s = slideWith("CONTENT", MAIN, "نموذج الربح", "اشتراك ثابت للمطعم — بلا عمولة على أي طلب");
-    s.addShape(ROUND, { x: M, y: 0.4, w: 2.75, h: 0.44, rectRadius: 0.22, fill: { color: C.text2 }, objectName: "b2b-badge" });
-    txt(s, [{ text: "B2B", options: { bold: true, color: C.accent1 } }, { text: " · للمطاعم والمقاهي", options: { color: C.background2 } }], { x: M, y: 0.4, w: 2.75, h: 0.44, align: "center", valign: "middle", fontSize: 15, objectName: "b2b-label" });
+    const s = slideWith("CONTENT", MAIN, "نموذج الربح · B2B للمطاعم والمقاهي", "اشتراك ثابت للمطعم — بلا عمولة على أي طلب");
 
     const cols = columns(3);
     const plans = [
-      { name: "الأساسية", price: "$15", body: "منيو وطاولات وQR، مطبخ، نادل، كاشير، وفريق" },
+      { name: "الأساسية", price: "$15", body: "منيو وطاولات ورموز QR، مطبخ، نادل، كاشير، وفريق" },
       { name: "الاحترافية", price: "$29", body: "كل الأساسية + تقارير وهوية خاصة، وبلا حدود", popular: true },
       { name: "التوصيل فقط", price: "$15", body: "لمطعم بلا صالة: طلبات استلام وتوصيل" },
     ];
@@ -388,7 +395,7 @@ async function build() {
       const y = 1.95;
       const pad = 0.34;
       const dark = !!p.popular;
-      card(s, x, y, w, 2.75, { fill: dark ? C.text2 : C.background1, line: dark ? false : undefined, name: `plan-${i + 1}` });
+      card(s, x, y, w, 2.65, { fill: dark ? C.text2 : C.background1, line: dark ? false : undefined, name: `plan-${i + 1}` });
       if (dark) {
         s.addShape(ROUND, { x: x + pad, y: y + pad, w: 1.75, h: 0.4, rectRadius: 0.2, fill: { color: C.accent1 }, objectName: "plan-popular-bg" });
         txt(s, "الأكثر اختيارًا", { x: x + pad, y: y + pad, w: 1.75, h: 0.4, align: "center", valign: "middle", fontSize: 13, bold: true, color: C.text1, objectName: "plan-popular" });
@@ -452,7 +459,7 @@ async function build() {
       else s.addShape(pres.shapes.LINE, { x: M + 0.25, y, w: CW - 0.5, h: 0, line: { color: C.accent6, width: 0.75 }, objectName: `compare-rule-${r + 1}` });
       const runs = ours
         ? [{ text: "menuPilot", options: { bold: true, color: C.accent3, fontSize: 20 } }]
-        : [{ text: name, options: { bold: true } }, { text: `  ·  ${sub}`, options: { fontSize: 13, color: C.accent4 } }];
+        : [{ text: name, options: { bold: true } }, { text: `\u200F  ·  ${sub}`, options: { fontSize: 13, color: C.accent4 } }];
       txt(s, runs, { x: M + CW - nameW + 0.3, y, w: nameW - 0.6, h: rowH, valign: "middle", fontSize: 17, objectName: `compare-name-${r + 1}` });
       for (let c = 0; c < 3; c++) {
         const [ic, hex] = MARK[marks[c]];
@@ -490,7 +497,7 @@ async function build() {
       ["سجى سقالله", "مطوّرة الواجهات (React)", "س س"],
       ["رنين ريان", "مطوّرة الواجهات (React)", "ر ر"],
     ];
-    const cols = columns(5, 0.25);
+    const cols = columns(5, 0.35);
     for (let i = 0; i < 5; i++) {
       const { x, w } = cols[i];
       const [name, role, ini, lead] = team[i];
@@ -526,9 +533,9 @@ async function build() {
   pres.addSection({ title: BACKUP });
 
   {
-    const s = slideWith("COVER", BACKUP, "ملحق", "شرائح احتياطية");
-    txt(s, "للأسئلة فقط — مش جزء من الخمس دقائق", { x: 6.0, y: 3.45, w: 6.733, h: 0.5, fontSize: 20, color: C.background2, transparency: 25, objectName: "divider-note" });
-    await tile(s, 2.1, 1.75, 2.3, "dark", "message-circle-question-mark");
+    const s = slideWith("DIVIDER", BACKUP, "ملحق", "شرائح احتياطية");
+    txt(s, "للأسئلة فقط — مش جزء من الخمس دقائق", { x: 6.0, y: 4.2, w: 6.733, h: 0.5, fontSize: 20, color: C.background2, transparency: 25, objectName: "divider-note" });
+    await tile(s, 2.1, 2.6, 2.3, "dark", "message-circle-question-mark");
     s.addNotes("ما بنعرض هاي الشرائح إلا إذا انسألنا سؤال إلها. افتحوها مباشرة من رقمها (اكتب الرقم + Enter في وضع العرض).");
   }
 
@@ -538,8 +545,8 @@ async function build() {
     const cols = columns(3, 0.7);
     const boxes = [
       { icon: "monitor-smartphone", head: "الواجهات — React PWA", lines: ["5 شاشات لـ5 أدوار", "على أي جوال أو لابتوب، بلا تثبيت", "طابور محلي يحفظ التغييرات وقت الانقطاع"] },
-      { icon: "server", head: "الخادم — Laravel API", lines: ["أكثر من 110 نقطة API", "الصلاحيات والاشتراكات في الخادم فقط", "إشارات لحظية عبر Laravel Reverb"] },
-      { icon: "database", head: "قاعدة البيانات — MySQL", lines: ["بيانات كل مطعم معزولة عن غيره", "الصور في القاعدة، فلا تضيع عند النشر", "كل تغيير مهم في سجل تدقيق"] },
+      { icon: "server", head: "الخادم — Laravel API", lines: ["أكثر من 110 نقطة API", "الصلاحيات والاشتراكات في الخادم فقط", "إشارات لحظية عبر Laravel\u00A0Reverb"] },
+      { icon: "database", head: "قاعدة البيانات — MySQL", lines: ["بيانات كل مطعم معزولة", "الصور محفوظة في القاعدة", "كل تغيير مهم في سجل تدقيق"] },
     ];
     for (let i = 0; i < 3; i++) {
       const { x, w } = cols[i];
@@ -554,7 +561,7 @@ async function build() {
       if (i < 2) s.addImage({ data: await icon("arrow-left-right", HEX.orangeInk), x: x - 0.53, y: y + 1.5, w: 0.36, h: 0.36, altText: "", objectName: `arch-link-${i + 1}` });
     }
     card(s, M, 5.6, CW, 0.75, { r: 0.14, shadow: false, name: "arch-ops" });
-    txt(s, "النشر: Vercel للواجهة وRender للخادم · أكثر من 170 اختبارًا آليًا · فحص إنتاج من 30 نقطة بعد كل نشر (GO / NO-GO)", {
+    txt(s, "النشر: الواجهة على Vercel والخادم على Render · أكثر من 170 اختبارًا آليًا · فحص إنتاج من 30 نقطة بعد كل نشر (GO / NO-GO)", {
       x: M + 0.35, y: 5.6, w: CW - 0.7, h: 0.75, valign: "middle", fontSize: 16, color: C.text2, objectName: "arch-ops-text",
     });
     s.addNotes(
@@ -585,9 +592,9 @@ async function build() {
         txt(s, g.items[k], { x: x + 0.32, y: ry, w: w - 1.1, h: 0.5, valign: "middle", fontSize: 17, color: C.text2, objectName: `offline-item-${i + 1}-${k + 1}` });
       }
     }
-    card(s, M, 5.65, CW, 0.75, { r: 0.14, shadow: false, name: "offline-how" });
+    card(s, M, 5.8, CW, 0.75, { r: 0.14, shadow: false, name: "offline-how" });
     txt(s, "كل تغيير بيتحفظ بطابور على الجهاز مع مفتاح Idempotency — فالدفعة ما بتنحسب مرتين حتى لو انبعتت مرتين", {
-      x: M + 0.35, y: 5.65, w: CW - 0.7, h: 0.75, valign: "middle", fontSize: 16, color: C.text2, objectName: "offline-how-text",
+      x: M + 0.35, y: 5.8, w: CW - 0.7, h: 0.75, valign: "middle", fontSize: 16, color: C.text2, objectName: "offline-how-text",
     });
     s.addNotes(
       "متى: «شو بصير لو انقطع النت؟» — وغالبًا رح ينسأل في غزة.\n\n" +
@@ -605,11 +612,11 @@ async function build() {
       { icon: "lock", head: "مفتاح سري لكل جلسة زبون", body: "رقم الجلسة وحده ما بيكفي للوصول إليها" },
       { icon: "map-pin", head: "تحقق من الموقع", body: "الطلب من الطاولة بس من داخل 200 متر من المطعم — فما في طلبات وهمية" },
       { icon: "shield-check", head: "صلاحيات لكل دور", body: "كل موظف بيشوف ويعدّل اللي بيخص دوره فقط، والمالك بيتحكم" },
-      { icon: "building-2", head: "عزل بين المطاعم", body: "بيانات كل مطعم معزولة، ومغطّاة باختبارات آلية" },
+      { icon: "building-2", head: "عزل بين المطاعم", body: "بيانات كل مطعم معزولة، ومغطّاة باختبارات" },
     ];
     for (let i = 0; i < 4; i++) {
       const { x, w } = cols[i % 2];
-      const y = 1.95 + Math.floor(i / 2) * 2.1;
+      const y = 1.95 + Math.floor(i / 2) * 2.2;
       const it = items[i];
       card(s, x, y, w, 1.85, { name: `security-${i + 1}` });
       await tile(s, x + w - 0.32 - 0.64, y + 0.32, 0.64, "ink", it.icon);
@@ -674,7 +681,7 @@ async function build() {
     const steps = [
       ["1", "play", "جرّبه بدون تسجيل", "مطعم تجريبي حي لكل دور: مالك، مطبخ، كاشير، نادل، وزبون"],
       ["2", "gift", "14 يومًا مجانًا", "كل الميزات مفتوحة، وبلا صفحة دفع عند التسجيل"],
-      ["3", "calendar-check", "الاشتراك", "شهري أو سنوي — والسنوي 10 أشهر بسعر 12"],
+      ["3", "calendar-check", "الاشتراك", "شهري أو سنوي — والسنوي 12\u00A0شهرًا بسعر\u00A010"],
     ];
     for (let i = 0; i < 3; i++) {
       const { x, w } = cols[i];
@@ -713,7 +720,7 @@ async function build() {
       const y = 2.0 + i * rh;
       if (i > 0) s.addShape(pres.shapes.LINE, { x: M + 0.25, y: y - 0.02, w: CW - 0.5, h: 0, line: { color: C.accent6, width: 0.75 }, objectName: `ref-rule-${i + 1}` });
       num(s, String(i + 1), { x: M + CW - 0.65, y, w: 0.35, h: 0.42, align: "center", fontSize: 16, objectName: `ref-num-${i + 1}` });
-      txt(s, [{ text: refs[i][0], options: { bold: true, color: C.text1 } }, { text: `  —  ${refs[i][1]}`, options: { color: C.accent3 } }], { x: M + 0.3, y, w: CW - 1.05, h: 0.42, valign: "middle", fontSize: 14, objectName: `ref-title-${i + 1}` });
+      txt(s, [{ text: refs[i][0], options: { bold: true, color: C.text1 } }, { text: `\u200F  —  ${refs[i][1]}`, options: { color: C.accent3 } }], { x: M + 0.3, y, w: CW - 1.05, h: 0.42, valign: "middle", fontSize: 14, objectName: `ref-title-${i + 1}` });
       txt(s, refs[i][2], { x: M + 0.3, y: y + 0.38, w: CW - 1.05, h: 0.32, valign: "middle", fontSize: 11, color: C.accent4, rtlMode: false, objectName: `ref-url-${i + 1}` });
     }
     s.addNotes("متى: «من وين هالرقم؟» — افتحوا هاي الشريحة وأشّروا على المصدر. الروابط الكاملة في docs/presentation/PREP.md.");
