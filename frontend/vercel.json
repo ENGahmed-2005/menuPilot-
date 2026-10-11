@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/api/auth/:path*", "destination": "https://auth-production-770e.up.railway.app/api/auth/:path*" },
-    { "source": "/api/auth-config", "destination": "https://auth-production-770e.up.railway.app/api/auth-config" },
+    { "source": "/api/auth/:path*", "destination": "https://menupilot-auth.onrender.com/api/auth/:path*" },
+    { "source": "/api/auth-config", "destination": "https://menupilot-auth.onrender.com/api/auth-config" },
     { "source": "/api/:path*", "destination": "https://menupilot-backend.onrender.com/api/:path*" },
     { "source": "/up", "destination": "https://menupilot-backend.onrender.com/up" },
     { "source": "/(.*)", "destination": "/index.html" }
