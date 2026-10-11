@@ -85,12 +85,18 @@ to the auth service behind the proxy.
   10 per 10 min, everything else 100/min. One address can receive at most 3
   e-mails per 15 minutes. The per-account lockout is what really stops
   password guessing; the IP limits slow scripts down.
-- **Client IP**: each proxy appends to `X-Forwarded-For`; the client is the
-  entry `AUTH_PROXY_HOPS` places from the right (default 1). The Railway
-  Caddyfile and Vercel both send exactly the visitor's IP; check the IP shown
-  on the Security page's devices list after deploying and adjust
-  `AUTH_PROXY_HOPS` if it shows a proxy instead. A request whose IP can't be
-  read is not IP-limited (rather than sharing one bucket with everyone).
+- **Client IP**: read from the first header in `AUTH_CLIENT_IP_HEADER` that a
+  request carries; proxies append to it, so the client is the entry
+  `AUTH_PROXY_HOPS` places from the right (default 1). In production the auth
+  service uses `x-vercel-forwarded-for,x-forwarded-for`: Vercel's rewrite sends
+  the visitor in the first; the Railway frontend's Caddy sets the second to
+  exactly the visitor and reaches the service over Railway's private network
+  (Railway's public edge replaces `X-Forwarded-Host` and `X-Real-IP`). After
+  deploying, check the IP shown for your device on the Security page; adjust
+  these two settings if it shows a proxy. A request whose IP can't be read is
+  not IP-limited (rather than sharing one bucket with everyone). The headers
+  can be forged by calling the service directly, which only lets a client
+  choose its own rate-limit bucket: the per-account lockout still applies.
 - OAuth tokens from Google are encrypted at rest. The service logs no secrets,
   links or e-mail addresses.
 
@@ -108,7 +114,8 @@ to the auth service behind the proxy.
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `no-reply@menupilot.app`, `menuPilot` | Sender. |
 | `AUTH_REQUIRE_EMAIL_VERIFICATION` | `true` (when e-mail is on) | New owners confirm their e-mail first. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | — | Google sign-in. |
-| `AUTH_CLIENT_IP_HEADER`, `AUTH_PROXY_HOPS` | `x-forwarded-for`, `1` | Where the client IP is read. |
+| `AUTH_CLIENT_IP_HEADER`, `AUTH_PROXY_HOPS` | `x-forwarded-for`, `1` | Where the client IP is read (comma-separated headers, first present wins). |
+| `HOST` | `::` | Listen address (IPv4 + IPv6). |
 | `AUTH_RATE_LIMIT` | `true` | |
 | `AUTH_PWNED_CHECK` | `true` in production | Refuse breached passwords. |
 | `AUTH_COOKIE_PREFIX` | `menupilot` | Must match Laravel's `AUTH_COOKIE_PREFIX`. |

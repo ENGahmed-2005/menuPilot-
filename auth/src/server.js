@@ -87,8 +87,13 @@ app.onError((error, c) => {
 });
 
 export function start(port = config.port) {
-  const server = serve({ fetch: app.fetch, port, hostname: "0.0.0.0" }, (info) => {
+  // "::" takes IPv4 and IPv6 (Railway's private network); IPv4 only where IPv6 is off.
+  const server = serve({ fetch: app.fetch, port, hostname: process.env.HOST || "::" }, (info) => {
     console.log(`[auth] listening on :${info.port} (${config.production ? "production" : "development"}; e-mail ${mailEnabled ? "on" : "off"}; Google ${config.google ? "on" : "off"})`);
+  });
+  server.once("error", (error) => {
+    if (error.code !== "EAFNOSUPPORT" || process.env.HOST) throw error;
+    server.listen(port, "0.0.0.0");
   });
   waitForSchema().then(() => console.log("[auth] database schema ready"));
   const stop = () => server.close(() => closeDb().finally(() => process.exit(0)));

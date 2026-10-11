@@ -32,16 +32,17 @@
 | `BETTER_AUTH_SECRET` | سر عشوائي 32 حرفًا على الأقل (`openssl rand -base64 32`)، ونفس القيمة في Laravel |
 | `DATABASE_URL` أو `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | نفس قاعدة Laravel |
 | `NODE_ENV` | `production` |
+| `AUTH_CLIENT_IP_HEADER` | `x-vercel-forwarded-for,x-forwarded-for` (عنوان الزائر الحقيقي خلف Vercel وRailway) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `MAIL_FROM_ADDRESS` | لتأكيد البريد واستعادة كلمة المرور بالبريد (بدونها يبقى طلب الاستعادة عبر واتساب) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | للدخول بحساب Google. رابط الرجوع: `https://menupilot.vercel.app/api/auth/callback/google` |
 
 الخدمة تنتظر حتى تُطبَّق migrations الـ Laravel (تعطي 503 مؤقتًا)، ثم تعمل وحدها.
 
 ## 4. Vercel (Frontend)
-`.env.production`: `VITE_API_BASE_URL=/api`. الواجهة تمرّر الطلبات من نفس عنوانها (`vercel.json`):
+الواجهة تطلب الـ API دائمًا من نفس عنوانها (`/api`) وتمرّرها (`vercel.json`):
 `/api/auth/*` و`/api/auth-config` إلى خدمة الدخول، و`/api/*` و`/up` إلى Laravel على Render. إذا تغيّر عنوان أي خدمة عدّله في `vercel.json`.
 
-**Railway (Frontend):** يقرأ `frontend/Caddyfile` ويحتاج متغيرين: `AUTH_UPSTREAM` (عنوان خدمة الدخول، https) و`API_UPSTREAM` (عنوان الـ backend، https)، و`VITE_API_BASE_URL=/api`.
+**Railway (Frontend):** يقرأ `frontend/Caddyfile` ويحتاج متغيرين: `AUTH_UPSTREAM=http://${{auth.RAILWAY_PRIVATE_DOMAIN}}:${{auth.PORT}}` (خدمة الدخول عبر الشبكة الداخلية، حتى يصلها عنوان الواجهة وIP الزائر كما هما) و`API_UPSTREAM` (عنوان الـ backend، https). المتغير القديم `VITE_API_BASE_URL` لم يعد يُستخدم.
 
 ## 5. اختبار الإنتاج (Go / No-Go)
 بعد كل نشر شغّل من جهازك:
