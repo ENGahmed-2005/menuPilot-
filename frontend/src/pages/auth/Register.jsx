@@ -1,7 +1,7 @@
 import { useState } from "react";
 import BrandLogo from "../../components/brand/Logo";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Gift, LockKeyhole, Mail, Store, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Gift, LockKeyhole, Mail, MailCheck, Store, UserRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { t, dir } from "../../i18n";
 import LanguageSwitch from "../../components/ui/LanguageSwitch";
@@ -26,6 +26,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
+  const [verifySent, setVerifySent] = useState(false);
   const [formData, setFormData] = useState({ restaurantName: "", restaurantType: "", email: "", password: "", confirmPassword: "" });
 
 
@@ -59,7 +60,7 @@ export default function Register() {
     setErrors({});
     setLoading(true);
     try {
-      await register({
+      const data = await register({
         restaurantName: formData.restaurantName.trim(),
         restaurantType: formData.restaurantType,
         email: formData.email.trim(),
@@ -67,6 +68,11 @@ export default function Register() {
         passwordConfirmation: formData.confirmPassword,
         plan: selectedPlan,
       });
+      if (data?.verifyEmail) {
+        setVerifySent(true); // the account exists; the first sign-in waits for the e-mail link
+        setStep(5);
+        return;
+      }
       // No checkout at registration: the free trial starts right away.
       navigate("/welcome", { replace: true });
     } catch (error) {
@@ -126,6 +132,17 @@ export default function Register() {
 
             <div className="rounded-[28px] border border-[#5A6574]/10 bg-white p-5 shadow-[0_24px_70px_rgba(23,35,49,.08)] sm:p-8 md:p-10">
               {errors.form && <div className="mb-6 rounded-2xl border border-[#B33F32]/20 bg-[#B33F32]/5 px-4 py-3 text-sm font-semibold text-[#B33F32]">{errors.form}</div>}
+
+              {verifySent && (
+                <div className="py-6 text-center">
+                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#EEA122]/15 text-[#E67E22]"><MailCheck size={26} aria-hidden="true" /></span>
+                  <h2 className="mt-5 text-2xl font-black">{t("تحقق من بريدك الإلكتروني")}</h2>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-[#5A6574]">
+                    {t("أنشأنا حساب مطعمك وأرسلنا رابط التأكيد إلى")} <strong dir="ltr">{formData.email.trim()}</strong>. {t("افتح الرابط لتفعيل الحساب وبدء التجربة المجانية. الرابط صالح لمدة ساعة.")}
+                  </p>
+                  <Link to="/login" className="mt-6 inline-flex rounded-full bg-[#EEA122] px-6 py-3 text-sm font-black text-[#172331] no-underline hover:bg-[#E67E22]">{t("الذهاب إلى تسجيل الدخول")}</Link>
+                </div>
+              )}
 
               {/* Step 1 (plan choice) removed: the free trial comes first; plans are chosen after it. */}
 

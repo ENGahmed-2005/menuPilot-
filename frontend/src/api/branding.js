@@ -1,4 +1,5 @@
-import { api, getToken } from './client';
+import { api, authHeaders } from './client';
+import { API_BASE_URL } from './baseUrl';
 
 export const getBranding = () => api.get('/me/branding');
 
@@ -24,12 +25,12 @@ export async function saveBranding(values) {
     form.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
   });
 
-  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+  const base = API_BASE_URL;
   const response = await fetch(`${base}/me/branding`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${getToken()}`,
+      ...authHeaders(),
     },
     body: form,
   });

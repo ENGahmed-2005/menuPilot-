@@ -1,6 +1,8 @@
 /* ==========================================================================
-   ResetPassword.jsx — تعيين كلمة مرور جديدة عبر رابط البريد الإلكتروني.
-   امتداد لـ FR-02. يُفتح على /reset-password?token=...&email=...
+   ResetPassword.jsx — a new password from a reset link. Two kinds of link:
+   - /reset-password?token=…            the e-mail from the auth service
+   - /reset-password?token=…&email=…    the platform team's WhatsApp link (Laravel)
+   The auth service sends ?error=INVALID_TOKEN when an e-mail link is used up or old.
    ========================================================================== */
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -19,6 +21,8 @@ export default function ResetPassword() {
 
   const token = searchParams.get("token") || "";
   const emailFromLink = searchParams.get("email") || "";
+  const fromWhatsApp = Boolean(emailFromLink);
+  const linkError = searchParams.get("error");
 
   const [email, setEmail] = useState(emailFromLink);
   const [password, setPassword] = useState("");
@@ -35,10 +39,14 @@ export default function ResetPassword() {
       setError(t("كلمتا المرور غير متطابقتين."));
       return;
     }
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password)) {
+      setError(t("8 أحرف على الأقل، مع حرف كبير وصغير ورقم ورمز."));
+      return;
+    }
 
     setLoading(true);
     try {
-      await resetPassword({ token, email, password, passwordConfirmation: confirmPassword });
+      await resetPassword({ token, email: fromWhatsApp ? email : "", password, passwordConfirmation: confirmPassword });
       setDone(true);
       setTimeout(() => navigate("/login", { replace: true }), 2000);
     } catch (err) {
@@ -57,26 +65,29 @@ export default function ResetPassword() {
       <h1 className="mb-7 font-display text-3xl text-ink">{t("تعيين كلمة مرور جديدة")}</h1>
 
       {done ? (
-        <FormAlert tone="success">{t("تم تحديث كلمة المرور بنجاح. جارِ تحويلك لصفحة تسجيل الدخول…")}</FormAlert>
+        <FormAlert tone="success">{t("تم تحديث كلمة المرور وتسجيل خروجك من كل الأجهزة. جارِ تحويلك لصفحة تسجيل الدخول…")}</FormAlert>
       ) : (
         <>
-          {!token && (
+          {(!token || linkError) && (
             <div className="mb-6">
-              <FormAlert>{t("رابط إعادة التعيين ناقص أو غير صالح. الرجاء طلب رابط جديد من صفحة استرجاع كلمة المرور.")}</FormAlert>
+              <FormAlert>{linkError ? t("رابط إعادة التعيين غير صالح أو انتهت صلاحيته. اطلب رابطًا جديدًا.") : t("رابط إعادة التعيين ناقص أو غير صالح. الرجاء طلب رابط جديد من صفحة استرجاع كلمة المرور.")}</FormAlert>
+              <Link to="/forgot-password" className="mt-3 inline-block text-sm font-bold text-copper-ink hover:text-copper">{t("طلب رابط جديد")}</Link>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <FormField
-              id="email"
-              label={t("البريد الإلكتروني")}
-              icon={Mail}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
+            {fromWhatsApp && (
+              <FormField
+                id="email"
+                label={t("البريد الإلكتروني")}
+                icon={Mail}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            )}
 
             <PasswordField
               id="password"
@@ -96,7 +107,7 @@ export default function ResetPassword() {
               autoComplete="new-password"
             />
 
-            <AuthSubmitButton loading={loading} disabled={!token}>
+            <AuthSubmitButton loading={loading} disabled={!token || Boolean(linkError)}>
               {loading ? t("جارِ التحديث…") : t("تحديث كلمة المرور")}
             </AuthSubmitButton>
 

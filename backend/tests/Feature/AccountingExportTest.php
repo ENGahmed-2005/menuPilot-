@@ -177,13 +177,13 @@ it('enforces export permissions on the backend', function () {
 
     $staffId = DB::table('staff')->where('account_user_id', $cashier['id'])->value('id');
     $this->patchJson("/api/staff/{$staffId}", ['permissions' => ['view_payments', 'export_payments']], authAs($owner))->assertOk();
-    DB::table('users')->where('id', $cashier['id'])->update(['api_token' => hash('sha256', 'cashier-2')]);
+    authSession($cashier['id'], 'cashier-2');
     $this->get('/api/reports/export/payments', authAs(['token' => 'cashier-2']))->assertOk();
     $this->getJson('/api/reports/export/invoices', authAs(['token' => 'cashier-2']))->assertForbidden();
     $this->putJson('/api/accounting/settings', ['currency' => 'USD'], authAs(['token' => 'cashier-2']))->assertForbidden();
 
     $token = 'adm-'.uniqid();
-    DB::table('users')->insert(['name' => 'Admin', 'email' => 'adm@x.test', 'password' => Hash::make('x'), 'role' => 'admin', 'api_token' => hash('sha256', $token), 'created_at' => now(), 'updated_at' => now()]);
+    authSession(DB::table('users')->insertGetId(['name' => 'Admin', 'email' => 'adm@x.test', 'password' => Hash::make('x'), 'role' => 'admin', 'created_at' => now(), 'updated_at' => now()]), $token);
     $this->getJson('/api/reports/export/invoices', authAs(['token' => $token]))->assertForbidden();
 });
 

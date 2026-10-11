@@ -16,13 +16,13 @@ function registerOwner($test, array $extra = []): array
         'password' => 'Trial#Pass123', 'password_confirmation' => 'Trial#Pass123',
     ], $extra))->assertCreated();
 
-    return ['token' => $res->json('data.token'), 'id' => $res->json('data.user.id'), 'user' => $res->json('data.user')];
+    return ['token' => authSession($res->json('data.user.id')), 'id' => $res->json('data.user.id'), 'user' => $res->json('data.user')];
 }
 
 function trialAdmin(): array
 {
     $token = 'adm-'.uniqid();
-    DB::table('users')->insert(['name' => 'Admin', 'email' => uniqid().'@adm.test', 'password' => Hash::make('x'), 'role' => 'admin', 'api_token' => hash('sha256', $token), 'created_at' => now(), 'updated_at' => now()]);
+    authSession(DB::table('users')->insertGetId(['name' => 'Admin', 'email' => uniqid().'@adm.test', 'password' => Hash::make('x'), 'role' => 'admin', 'created_at' => now(), 'updated_at' => now()]), $token);
 
     return ['token' => $token];
 }

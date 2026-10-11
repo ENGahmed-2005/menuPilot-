@@ -99,3 +99,24 @@ jobs:
           DB_USERNAME: menupilot
           DB_PASSWORD: menupilot
         run: php artisan test
+
+      # The auth service (auth/) runs on the schema Laravel just migrated.
+      - name: Setup Node.js (auth service)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: auth/package-lock.json
+
+      - name: Run auth service tests
+        working-directory: auth
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: menupilot_test
+          DB_USERNAME: menupilot
+          DB_PASSWORD: menupilot
+          BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123
+        run: |
+          npm ci
+          npm test

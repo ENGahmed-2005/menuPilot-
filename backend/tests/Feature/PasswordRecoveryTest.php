@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
@@ -22,8 +23,16 @@ it('turns an owner forgot-password into an admin request and the admin link rese
 
     $link = $this->postJson("/api/admin/password-requests/{$req['id']}/link", [], authAs($admin))->assertOk()->json('data');
     $this->postJson('/api/auth/reset-password', ['token' => $link['token'], 'email' => $link['email'], 'password' => 'NewPass#2026', 'password_confirmation' => 'NewPass#2026'])->assertOk();
-    $this->postJson('/api/auth/login', ['email' => $email, 'password' => 'NewPass#2026'])->assertOk();
-    expect(DB::table('password_reset_requests')->value('status'))->toBe('sent');
+    // The auth service signs in against the credential account: both copies hold the new password…
+    expect(Hash::check('NewPass#2026', DB::table('users')->where('id', $owner['id'])->value('password')))->toBeTrue()
+        ->and(Hash::check('NewPass#2026', credentialHash($owner['id'])))->toBeTrue();
+    // …and every device was signed out.
+    $this->getJson('/api/auth/me', authAs($owner))->assertUnauthorized()->assertJsonPath('code', 'SESSION_EXPIRED');
+    expect(DB::table('auth_sessions')->where('user_id', $owner['id'])->count())->toBe(0)
+        ->and(DB::table('password_reset_requests')->value('status'))->toBe('sent');
+    // The one-time link can't be reused.
+    $this->postJson('/api/account/reset-password', ['token' => $link['token'], 'email' => $link['email'], 'password' => 'Other#Pass2026', 'password_confirmation' => 'Other#Pass2026'])
+        ->assertStatus(422)->assertJsonPath('code', 'RESET_TOKEN_INVALID');
 });
 
 it('does not create admin requests for staff; the owner changes staff passwords', function () {
@@ -36,5 +45,10 @@ it('does not create admin requests for staff; the owner changes staff passwords'
     $staffId = DB::table('staff')->where('account_user_id', $waiter['id'])->value('id');
     $this->putJson("/api/staff/{$staffId}", ['password' => 'Waiter#2026'], authAs($owner))->assertOk();
     $this->getJson('/api/auth/me', authAs($waiter))->assertUnauthorized(); // old session ends
-    $this->postJson('/api/auth/login', ['email' => $email, 'password' => 'Waiter#2026'])->assertOk();
+    expect(Hash::check('Waiter#2026', credentialHash($waiter['id'])))->toBeTrue(); // signs in with the new one
 });
+
+function credentialHash(int $userId): ?string
+{
+    return DB::table('auth_accounts')->where(['provider_id' => 'credential', 'account_id' => (string) $userId])->value('password');
+}

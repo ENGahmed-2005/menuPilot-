@@ -47,6 +47,7 @@ const AdminSubscriptions = lazy(() => import("../pages/admin/AdminSubscriptions"
 const AdminSettings = lazy(() => import("../pages/admin/AdminSettings"));
 const AdminNotifications = lazy(() => import("../pages/admin/AdminNotifications"));
 const PasswordRequests = lazy(() => import("../pages/admin/PasswordRequests"));
+const Security = lazy(() => import("../pages/account/Security"));
 
 // Each role only downloads its own screens: a customer scanning a QR code
 // never loads the admin or cashier bundles.
@@ -125,6 +126,11 @@ export default function AppRoutes() {
       </Route>
       <Route element={<ProtectedRoute allow={["waiter", "owner", "manager"]} permission="view_tables" />}>
         <Route element={<FeatureProtectedRoute feature="waiter" />}><Route path="/waiter" element={<DashboardShell><SubscriptionGuard><TableSessions /></SubscriptionGuard></DashboardShell>} /></Route>
+      </Route>
+
+      {/* Every signed-in role: password, two-step verification, devices. */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/account/security" element={<DashboardShell><Security /></DashboardShell>} />
       </Route>
 
       <Route element={<ProtectedRoute allow={["admin"]} />}>

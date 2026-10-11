@@ -61,10 +61,14 @@ export default defineConfig({
     // المنفذ الذي يفتح عليه سيرفر التطوير → http://localhost:5173
     port: 5173,
 
-    // proxy (اختياري): يُستخدم لاحقًا عند ربط الواجهة بـ API الخاص بـ Laravel.
-    // الفكرة: أي طلب يبدأ بـ /api يُعاد توجيهه إلى سيرفر Laravel،
-    // فيظن المتصفح أن الطلب لنفس العنوان → لا تظهر مشكلة CORS.
-    // أزل التعليق عن السطر التالي عند تشغيل الـ backend محليًا:
-    // proxy: { "/api": { target: "http://localhost:8000", changeOrigin: true } },
+    // Same origin, as in production (vercel.json, Caddyfile): /api/auth* goes to
+    // the auth service (auth/, port 3005) and the rest of /api to Laravel, so
+    // the session cookie belongs to this address. xfwd passes the original
+    // host and client IP on; the first matching entry wins.
+    proxy: {
+      "/api/auth": { target: process.env.AUTH_DEV_URL || "http://localhost:3005", xfwd: true },
+      "/api": { target: process.env.API_DEV_URL || "http://localhost:8000", xfwd: true },
+      "/up": { target: process.env.API_DEV_URL || "http://localhost:8000" },
+    },
   },
 });

@@ -24,8 +24,13 @@ use App\Http\Controllers\SubscriptionPaymentController;
 use App\Http\Controllers\TableController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
+// Account endpoints that stay in Laravel (sign-in itself is the Better Auth
+// service, auth/). Served twice: /api/auth/* for clients that call Laravel
+// directly (an old cached app gets 410 from login), and /api/account/* for
+// the app, whose origin proxies every /api/auth/* path to the auth service —
+// which owns /api/auth/reset-password too.
+$accountRoutes = function () {
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
     Route::post('login', [AuthController::class, 'login']);
     Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
     Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
@@ -33,7 +38,9 @@ Route::prefix('auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
     });
-});
+};
+Route::prefix('auth')->group($accountRoutes);
+Route::prefix('account')->group($accountRoutes);
 
 Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
 // «Try it» demo restaurants (App\Support\DemoRestaurant).

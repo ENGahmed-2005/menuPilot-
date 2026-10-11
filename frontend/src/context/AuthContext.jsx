@@ -7,7 +7,7 @@
    ========================================================================== */
 import { ROLE_DEFAULTS } from "../config/permissions";
 import { createContext, useContext, useEffect, useState } from "react";
-import { login as apiLogin, logout as apiLogout, register as apiRegister, fetchCurrentUser } from "../api/auth";
+import { login as apiLogin, logout as apiLogout, register as apiRegister, verifyTwoFactor as apiVerifyTwoFactor, fetchCurrentUser } from "../api/auth";
 import { getToken } from "../api/client";
 import { startDemo as apiStartDemo } from "../api/demo";
 import { clearOfflineData, saveUser, savedUser } from "../offline/storage";
@@ -18,10 +18,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); // { id, email, role, restaurantName }
   const [loading, setLoading] = useState(true); // true أثناء التحقق من الجلسة عند فتح التطبيق
 
-  // عند أول تحميل: لو في توكن محفوظ، نتحقق أنه ما زال صالحًا ونجلب بيانات المستخدم.
+  // On first load: ask who is signed in, when this device has signed in
+  // before (the session itself is an httpOnly cookie this code can't see).
+  // Visitors who never signed in (customers scanning a QR) make no call; the
+  // sign-in page asks on its own, for a session made by Google or an e-mail link.
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
+    if (!getToken() && !savedUser()) {
       setLoading(false);
       return;
     }
@@ -55,10 +57,24 @@ export function AuthProvider({ children }) {
     return () => { clearInterval(timer); window.removeEventListener("focus", refresh); window.removeEventListener("menupilot:permission-denied", refresh); };
   }, [Boolean(user)]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** {user} when signed in; {twoFactor: true} when verifyTwoFactor() must follow. */
   async function login(payload) {
     const data = await apiLogin(payload);
+    if (data.user) setUser(data.user);
+    return data;
+  }
+
+  async function verifyTwoFactor(payload) {
+    const data = await apiVerifyTwoFactor(payload);
     setUser(data.user);
     return data;
+  }
+
+  /** After Google or an e-mail link brought the browser back with a session cookie. */
+  async function refreshUser() {
+    const next = await fetchCurrentUser();
+    setUser(next);
+    return next;
   }
 
   /** «Try it»: log in to the demo restaurant as owner, kitchen, cashier or waiter. */
@@ -68,9 +84,10 @@ export function AuthProvider({ children }) {
     return data;
   }
 
+  /** {user} when signed in right away; {verifyEmail: true} when the e-mail must be confirmed first. */
   async function register(payload) {
     const data = await apiRegister(payload);
-    setUser(data.user);
+    if (data.user) setUser(data.user);
     return data;
   }
 
@@ -86,7 +103,7 @@ export function AuthProvider({ children }) {
     setUser((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
-  // Permissions come from the API (GET /auth/me, login). They only drive what
+  // Permissions come from the API (GET /account/me). They only drive what
   // the UI shows; Laravel enforces every one of them on the server.
   const permissions = user?.permissions || ROLE_DEFAULTS[user?.role] || [];
   // No role shortcuts: the platform admin only holds platform permissions.
@@ -100,6 +117,8 @@ export function AuthProvider({ children }) {
     isAuthenticated: Boolean(user),
     loading,
     login,
+    verifyTwoFactor,
+    refreshUser,
     register,
     logout,
     updateUser, startDemo };

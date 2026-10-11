@@ -2,18 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Staff;
 use App\Models\User;
+use App\Support\AuthSessions;
+use App\Support\CredentialAccount;
 use App\Support\Permissions;
 use App\Support\SubscriptionAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
+/**
+ * Account endpoints that stay in Laravel. Signing in, sessions, 2FA, Google,
+ * e-mail verification and e-mail password resets belong to the Better Auth
+ * service (auth/); Laravel creates restaurants (register), answers "who am
+ * I" from the session, and keeps the admin's WhatsApp reset-link flow.
+ */
 class AuthController extends Controller
 {
     private function out($data, $status = 200)
@@ -36,21 +42,21 @@ class AuthController extends Controller
         ]);
         $v = $v->validate();
 
-        $token = Str::random(60);
         // Owner, restaurant and free trial are created together or not at all.
         // Trial dates come from config/subscriptions.php; request values
-        // (plan, trial_ends_at, status…) are ignored.
-        $u = DB::transaction(function () use ($v, $email, $token) {
+        // (plan, trial_ends_at, status…) are ignored. No token: the app signs
+        // in through the auth service (after verifying the e-mail when it asks).
+        $u = DB::transaction(function () use ($v, $email) {
             $u = User::create([
                 'name' => $v['restaurant_name'],
                 'restaurant_name' => $v['restaurant_name'],
                 'email' => $email,
                 'password' => Hash::make($v['password']),
                 'role' => 'owner',
-                'api_token' => hash('sha256', $token),
                 'login_failed_attempts' => 0,
                 'login_locked_until' => null,
             ]);
+            CredentialAccount::sync($u->id, $u->password);
             SubscriptionAccess::startTrial($u);
 
             return $u->fresh();
@@ -58,68 +64,30 @@ class AuthController extends Controller
         $u->setAttribute('permissions', Permissions::for($u));
         $u->setAttribute('subscription', SubscriptionAccess::for($u)->toArray());
 
-        return $this->out(['token' => $token, 'user' => $u], 201);
+        return $this->out(['user' => $u], 201);
     }
 
-    public function login(Request $r)
+    /**
+     * Sign-in moved to the auth service (POST /api/auth/sign-in/email through
+     * the app's own origin). An app cached from before still posts here.
+     */
+    public function login()
     {
-        $v = $r->validate(['email' => 'required|email', 'password' => 'required']);
-        $email = Str::lower(trim($v['email']));
-        $u = User::whereRaw('LOWER(email) = ?', [$email])->first();
-
-        if ($u && $u->login_locked_until && now()->lt($u->login_locked_until)) {
-            return response()->json(['message' => 'تم إيقاف الدخول مؤقتًا بعد عدة محاولات خاطئة. حاول مجددًا بعد 15 دقيقة، أو استخدم «نسيت كلمة المرور».'], 429);
-        }
-
-        if (! $u || ! Hash::check($v['password'], $u->password)) {
-            if ($u) {
-                $attempts = ((int) $u->login_failed_attempts) + 1;
-                if ($attempts >= 5) {
-                    $u->update([
-                        'login_failed_attempts' => 0,
-                        'login_locked_until' => now()->addMinutes(15),
-                    ]);
-
-                    return response()->json(['message' => 'تم إيقاف الدخول مؤقتًا بعد عدة محاولات خاطئة. حاول مجددًا بعد 15 دقيقة، أو استخدم «نسيت كلمة المرور».'], 429);
-                }
-                $u->update(['login_failed_attempts' => $attempts]);
-            }
-
-            return response()->json(['message' => 'البريد الإلكتروني أو كلمة المرور غير صحيحة. تأكد منهما وحاول مجددًا.', 'code' => 'INVALID_CREDENTIALS'], 422);
-        }
-
-        if ($u->login_locked_until) {
-            $u->update(['login_locked_until' => null]);
-        }
-        if ($u->is_active === false) {
-            return response()->json(['message' => 'تم تعطيل هذا الحساب. تواصل مع إدارة المنصة.', 'code' => 'ACCOUNT_DISABLED'], 403);
-        }
-        if ($u->role !== 'owner' && $u->role !== 'admin') {
-            $staff = Staff::where('account_user_id', $u->id)->first();
-            if (! $staff || ! $staff->active || $staff->role !== $u->role) {
-                return response()->json(['message' => 'حساب الموظف هذا موقوف أو غير مرتبط بمطعم. تواصل مع صاحب المطعم.', 'code' => 'ACCOUNT_DISABLED'], 403);
-            }
-            if (User::where('id', $staff->user_id)->value('is_active') === false) {
-                return response()->json(['message' => 'حساب هذا المطعم موقوف. تواصل مع إدارة المنصة.', 'code' => 'ACCOUNT_DISABLED'], 403);
-            }
-        }
-        $u->refreshSubscriptionStatus();
-        $token = Str::random(60);
-        $u->update([
-            'api_token' => hash('sha256', $token),
-            'login_failed_attempts' => 0,
-            'login_locked_until' => null,
-        ]);
-
-        $u->setAttribute('permissions', Permissions::for($u));
-        $u->setAttribute('subscription', SubscriptionAccess::for($u)->sync()->toArray());
-
-        return $this->out(['token' => $token, 'user' => $u]);
+        return response()->json([
+            'message' => 'تم تحديث طريقة تسجيل الدخول. اضغط «تحديث الآن» أسفل الشاشة، أو أغلق التطبيق وافتحه من جديد، ثم سجّل الدخول.',
+            'code' => 'USE_NEW_LOGIN',
+        ], 410);
     }
 
+    /**
+     * Only the shared demo accounts still hold a legacy token; real sessions
+     * end through the auth service (sign-out), which deletes the session row.
+     */
     public function logout(Request $r)
     {
-        $r->user()->update(['api_token' => null]);
+        if (AuthSessions::resolve($r)['via'] === 'legacy') {
+            $r->user()->update(['api_token' => null]);
+        }
 
         return $this->out(['message' => 'Logged out']);
     }
@@ -130,6 +98,9 @@ class AuthController extends Controller
         $u->refreshSubscriptionStatus();
 
         $u->load('restaurantSetting');
+        // Shown on the Security page (Better Auth keeps them up to date).
+        $u->setAttribute('two_factor_enabled', (bool) $u->two_factor_enabled);
+        $u->setAttribute('email_verified', (bool) $u->email_verified);
         // The frontend mirrors these to hide actions; the API enforces them.
         $u->setAttribute('permissions', Permissions::for($u));
         // Server-computed trial/subscription state (the UI never computes it).
@@ -172,7 +143,14 @@ class AuthController extends Controller
 
             return response()->json(['message' => 'انتهت صلاحية رابط إعادة التعيين. اطلب رابطًا جديدًا.', 'code' => 'RESET_TOKEN_EXPIRED'], 422);
         }
-        User::where('email', $v['email'])->update(['password' => Hash::make($v['password']), 'api_token' => null, 'login_failed_attempts' => 0, 'login_locked_until' => null]);
+        $user = User::where('email', $v['email'])->first();
+        if ($user) {
+            $hash = Hash::make($v['password']);
+            $user->forceFill(['password' => $hash, 'api_token' => null, 'login_failed_attempts' => 0, 'login_locked_until' => null])->save();
+            CredentialAccount::sync($user->id, $hash);
+            // A new password signs every device out.
+            AuthSessions::revokeFor($user->id);
+        }
         DB::table('password_reset_tokens')->where('email', $v['email'])->delete();
 
         return $this->out(['message' => 'Password reset successfully']);

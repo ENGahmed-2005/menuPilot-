@@ -12,7 +12,7 @@ uses(RefreshDatabase::class);
 function featuresAdmin(): array
 {
     $t = 'adm-'.Str::random(20);
-    DB::table('users')->insert(['name' => 'Admin', 'email' => uniqid().'@adm.test', 'password' => Hash::make('x'), 'role' => 'admin', 'api_token' => hash('sha256', $t), 'created_at' => now(), 'updated_at' => now()]);
+    authSession(DB::table('users')->insertGetId(['name' => 'Admin', 'email' => uniqid().'@adm.test', 'password' => Hash::make('x'), 'role' => 'admin', 'created_at' => now(), 'updated_at' => now()]), $t);
 
     return ['token' => $t];
 }
@@ -107,7 +107,7 @@ it('keeps the admin decisions when the plan changes', function () {
 it('applies revokes during a trial, but a grant never outlives the paid period', function () {
     $admin = featuresAdmin();
     $res = $this->postJson('/api/auth/register', ['restaurant_name' => 'T', 'email' => 'ft'.uniqid().'@x.test', 'password' => 'Trial#Pass123', 'password_confirmation' => 'Trial#Pass123'])->assertCreated();
-    $trial = ['token' => $res->json('data.token'), 'id' => $res->json('data.user.id')];
+    $trial = ['token' => authSession($res->json('data.user.id')), 'id' => $res->json('data.user.id')];
     $all = collect($this->getJson("/api/admin/restaurants/{$trial['id']}/features", authAs($admin))->json('data.groups'))->flatMap(fn ($g) => $g['items'])->pluck('key')->all();
     setFeatures($this, $admin, $trial, array_values(array_diff($all, ['online_orders'])))->assertOk();
     expect(User::find($trial['id'])->hasFeature('online_orders'))->toBeFalse();

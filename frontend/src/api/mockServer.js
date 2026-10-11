@@ -56,7 +56,7 @@ export const DEMO_ACCOUNTS = [
   { email: "admin@menupilot.test", password: "password123", role: "admin", name: "Platform Admin" },
 ];
 
-// التوكن يشيل الدور والإيميل جوّاه عشان /auth/me يشتغل حتى بعد إعادة تحميل
+// التوكن يشيل الدور والإيميل جوّاه عشان /account/me يشتغل حتى بعد إعادة تحميل
 // الصفحة (التوكن نفسه محفوظ في localStorage من قبل client.js).
 function encodeToken(account) {
   return `mock.${account.role}.${btoa(account.email)}`;
@@ -202,7 +202,7 @@ export async function mockRequest(method, rawPath, body, token) {
   const seg = path.split("/").filter(Boolean); // ["public","tables","T01","menu"] مثلًا
 
   // ------- Auth -------
-  if (method === "POST" && path === "/auth/register") {
+  if (method === "POST" && path === "/account/register") {
     const exists = owners.some((o) => o.email === body.email);
     if (exists) fail(422, "Email already registered.", { email: ["This email is already taken."] });
     const account = {
@@ -217,17 +217,17 @@ export async function mockRequest(method, rawPath, body, token) {
     return { token: encodeToken(account), user: toUserPayload(account) };
   }
 
-  if (method === "POST" && path === "/auth/login") {
+  if (method === "POST" && path === "/account/login") {
     const account = owners.find((o) => o.email === body.email) || DEMO_ACCOUNTS.find((o) => o.email === body.email);
     if (!account || account.password !== body.password) fail(401, "Invalid email or password.");
     return { token: encodeToken(account), user: toUserPayload(account) };
   }
 
-  if (method === "POST" && path === "/auth/logout") return null;
+  if (method === "POST" && path === "/account/logout") return null;
 
   // FR-02 امتداد: استرجاع كلمة المرور. برجّع رسالة نجاح عامة دايمًا (حتى لو
   // الإيميل مش مسجّل) عشان ما نكشف قائمة الحسابات الموجودة.
-  if (method === "POST" && path === "/auth/forgot-password") {
+  if (method === "POST" && path === "/account/forgot-password") {
     return {
       message: "إذا كان البريد الإلكتروني مسجّلاً لدينا، فسنرسل رابط إعادة تعيين كلمة المرور إليه.",
       // ⚠️ للتجربة فقط (بيئة Mock بلا بريد إلكتروني حقيقي): نرجّع توكن وهمي
@@ -237,7 +237,7 @@ export async function mockRequest(method, rawPath, body, token) {
     };
   }
 
-  if (method === "POST" && path === "/auth/reset-password") {
+  if (method === "POST" && path === "/account/reset-password") {
     const account =
       owners.find((o) => o.email === body.email) ||
       DEMO_ACCOUNTS.find((o) => o.email === body.email);
@@ -246,7 +246,7 @@ export async function mockRequest(method, rawPath, body, token) {
     return { message: "تم تحديث كلمة المرور بنجاح." };
   }
 
-  if (method === "GET" && path === "/auth/me") {
+  if (method === "GET" && path === "/account/me") {
     const account = decodeToken(token);
     if (!account) fail(401, "Session expired.");
     return toUserPayload(account);

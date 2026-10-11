@@ -25,10 +25,13 @@ self.addEventListener("message", (event) => {
 });
 
 // Any page address (React Router) opens the app shell.
-registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html"), { denylist: [/^\/__/] }));
+// Not /api/*: e-mail links (/api/auth/verify-email, /api/auth/reset-password/…)
+// and Google's callback are page loads the auth service must answer.
+registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html"), { denylist: [/^\/__/, /^\/api\//, /^\/up$/] }));
 
-// Live streams (SSE) and sign-in/sign-up calls go straight to the network.
-const NEVER_CACHE = /\/api\/(broadcasting|auth\/(?!me$)|demo|password)|\/stream$/;
+// Live streams (SSE), sign-in and account calls go straight to the network;
+// only /api/account/me is kept, so the app can open offline.
+const NEVER_CACHE = /\/api\/(broadcasting|auth\/|auth-config|account\/(?!me$)|demo|password)|\/stream$/;
 const isJson = (response) => (response.headers.get("content-type") || "").includes("json");
 
 const withHeaders = async (response, extra) => {

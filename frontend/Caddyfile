@@ -1,0 +1,54 @@
+# Caddyfile — the frontend on Railway (Railpack serves dist/ with this file
+# instead of its default one; the app is built into /app/dist).
+# The browser only talks to this origin: /api/auth* goes to the auth service,
+# the rest of /api (and /up) to Laravel, so the session cookie is first-party.
+# AUTH_UPSTREAM: the auth service on Railway's private network
+#   (http://auth.railway.internal:8080): Railway's public edge would replace
+#   X-Forwarded-Host and the visitor's IP, which the auth service relies on.
+# API_UPSTREAM: Laravel's https://… address (docs/DEPLOYMENT.md).
+{
+	admin off
+	persist_config off
+	auto_https off
+	servers {
+		# Railway's edge: X-Forwarded-For from it is believed, so {client_ip} is the visitor.
+		trusted_proxies static private_ranges 100.0.0.0/8
+	}
+}
+
+:{$PORT:8080} {
+	encode zstd gzip
+
+	@auth path /api/auth /api/auth/* /api/auth-config
+	handle @auth {
+		reverse_proxy {$AUTH_UPSTREAM} {
+			header_up Host {upstream_hostport}
+			header_up X-Forwarded-Host {host}
+			# Exactly the visitor, like Vercel's rewrite sends it.
+			header_up X-Forwarded-For {client_ip}
+		}
+	}
+
+	@api path /api/* /up
+	handle @api {
+		reverse_proxy {$API_UPSTREAM} {
+			header_up Host {upstream_hostport}
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-For {client_ip}
+		}
+	}
+
+	handle {
+		root * {$RAILPACK_STATIC_FILE_ROOT:/app/dist}
+		header {
+			X-Content-Type-Options nosniff
+			-Server
+		}
+		header /assets/* Cache-Control "public, max-age=31536000, immutable"
+		header /sw.js Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server {
+			hide .git .env*
+		}
+	}
+}

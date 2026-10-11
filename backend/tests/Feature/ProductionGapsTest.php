@@ -40,7 +40,7 @@ it('refuses to change the orders of a closed, paid session', function () {
 
 it('keeps the platform admin out of restaurant operations', function () {
     $token = 'adm-'.uniqid();
-    DB::table('users')->insert(['name' => 'Admin', 'email' => 'a@x.test', 'password' => Hash::make('x'), 'role' => 'admin', 'api_token' => hash('sha256', $token), 'created_at' => now(), 'updated_at' => now()]);
+    authSession(DB::table('users')->insertGetId(['name' => 'Admin', 'email' => 'a@x.test', 'password' => Hash::make('x'), 'role' => 'admin', 'created_at' => now(), 'updated_at' => now()]), $token);
     $admin = ['token' => $token];
 
     foreach (['/api/tables', '/api/sessions', '/api/kitchen/orders', '/api/staff', '/api/payments/pending'] as $url) {
@@ -61,7 +61,7 @@ it('gives a manager read-only access until the owner grants more', function () {
 
     $staffId = DB::table('staff')->where('account_user_id', $manager['id'])->value('id');
     $this->patchJson("/api/staff/{$staffId}", ['permissions' => ['view_tables', 'manage_tables']], authAs($owner))->assertOk();
-    DB::table('users')->where('id', $manager['id'])->update(['api_token' => hash('sha256', 'mgr-2')]);
+    authSession($manager['id'], 'mgr-2');
     $this->postJson('/api/tables', ['label' => 'M1', 'seats' => 2], authAs(['token' => 'mgr-2']))->assertCreated();
 });
 
