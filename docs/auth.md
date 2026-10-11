@@ -107,7 +107,7 @@ to the auth service behind the proxy.
 | `BETTER_AUTH_SECRET` | — (required, 32+ chars) | Signs cookies and encrypts 2FA secrets. Set the same value in Laravel. `openssl rand -base64 32` |
 | `DATABASE_URL` or `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | local MySQL | Laravel's database. Railway's `MYSQL*` variables are read too. |
 | `PORT` | 3005 | |
-| `AUTH_ALLOWED_HOSTS` | the Vercel, Vercel previews, Railway and `localhost:5173` frontends | Hosts that proxy `/api/auth` (wildcards allowed). Links and cookies use the host a request came through. |
+| `AUTH_ALLOWED_HOSTS` | `menupilot.vercel.app`, the Railway frontend (and `localhost:5173` outside production) | Hosts that proxy `/api/auth`. Links and cookies use the host a request came through, so list **exact** hosts: never a wildcard on a shared domain like `*.vercel.app` (anyone could create a matching project and receive reset links). |
 | `AUTH_FALLBACK_URL` | `https://menupilot.vercel.app` | Base for links when the host isn't in the list. |
 | `FRONTEND_ORIGINS` | — | Extra trusted origins, comma-separated. |
 | `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SECURE` | — | E-mail. Without `SMTP_HOST`, no e-mail features. |

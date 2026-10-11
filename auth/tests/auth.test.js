@@ -170,6 +170,24 @@ describe("e-mail confirmation and password reset", () => {
     assert.equal((await browser().signIn(owner.email, "Fresh#Pass9")).status, 200);
   });
 
+  it("never builds e-mail links on a host outside the exact list (no *.vercel.app look-alikes)", async () => {
+    const owner = await makeUser();
+    const evil = "https://menupilot-x-engahmed-2005.vercel.app";
+    const forged = await browser().call("/api/auth/request-password-reset", {
+      method: "POST", body: { email: owner.email, redirectTo: "/reset-password" },
+      headers: { origin: evil, "x-forwarded-host": new URL(evil).host, "x-forwarded-proto": "https" },
+    });
+    assert.equal(forged.status, 403);
+    // A trusted Origin with a forged host still gets links on the fallback address.
+    await browser().call("/api/auth/request-password-reset", {
+      method: "POST", body: { email: owner.email, redirectTo: "/reset-password" },
+      headers: { "x-forwarded-host": new URL(evil).host },
+    });
+    assert.equal(sentMail.length, 1);
+    assert.ok(!sentMail[0].text.includes("vercel.app"));
+    assert.match(sentMail[0].text, /http:\/\/localhost:5173\/api\/auth\/reset-password\//);
+  });
+
   it("answers a reset request for an unknown or demo address the same way, and sends nothing", async () => {
     const demo = await makeUser({ is_demo: 1 });
     for (const email of ["nobody@menupilot.test", demo.email]) {

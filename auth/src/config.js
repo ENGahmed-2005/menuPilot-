@@ -6,16 +6,17 @@ const env = process.env;
 const list = (value, fallback = "") => (value ?? fallback).split(",").map((s) => s.trim()).filter(Boolean);
 const flag = (value, fallback) => (value === undefined || value === "" ? fallback : !["0", "false", "no", "off"].includes(value.toLowerCase()));
 
-// The frontends that proxy /api/auth/* here (same-origin cookies). Vercel
-// preview deployments of this project match the wildcard.
+const production = env.NODE_ENV === "production";
+
+// The frontends that proxy /api/auth/* here (same-origin cookies). Exact hosts
+// only: links in e-mails are built from the host a request names, so a
+// wildcard on a shared domain (*.vercel.app) would let anyone with a matching
+// project receive password-reset links. Add Vercel preview hosts one by one.
 const DEFAULT_HOSTS = [
   "menupilot.vercel.app",
-  "menupilot-*-engahmed-2005.vercel.app",
   "frontend-production-351d.up.railway.app",
-  "localhost:5173",
+  ...(production ? [] : ["localhost:5173"]),
 ].join(",");
-
-const production = env.NODE_ENV === "production";
 
 function database() {
   const url = env.DATABASE_URL || env.MYSQL_URL;
