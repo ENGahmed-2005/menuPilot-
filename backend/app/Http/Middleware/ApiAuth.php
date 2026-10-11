@@ -4,25 +4,35 @@ namespace App\Http\Middleware;
 
 use App\Models\Staff;
 use App\Models\User;
+use App\Support\AuthSessions;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
+/**
+ * Signed-in API access. The user comes from a Better Auth session (cookie or
+ * Bearer session token) or, for the shared demo accounts only, the legacy
+ * api_token — App\Support\AuthSessions. Account status is re-checked on every
+ * request, so disabling bites immediately, not at the next sign-in.
+ */
 class ApiAuth
 {
     public function handle(Request $request, Closure $next)
     {
-        $header = $request->header('Authorization', '');
+        $auth = AuthSessions::resolve($request);
 
-        if (! preg_match('/^Bearer\s+(.+)$/i', $header, $matches)) {
+        if ($auth['status'] === AuthSessions::MISSING) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
+        if ($auth['status'] !== AuthSessions::OK) {
+            return response()->json(['message' => 'انتهت جلسة الدخول. سجّل الدخول مجددًا.', 'code' => 'SESSION_EXPIRED'], 401);
+        }
+        $user = $auth['user'];
 
-        $token = hash('sha256', trim($matches[1]));
-        $user = User::where('api_token', $token)->first();
-
-        if (! $user) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+        // The cookie is SameSite=Lax already; refuse a cross-site change on top
+        // (browsers send Sec-Fetch-Site; the app itself is always same-origin).
+        if ($auth['via'] === 'cookie' && ! $request->isMethodSafe() && $request->headers->get('Sec-Fetch-Site') === 'cross-site') {
+            return response()->json(['message' => 'طلب غير مسموح من موقع آخر.', 'code' => 'CROSS_SITE_REQUEST'], 403);
         }
 
         // Disabled accounts lose API access immediately, not at next login:
@@ -42,6 +52,10 @@ class ApiAuth
         // "Last activity" for staff management, written at most every 5 minutes.
         if (! $user->last_active_at || $user->last_active_at->lt(now()->subMinutes(5))) {
             User::where('id', $user->id)->update(['last_active_at' => now()]);
+        }
+        // …and for this device on the Security page.
+        if ($auth['session']) {
+            AuthSessions::touch($auth['session']);
         }
 
         $request->setUserResolver(static fn () => $user);

@@ -39,11 +39,13 @@ class AdminAccount
         if ($existing) {
             $existing->forceFill([
                 'password' => Hash::make($password),
-                'api_token' => null, // sign out existing sessions
+                'api_token' => null,
                 'login_failed_attempts' => 0,
                 'login_locked_until' => null,
                 'is_active' => true,
             ])->save();
+            CredentialAccount::sync($existing->id, $existing->password);
+            AuthSessions::revokeFor($existing->id); // sign out existing sessions
 
             return ['status' => 'updated', 'message' => "Password reset for admin {$email}."];
         }
@@ -52,7 +54,7 @@ class AdminAccount
             return ['status' => 'unchanged', 'message' => 'An admin account already exists; no second admin was created.'];
         }
 
-        User::create([
+        $admin = User::forceCreate([
             'name' => $name,
             'restaurant_name' => 'menuPilot',
             'email' => $email,
@@ -60,7 +62,9 @@ class AdminAccount
             'role' => 'admin',
             'plan' => 'pro',
             'is_active' => true,
+            'email_verified' => true, // set up by the operator, not self-registered
         ]);
+        CredentialAccount::sync($admin->id, $admin->password);
 
         return ['status' => 'created', 'message' => "Admin {$email} created."];
     }

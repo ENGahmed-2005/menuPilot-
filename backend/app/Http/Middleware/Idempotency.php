@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\AuthSessions;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Safe retries for the offline queue (docs/offline.md). A screen that was
@@ -68,15 +68,12 @@ class Idempotency
     /**
      * Who sends it: the signed-in account (so a resend after signing in
      * again still replays), else the guest's session secret, else the IP.
-     * Runs before ApiAuth, so it looks the token up the same way.
+     * Runs before ApiAuth and shares its lookup (App\Support\AuthSessions).
      */
     private function who(Request $request): string
     {
-        if ($token = $request->bearerToken()) {
-            $userId = DB::table('users')->where('api_token', hash('sha256', trim($token)))->value('id');
-            if ($userId) {
-                return "user:$userId";
-            }
+        if ($user = AuthSessions::resolve($request)['user']) {
+            return "user:{$user->id}";
         }
 
         return ($session = $request->header('X-Session-Token')) ? 'session:'.hash('sha256', $session) : 'ip:'.$request->ip();

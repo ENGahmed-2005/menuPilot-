@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Support\Audit;
+use App\Support\AuthSessions;
+use App\Support\CredentialAccount;
 use App\Support\RestaurantFeatures;
 use App\Support\SubscriptionAccess;
 use App\Support\SubscriptionPlans;
@@ -167,6 +169,9 @@ class AdminController extends Controller
         }
 
         $u = User::where('role', 'owner')->findOrFail($id);
+        if (is_string($r->input('email'))) {
+            $r->merge(['email' => Str::lower(trim($r->input('email')))]); // Better Auth looks e-mails up lower-cased
+        }
         $v = $r->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,'.$u->id,
@@ -208,7 +213,9 @@ class AdminController extends Controller
         $password = $v['password'] ?? 'MP-'.Str::upper(Str::random(6)).'-'.random_int(100, 999);
         $now = now();
 
-        $owner = User::create([
+        // The platform vouches for the address it typed: no verification e-mail
+        // stands between the owner and the generated password.
+        $owner = User::forceCreate([
             'name' => $v['name'],
             'email' => Str::lower(trim($v['email'])),
             'restaurant_name' => $v['restaurant_name'],
@@ -217,10 +224,12 @@ class AdminController extends Controller
             'role' => 'owner',
             'plan' => $plan,
             'is_active' => true,
+            'email_verified' => true,
             'trial_started_at' => $plan === 'trial' ? $now : null,
             'trial_ends_at' => $plan === 'trial' ? $now->copy()->addDays(14) : null,
             'subscription_started_at' => $plan === 'trial' ? null : $now,
         ]);
+        CredentialAccount::sync($owner->id, $owner->password);
         if ($addons) {
             $owner->forceFill(['addons' => $addons])->save();
         }
@@ -271,6 +280,7 @@ class AdminController extends Controller
             DB::table('dining_sessions')->whereIn('id', $sessionIds)->delete();
 
             $staffUserIds = DB::table('staff')->where('user_id', $owner->id)->pluck('account_user_id')->filter();
+            AuthSessions::revokeFor($owner->id, ...$staffUserIds->map(fn ($id) => (int) $id)->all());
             DB::table('staff')->where('user_id', $owner->id)->delete();
             User::whereIn('id', $staffUserIds)->where('role', '!=', 'admin')->delete();
             $owner->delete(); // cascades tables, menu, categories, branding
@@ -297,8 +307,9 @@ class AdminController extends Controller
 
     /**
      * PATCH admin/owners/{id}/status {active}
-     * Disabling an owner revokes their token and blocks their whole restaurant
-     * (staff are rejected by ApiAuth while the owner is inactive). Records are kept.
+     * Disabling an owner signs them and their staff out of every device and
+     * blocks the whole restaurant (staff are rejected by ApiAuth and by the
+     * auth service while the owner is inactive). Records are kept.
      */
     public function ownerStatus(Request $r, $id)
     {
@@ -309,6 +320,10 @@ class AdminController extends Controller
         $v = $r->validate(['active' => 'required|boolean']);
         $u = User::where('role', 'owner')->findOrFail($id);
         $u->update(['is_active' => $v['active']] + ($v['active'] ? [] : ['api_token' => null]));
+        if (! $v['active']) {
+            $staffUserIds = DB::table('staff')->where('user_id', $u->id)->whereNotNull('account_user_id')->pluck('account_user_id');
+            AuthSessions::revokeFor($u->id, ...$staffUserIds->map(fn ($id) => (int) $id)->all());
+        }
         Audit::log($r, $v['active'] ? 'admin.owner_enabled' : 'admin.owner_disabled', 'user', $u->id, [], $u->id);
 
         return response()->json(['data' => $u->fresh()]);

@@ -11,10 +11,10 @@ function adminUser(): array
     $token = 'adm-'.uniqid();
     $id = DB::table('users')->insertGetId([
         'name' => 'Admin', 'email' => uniqid().'@admin.test', 'password' => Hash::make('Admin#Pass1234'),
-        'role' => 'admin', 'api_token' => hash('sha256', $token), 'created_at' => now(), 'updated_at' => now(),
+        'role' => 'admin', 'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    return ['id' => $id, 'token' => $token];
+    return ['id' => $id, 'token' => authSession($id, $token)];
 }
 
 /*
@@ -124,8 +124,9 @@ it('lets the admin create, edit, re-plan and delete a restaurant', function () {
         ->and($created['restaurant']['role'])->toBe('owner')
         ->and($created['restaurant']['trial_ends_at'])->not->toBeNull();
 
-    // The new owner can sign in with the generated password.
-    $this->postJson('/api/auth/login', ['email' => 'lina@resto.test', 'password' => $created['generated_password']])->assertOk();
+    // The new owner can sign in with the generated password (auth service: credential account, already verified).
+    expect(Hash::check($created['generated_password'], DB::table('auth_accounts')->where(['provider_id' => 'credential', 'account_id' => (string) $id])->value('password')))->toBeTrue()
+        ->and($created['restaurant']['email_verified'])->toBeTrue();
 
     $this->patchJson("/api/admin/restaurants/{$id}", ['name' => 'Lina H', 'email' => 'lina@resto.test', 'restaurant_name' => 'Lina Grill & Co'], authAs($admin))
         ->assertOk()->assertJsonPath('data.restaurant_name', 'Lina Grill & Co');

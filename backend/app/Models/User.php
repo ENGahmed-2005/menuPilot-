@@ -28,6 +28,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            // Better Auth (auth/ service) fields on its user model.
+            'email_verified' => 'boolean',
+            'two_factor_enabled' => 'boolean',
             'is_active' => 'boolean',
             'is_demo' => 'boolean',
             'last_active_at' => 'datetime',

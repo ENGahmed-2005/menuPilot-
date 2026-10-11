@@ -22,10 +22,10 @@ function makeAdmin(): array
     $token = 'admin-token-'.uniqid();
     $id = DB::table('users')->insertGetId([
         'name' => 'Admin', 'email' => uniqid().'@admin.test', 'password' => Hash::make('Admin#Pass123'),
-        'role' => 'admin', 'api_token' => hash('sha256', $token), 'created_at' => now(), 'updated_at' => now(),
+        'role' => 'admin', 'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    return ['id' => $id, 'token' => $token];
+    return ['id' => $id, 'token' => authSession($id, $token)];
 }
 
 /*
@@ -114,7 +114,7 @@ it('honours custom permissions set by the owner', function () {
     $this->patchJson("/api/staff/{$staffId}", ['permissions' => ['view_tables', 'view_payments', 'close_session']], authAs($owner))
         ->assertOk()->assertJsonPath('data.custom_permissions', true);
     // Access changes revoke the token; sign the waiter in again with a fresh one.
-    DB::table('users')->where('id', $waiter['id'])->update(['api_token' => hash('sha256', 'fresh-waiter')]);
+    authSession($waiter['id'], 'fresh-waiter');
     $waiter['token'] = 'fresh-waiter';
 
     ['session' => $s] = sessionWithOrder($this, $owner['id']);
@@ -150,22 +150,24 @@ it('stops a manager from granting permissions they do not have or editing themse
         ->assertForbidden()->assertJsonPath('code', 'SELF_EDIT_FORBIDDEN');
 });
 
-it('disabling a staff member blocks login and API access but keeps the record', function () {
+it('disabling a staff member signs them out, blocks API access and keeps the record', function () {
     $owner = makeOwner();
     $cashier = makeStaff($owner['id'], 'cashier');
-    $email = DB::table('users')->where('id', $cashier['id'])->value('email');
     $staffId = DB::table('staff')->where('account_user_id', $cashier['id'])->value('id');
 
     $this->patchJson("/api/staff/{$staffId}/status", ['active' => false], authAs($owner))->assertOk()->assertJsonPath('data.active', false);
 
-    $this->getJson('/api/sessions', authAs($cashier))->assertStatus(401); // token revoked
-    $this->postJson('/api/auth/login', ['email' => $email, 'password' => 'Secret#123'])->assertForbidden();
+    $this->getJson('/api/sessions', authAs($cashier))->assertStatus(401)->assertJsonPath('code', 'SESSION_EXPIRED'); // every device signed out
+    expect(DB::table('auth_sessions')->where('user_id', $cashier['id'])->count())->toBe(0);
+    // A session created anyway (the auth service refuses to) is still turned away.
+    $again = ['token' => authSession($cashier['id'])];
+    $this->getJson('/api/sessions', authAs($again))->assertForbidden()->assertJsonPath('code', 'ACCOUNT_DISABLED');
     expect(DB::table('staff')->where('id', $staffId)->exists())->toBeTrue()
         ->and(DB::table('audit_logs')->where('action', 'staff.access_changed')->exists())->toBeTrue();
 
     $this->patchJson("/api/staff/{$staffId}/status", ['active' => true], authAs($owner))->assertOk();
-    $this->postJson('/api/auth/login', ['email' => $email, 'password' => 'Secret#123'])->assertOk()
-        ->assertJsonPath('data.user.permissions', fn ($p) => in_array('close_session', $p, true));
+    $this->getJson('/api/auth/me', authAs($again))->assertOk()
+        ->assertJsonPath('data.permissions', fn ($p) => in_array('close_session', $p, true));
 });
 
 it('keeps owners inside their own restaurant even with full permissions', function () {
@@ -208,7 +210,9 @@ it('lets the admin manage owners, and disabling an owner locks out their staff',
     $this->patchJson("/api/admin/restaurants/{$owner['id']}/plan", ['plan' => 'pro', 'addons' => ['delivery']], authAs($admin))->assertOk();
     $this->patchJson("/api/admin/owners/{$owner['id']}/status", ['active' => false], authAs($admin))->assertOk();
 
-    $this->getJson('/api/sessions', authAs($cashier))->assertForbidden()->assertJsonPath('code', 'ACCOUNT_DISABLED');
+    // The staff's sessions are deleted at once, and a new one is still refused.
+    $this->getJson('/api/sessions', authAs($cashier))->assertUnauthorized()->assertJsonPath('code', 'SESSION_EXPIRED');
+    $this->getJson('/api/sessions', authAs(['token' => authSession($cashier['id'])]))->assertForbidden()->assertJsonPath('code', 'ACCOUNT_DISABLED');
     expect(DB::table('audit_logs')->whereIn('action', ['admin.plan_changed', 'admin.owner_disabled'])->count())->toBe(2);
 });
 
@@ -222,8 +226,12 @@ it('AdminSeeder creates one admin from env, never duplicates, never promotes an 
     $hash = User::where('email', 'root@menupilot.test')->value('password');
     expect(Hash::check('Very-Long-Pass-123', $hash))->toBeTrue();
 
-    $login = $this->postJson('/api/auth/login', ['email' => 'root@menupilot.test', 'password' => 'Very-Long-Pass-123'])->assertOk();
-    expect($login->json('data.user.role'))->toBe('admin')->and($login->json('data.user.permissions'))->toContain('manage_admin');
+    // Ready for the auth service: credential account and no verification e-mail in the way.
+    $adminId = User::where('email', 'root@menupilot.test')->value('id');
+    expect(Hash::check('Very-Long-Pass-123', DB::table('auth_accounts')->where(['provider_id' => 'credential', 'account_id' => (string) $adminId])->value('password')))->toBeTrue()
+        ->and(User::find($adminId)->email_verified)->toBeTrue();
+    $me = $this->getJson('/api/auth/me', authAs(['token' => authSession($adminId)]))->assertOk();
+    expect($me->json('data.role'))->toBe('admin')->and($me->json('data.permissions'))->toContain('manage_admin');
 
     // A different email while an admin exists: no second admin.
     config(['app.admin.email' => 'second@menupilot.test']);

@@ -10,13 +10,13 @@ function trialOwner($test): array
 {
     $res = $test->postJson('/api/auth/register', ['restaurant_name' => 'مطعم الدفع', 'email' => 'pay'.uniqid().'@x.test', 'password' => 'Trial#Pass123', 'password_confirmation' => 'Trial#Pass123'])->assertCreated();
 
-    return ['token' => $res->json('data.token'), 'id' => $res->json('data.user.id')];
+    return ['token' => authSession($res->json('data.user.id')), 'id' => $res->json('data.user.id')];
 }
 
 function platformAdmin(): array
 {
     $t = 'adm-'.uniqid();
-    DB::table('users')->insert(['name' => 'Admin', 'email' => uniqid().'@adm.test', 'password' => Hash::make('x'), 'role' => 'admin', 'api_token' => hash('sha256', $t), 'created_at' => now(), 'updated_at' => now()]);
+    authSession(DB::table('users')->insertGetId(['name' => 'Admin', 'email' => uniqid().'@adm.test', 'password' => Hash::make('x'), 'role' => 'admin', 'created_at' => now(), 'updated_at' => now()]), $t);
 
     return ['token' => $t];
 }

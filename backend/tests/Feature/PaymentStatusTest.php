@@ -20,14 +20,13 @@ function psOwner(): array
         'password' => Hash::make('Secret#123'),
         'role' => 'owner',
         'plan' => 'pro',
-        'api_token' => hash('sha256', $token),
         'latitude' => 31.5,
         'longitude' => 34.46,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
 
-    return ['id' => $id, 'token' => $token];
+    return ['id' => $id, 'token' => authSession($id, $token)];
 }
 
 function psStaff(int $ownerId, string $role): array
@@ -38,7 +37,6 @@ function psStaff(int $ownerId, string $role): array
         'email' => Str::lower(Str::random(8)).'@staff.test',
         'password' => Hash::make('Secret#123'),
         'role' => $role,
-        'api_token' => hash('sha256', $token),
         'created_at' => now(),
         'updated_at' => now(),
     ]);
@@ -52,7 +50,7 @@ function psStaff(int $ownerId, string $role): array
         'updated_at' => now(),
     ]);
 
-    return ['id' => $id, 'token' => $token];
+    return ['id' => $id, 'token' => authSession($id, $token)];
 }
 
 function psTable(int $ownerId): object

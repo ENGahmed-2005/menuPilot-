@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Staff;
 use App\Models\User;
 use App\Support\Audit;
+use App\Support\AuthSessions;
+use App\Support\CredentialAccount;
 use App\Support\Permissions;
 use App\Support\ResolvesRestaurant;
 use Illuminate\Http\Request;
@@ -21,7 +23,8 @@ use Illuminate\Validation\Rule;
  *  - nobody edits, disables or deletes their own staff record;
  *  - an actor can't grant permissions they don't hold themselves
  *    (a manager can't create a stronger account than their own);
- *  - disabling keeps the record and revokes the API token immediately.
+ *  - disabling keeps the record and signs the employee out of every device
+ *    immediately (their Better Auth sessions are deleted).
  */
 class StaffController extends Controller
 {
@@ -44,6 +47,7 @@ class StaffController extends Controller
 
     public function store(Request $request)
     {
+        $this->normalizeEmail($request);
         $v = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -67,13 +71,17 @@ class StaffController extends Controller
         }
 
         $staff = DB::transaction(function () use ($restaurantId, $owner, $v, $plainPassword, $permissions) {
-            $employee = User::create([
+            // The owner vouches for the address (staff often have no real
+            // mailbox), so e-mail verification never blocks their sign-in.
+            $employee = User::forceCreate([
                 'name' => $v['name'],
                 'email' => $v['email'],
                 'password' => Hash::make($plainPassword),
                 'role' => $v['role'],
                 'plan' => $owner->plan,
+                'email_verified' => true,
             ]);
+            CredentialAccount::sync($employee->id, $employee->password);
 
             return Staff::create([
                 'user_id' => $restaurantId,
@@ -103,6 +111,7 @@ class StaffController extends Controller
             return response()->json(['message' => 'لا يمكنك تعديل صلاحيات أو حالة حسابك بنفسك.', 'code' => 'SELF_EDIT_FORBIDDEN'], 403);
         }
 
+        $this->normalizeEmail($request);
         $v = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'email' => ['sometimes', 'required', 'email', Rule::unique('users', 'email')->ignore($staff->account_user_id)],
@@ -146,15 +155,22 @@ class StaffController extends Controller
                 if (! empty($v['password'])) {
                     $userData['password'] = Hash::make($v['password']);
                 }
-                // Disabling, a role change or a new password revoke the current
-                // token (sign in again). Permission changes do NOT: they are
-                // checked on every request, so they apply immediately and the
-                // employee's screen refreshes them (AuthContext).
-                if ((array_key_exists('active', $v) && ! $v['active']) || (isset($v['role']) && $v['role'] !== $previousRole) || ! empty($v['password'])) {
+                // Disabling, a role change or a new password sign the employee
+                // out of every device (sign in again). Permission changes do
+                // NOT: they are checked on every request, so they apply
+                // immediately and the employee's screen refreshes them (AuthContext).
+                $signOut = (array_key_exists('active', $v) && ! $v['active']) || (isset($v['role']) && $v['role'] !== $previousRole) || ! empty($v['password']);
+                if ($signOut) {
                     $userData['api_token'] = null;
                 }
                 if ($userData) {
                     $user->update($userData);
+                }
+                if (isset($userData['password'])) {
+                    CredentialAccount::sync($user->id, $userData['password']);
+                }
+                if ($signOut) {
+                    AuthSessions::revokeFor($user->id);
                 }
             }
         });
@@ -190,12 +206,21 @@ class StaffController extends Controller
             $accountUserId = $staff->account_user_id;
             $staff->delete();
             if ($accountUserId) {
+                AuthSessions::revokeFor($accountUserId);
                 User::where('id', $accountUserId)->delete();
             }
         });
         Audit::log($request, 'staff.deleted', 'staff', $staff->id, ['role' => $staff->role, 'email' => $staff->email], $staff->user_id);
 
         return $this->out(['message' => 'Deleted']);
+    }
+
+    /** Better Auth looks e-mails up lower-cased, so they are stored that way. */
+    private function normalizeEmail(Request $request): void
+    {
+        if (is_string($request->input('email'))) {
+            $request->merge(['email' => Str::lower(trim($request->input('email')))]);
+        }
     }
 
     private function isSelf(Request $request, Staff $staff): bool
