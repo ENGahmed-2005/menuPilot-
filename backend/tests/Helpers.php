@@ -18,6 +18,7 @@ function authSession(int $userId, ?string $token = null, ?DateTimeInterface $exp
 {
     $token ??= Str::random(32);
     DB::table('auth_sessions')->insert([
+        'id' => Str::random(32),
         'user_id' => $userId,
         'token' => $token,
         'expires_at' => $expiresAt ?? now()->addYear(),

@@ -106,9 +106,11 @@ class AuthSessions
         $secret = config('auth_service.secret');
 
         if (($bearer = self::bearer($request)) !== null) {
-            // Signed like the cookie (contains "."), or the bare token.
+            // Signed like the cookie ("<token>.<signature>"). The bare token is
+            // accepted only while no secret is configured (tests, local dev):
+            // a raw token that leaks is then useless without the secret.
             $decoded = str_contains($bearer, '%') ? rawurldecode($bearer) : $bearer;
-            $token = str_contains($decoded, '.') ? self::tokenFromSignedValue($decoded, $secret) : $decoded;
+            $token = str_contains($decoded, '.') || filled($secret) ? self::tokenFromSignedValue($decoded, $secret) : $decoded;
             if ($found = self::fromSession($token, 'bearer')) {
                 return $found;
             }

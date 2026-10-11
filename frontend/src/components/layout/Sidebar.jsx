@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import BrandLogo from "../brand/Logo";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  BarChart3, Bell, Bike, ChefHat, KeyRound, MapPin, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette, ChevronDown, QrCode, Receipt, Settings, Settings2, Sparkles, UtensilsCrossed, Users, X, Wallet,
+  BarChart3, Bell, Bike, ChefHat, KeyRound, MapPin, ClipboardList, Crown, FileSpreadsheet, HandPlatter, LayoutDashboard, LogOut, Menu, Palette, ChevronDown, QrCode, Receipt, Settings, Settings2, Sparkles, UtensilsCrossed, Users, X, Wallet, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { SUBSCRIPTION_ADDONS, getSubscriptionPlan, monthlyPrice, subscriptionOf, userHasFeature } from "../../config/subscriptions";
@@ -253,6 +253,12 @@ export default function Sidebar() {
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-paper/80 transition-colors hover:bg-paper/10 hover:text-paper">
                 <Settings size={18} aria-hidden="true" />
               </button>
+            )}
+            {!user?.is_demo && (
+              <NavLink to="/account/security" aria-label={t("الأمان وتسجيل الدخول")} title={t("الأمان وتسجيل الدخول")}
+                className={({ isActive }) => `grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors hover:bg-paper/10 hover:text-paper ${isActive ? "bg-paper/10 text-paper" : "text-paper/80"}`}>
+                <ShieldCheck size={18} aria-hidden="true" />
+              </NavLink>
             )}
             <LanguageSwitch tone="dark" className="min-h-9 px-2.5 text-xs" />
             <button type="button" onClick={logout} aria-label={t("تسجيل الخروج")} title={t("تسجيل الخروج")}

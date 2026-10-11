@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { getToken } from "../api/client";
+import { authHeaders } from "../api/client";
+import { API_BASE_URL as BASE_URL } from "../api/baseUrl";
 import { getActiveSessions } from "../api/sessions";
 import { useAuth } from "../context/AuthContext";
 import { realtimeEnabled, restaurantChannel, useLive } from "../realtime";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 // See useOrderTracking: "polling" is for local development on Windows.
 // The mock API (VITE_USE_MOCKS) has no streaming endpoint, so demos poll too.
 const POLLING = import.meta.env.VITE_REALTIME_MODE === "polling" || import.meta.env.VITE_USE_MOCKS === "true";
 const POLL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS) || 3000;
 
 async function consumeStream(url, onSessions, signal) {
-  const response = await fetch(url, { headers: { Accept: "text/event-stream", Authorization: `Bearer ${getToken()}` }, signal });
+  const response = await fetch(url, { headers: { Accept: "text/event-stream", ...authHeaders() }, signal });
   if (!response.ok || !response.body) throw new Error(`Realtime connection failed: ${response.status}`);
 
   const reader = response.body.getReader();

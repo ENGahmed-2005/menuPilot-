@@ -1,10 +1,10 @@
 import { getSessionToken } from "../utils/sessionToken";
+import { API_BASE_URL as BASE_URL } from "../api/baseUrl";
 import { useEffect, useState } from "react";
 import { getSessionOrders } from "../api/orders";
 import { t } from "../i18n";
 import { realtimeEnabled, useLive, useSessionChannel } from "../realtime";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 // "polling" avoids long-lived SSE connections, which block the single-worker
 // `php artisan serve` on Windows. Production keeps the default "sse".
 // The mock API (VITE_USE_MOCKS) has no streaming endpoint, so demos poll too.

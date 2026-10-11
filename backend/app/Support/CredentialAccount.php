@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * The Better Auth "credential" account of a user (auth_accounts row with
@@ -26,6 +27,6 @@ class CredentialAccount
 
             return;
         }
-        DB::table('auth_accounts')->insert($key + ['user_id' => $userId, 'password' => $passwordHash, 'created_at' => $now, 'updated_at' => $now]);
+        DB::table('auth_accounts')->insert($key + ['id' => Str::random(32), 'user_id' => $userId, 'password' => $passwordHash, 'created_at' => $now, 'updated_at' => $now]);
     }
 }

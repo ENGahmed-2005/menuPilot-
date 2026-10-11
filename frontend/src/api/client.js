@@ -13,6 +13,12 @@ export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+/** The demo's Bearer token when there is one. Real accounts use the session cookie (Better Auth). */
+export function authHeaders() {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export function setToken(token) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else {
@@ -27,12 +33,11 @@ const WRITE_TIMEOUT_MS = 10000; // a hanging connection counts as offline
 /** One real HTTP call. Network failure → Error with status 0; never queues. */
 async function send(path, options = {}) {
   const { timeoutMs, ...fetchOptions } = options;
-  const token = getToken();
 
   const headers = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...authHeaders(),
     ...(fetchOptions.headers || {}),
   };
 
@@ -44,6 +49,7 @@ async function send(path, options = {}) {
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       ...fetchOptions,
+      credentials: 'same-origin', // the session cookie; /api is served from this origin
       ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,

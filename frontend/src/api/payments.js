@@ -1,7 +1,6 @@
-import { getToken } from "./client";
+import { authHeaders } from "./client";
+import { API_BASE_URL as BASE_URL } from "./baseUrl";
 import { sessionHeaders } from "../utils/sessionToken";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export const getPaymentOptions = (sessionId) =>
   fetch(`${BASE_URL}/public/sessions/${sessionId}/payment-options`, { headers: { Accept: "application/json", ...sessionHeaders(sessionId) } })
@@ -37,7 +36,7 @@ export async function submitPayment(sessionId, payload) {
 }
 
 export const getPendingPayments = () =>
-  fetch(`${BASE_URL}/payments/pending`, { headers: { Accept: "application/json", Authorization: `Bearer ${getToken()}` } })
+  fetch(`${BASE_URL}/payments/pending`, { headers: { Accept: "application/json", ...authHeaders() } })
     .then(async (response) => {
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.message || `Request failed: ${response.status}`);
@@ -45,7 +44,7 @@ export const getPendingPayments = () =>
     });
 
 export const verifyPayment = (paymentId) =>
-  fetch(`${BASE_URL}/payments/${paymentId}/verify`, { method: "POST", headers: { Accept: "application/json", Authorization: `Bearer ${getToken()}` } })
+  fetch(`${BASE_URL}/payments/${paymentId}/verify`, { method: "POST", headers: { Accept: "application/json", ...authHeaders() } })
     .then(async (response) => {
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.message || `Request failed: ${response.status}`);
@@ -55,7 +54,7 @@ export const verifyPayment = (paymentId) =>
 export const rejectPayment = (paymentId, reason) =>
   fetch(`${BASE_URL}/payments/${paymentId}/reject`, {
     method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ reason }),
   }).then(async (response) => {
     const data = await response.json().catch(() => null);

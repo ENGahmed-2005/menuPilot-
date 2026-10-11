@@ -20,27 +20,49 @@
 
 > مزودات SMTP مجانية مناسبة: Brevo (300 رسالة يوميًا)، أو Gmail مع App Password للتجربة فقط.
 
-## 3. Vercel (Frontend)
-`.env.production` جاهز: `VITE_API_BASE_URL`، `VITE_USE_MOCKS=false`، `VITE_REALTIME_MODE=polling`. عدّل `VITE_API_BASE_URL` إذا تغيّر عنوان الـ Backend.
+اختياري ومُستحسن: `BETTER_AUTH_SECRET` بنفس قيمة خدمة الدخول، فيتحقق Laravel من توقيع كوكي الجلسة.
 
-## 4. اختبار الإنتاج (Go / No-Go)
+## 3. خدمة الدخول (Better Auth) — مجلد `auth/`
+خدمة Node صغيرة تسجّل الدخول وتكتب الجلسات في نفس قاعدة MySQL، وLaravel يقرأها (التفاصيل في `docs/auth.md`).
+- **Railway:** خدمة `auth`، Root Directory = `/auth`، أمر التشغيل `npm start`، فحص الصحة `/live`.
+- **Render (بديل):** Web Service من نوع Docker، المجلد `auth/` (فيه `Dockerfile`).
+
+| المتغير | القيمة |
+|---|---|
+| `BETTER_AUTH_SECRET` | سر عشوائي 32 حرفًا على الأقل (`openssl rand -base64 32`)، ونفس القيمة في Laravel |
+| `DATABASE_URL` أو `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | نفس قاعدة Laravel |
+| `NODE_ENV` | `production` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `MAIL_FROM_ADDRESS` | لتأكيد البريد واستعادة كلمة المرور بالبريد (بدونها يبقى طلب الاستعادة عبر واتساب) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | للدخول بحساب Google. رابط الرجوع: `https://menupilot.vercel.app/api/auth/callback/google` |
+
+الخدمة تنتظر حتى تُطبَّق migrations الـ Laravel (تعطي 503 مؤقتًا)، ثم تعمل وحدها.
+
+## 4. Vercel (Frontend)
+`.env.production`: `VITE_API_BASE_URL=/api`. الواجهة تمرّر الطلبات من نفس عنوانها (`vercel.json`):
+`/api/auth/*` و`/api/auth-config` إلى خدمة الدخول، و`/api/*` و`/up` إلى Laravel على Render. إذا تغيّر عنوان أي خدمة عدّله في `vercel.json`.
+
+**Railway (Frontend):** يقرأ `frontend/Caddyfile` ويحتاج متغيرين: `AUTH_UPSTREAM` (عنوان خدمة الدخول، https) و`API_UPSTREAM` (عنوان الـ backend، https)، و`VITE_API_BASE_URL=/api`.
+
+## 5. اختبار الإنتاج (Go / No-Go)
 بعد كل نشر شغّل من جهازك:
 ```bash
-node scripts/smoke-test.mjs https://menupilot-backend.onrender.com/api
-# لحذف المطعم التجريبي تلقائيًا بعد الاختبار:
-SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... node scripts/smoke-test.mjs https://menupilot-backend.onrender.com/api
+node scripts/smoke-test.mjs https://menupilot.vercel.app
+# حساب الأدمن يحذف المطعم التجريبي بعد الاختبار، وينشئه إذا كان تأكيد البريد مفعّلًا:
+SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... node scripts/smoke-test.mjs https://menupilot.vercel.app
 ```
-يغطي 30 فحصًا: الصحة، وقاعدة البيانات، والمصادقة، ومسار الزبون، والمطبخ، والكاشير، والجلسة/الخروج. النتيجة `🟢 GO` أو `🔴 NO-GO` مع سبب كل فشل.
+يُعطى عنوان **الواجهة** (هي التي تمرّر `/api` و`/api/auth`). يغطي أكثر من 30 فحصًا: الصحة، وقاعدة البيانات، والمصادقة، ومسار الزبون، والمطبخ، والكاشير، والجلسة/الخروج. النتيجة `🟢 GO` أو `🔴 NO-GO` مع سبب كل فشل.
 
-## 5. بعد النشر
+## 6. بعد النشر
 - افتح `https://<backend>/health`، يجب أن يرجع `{"status":"ok"}`.
-- سجّل الدخول بحساب الأدمن.
+- افتح `https://<frontend>/api/auth-config` (خدمة الدخول تعمل)، ثم سجّل الدخول بحساب الأدمن.
+- من صفحة «الأمان وتسجيل الدخول» تأكد أن عنوان IP الظاهر لجهازك هو عنوانك الحقيقي (وإلا عدّل `AUTH_PROXY_HOPS`، انظر `docs/auth.md`).
 - جرّب "نسيت كلمة المرور" وتأكد من وصول البريد.
 - أنشئ طاولة، وامسح رمز QR من هاتف داخل نطاق 200 متر من المطعم، وأرسل طلبًا.
 - ارفع صورة لصنف، ثم أعد نشر الخدمة وتأكد أن الصورة ما زالت تظهر.
 
-## 6. ما تغيّر أمنيًا
-- **استعادة كلمة المرور:** الرابط يُرسل بالبريد فقط، صالح 60 دقيقة، والاستجابة واحدة سواء كان البريد مسجلًا أم لا.
+## 7. ما تغيّر أمنيًا
+- **تسجيل الدخول (Better Auth):** الجلسة في كوكي httpOnly لا يقرؤها JavaScript، التحقق بخطوتين، إدارة الأجهزة، الدخول بحساب Google، وقفل الحساب 15 دقيقة بعد 5 محاولات خاطئة (`docs/auth.md`).
+- **استعادة كلمة المرور:** الرابط يُرسل بالبريد فقط، صالح 60 دقيقة ولمرة واحدة، ويسجّل الخروج من كل الأجهزة، والاستجابة واحدة سواء كان البريد مسجلًا أم لا.
 - **جلسات الزبائن:** كل جلسة لها رمز سري (`X-Session-Token`). رقم الجلسة وحده لم يعد كافيًا للوصول إليها.
 - **الصور:** تُخزَّن في قاعدة البيانات وتُعرض من `/api/media/{uuid}`، فلا تضيع عند إعادة النشر.
 - **رموز QR:** تُبنى من `FRONTEND_URL` في الـ Backend، ومن عنوان الواجهة نفسها في الواجهة.

@@ -3,10 +3,9 @@
    Exports are binary (.xlsx), so they bypass the JSON client and download
    through fetch + Blob, keeping the same auth header and friendly errors.
    ========================================================================== */
-import { api, getToken } from "./client";
+import { api, authHeaders } from "./client";
+import { API_BASE_URL as BASE_URL } from "./baseUrl";
 import { friendlyMessage } from "../utils/errors";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export const getAccountingSettings = () => api.get("/accounting/settings");
 export const saveAccountingSettings = (payload) => api.put("/accounting/settings", payload);
@@ -17,7 +16,7 @@ export async function downloadExport(type, params) {
   let response;
   try {
     response = await fetch(`${BASE_URL}/reports/export/${type}${qs ? `?${qs}` : ""}`, {
-      headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json", Authorization: `Bearer ${getToken()}` },
+      headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json", ...authHeaders() },
     });
   } catch {
     const error = new Error(friendlyMessage(0)); error.friendly = true; throw error;

@@ -56,6 +56,11 @@ it('checks the cookie signature when the auth service secret is configured', fun
     $this->getJson('/api/account/me', withCookie('__Secure-menupilot.session_token', signedCookie($owner['token'], 'another-secret')))
         ->assertUnauthorized();
     $this->getJson('/api/account/me', withCookie('__Secure-menupilot.session_token', $owner['token']))->assertUnauthorized();
+
+    // The same rule for a Bearer session token: signed, never bare.
+    $this->getJson('/api/account/me', authAs(['token' => signedCookie($owner['token'], 'test-secret-that-is-long-enough-123')]))
+        ->assertOk()->assertJsonPath('data.id', $owner['id']);
+    $this->getJson('/api/account/me', authAs($owner))->assertUnauthorized();
 });
 
 it('keeps legacy tokens for the demo accounts only', function () {

@@ -4,14 +4,18 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * Better Auth (the auth/ service) on the existing database.
  *
  * Laravel stays the only one that migrates: the auth service maps its models
  * onto these tables and never creates any. "users" IS Better Auth's user
- * model (numeric ids, generateId "serial"); the other tables mirror Better
- * Auth 1.7.7's core schema and its two-factor plugin, snake_case.
+ * model (its numeric id is read as a string); the other tables mirror Better
+ * Auth 1.7.7's core schema and its two-factor plugin, snake_case, with the
+ * 32-character string ids Better Auth generates (an id known before the
+ * insert: MySQL has no RETURNING, and reading LAST_INSERT_ID() back on a
+ * pooled connection could pick another request's row).
  *
  *  - users.email_verified     true for every existing account (grandfathered)
  *  - users.image              avatar (Google)
@@ -63,7 +67,7 @@ return new class extends Migration
     {
         if (! Schema::hasTable('auth_sessions')) {
             Schema::create('auth_sessions', function (Blueprint $t) {
-                $t->id();
+                $t->string('id', 36)->primary();
                 $t->foreignId('user_id')->index()->constrained('users')->cascadeOnDelete();
                 $t->string('token', 255)->unique();
                 $t->dateTime('expires_at');
@@ -76,7 +80,7 @@ return new class extends Migration
 
         if (! Schema::hasTable('auth_accounts')) {
             Schema::create('auth_accounts', function (Blueprint $t) {
-                $t->id();
+                $t->string('id', 36)->primary();
                 $t->foreignId('user_id')->index()->constrained('users')->cascadeOnDelete();
                 $t->string('account_id', 255);
                 $t->string('provider_id', 255);
@@ -95,7 +99,7 @@ return new class extends Migration
 
         if (! Schema::hasTable('auth_verifications')) {
             Schema::create('auth_verifications', function (Blueprint $t) {
-                $t->id();
+                $t->string('id', 36)->primary();
                 $t->string('identifier', 255)->index();
                 $t->text('value');
                 $t->dateTime('expires_at');
@@ -107,7 +111,7 @@ return new class extends Migration
         // Better Auth 1.7.7 two-factor plugin schema: no timestamps.
         if (! Schema::hasTable('auth_two_factors')) {
             Schema::create('auth_two_factors', function (Blueprint $t) {
-                $t->id();
+                $t->string('id', 36)->primary();
                 $t->foreignId('user_id')->index()->constrained('users')->cascadeOnDelete();
                 $t->text('secret');
                 $t->text('backup_codes');
@@ -119,7 +123,7 @@ return new class extends Migration
 
         if (! Schema::hasTable('auth_rate_limits')) {
             Schema::create('auth_rate_limits', function (Blueprint $t) {
-                $t->id();
+                $t->string('id', 36)->primary();
                 $t->string('key', 255)->unique();
                 $t->integer('count');
                 $t->bigInteger('last_request'); // ms since epoch
@@ -146,6 +150,7 @@ return new class extends Migration
         DB::table('users')->whereNotNull('password')->where('password', '!=', '')->select(['id', 'password'])
             ->chunkById(500, function ($users) use ($now) {
                 DB::table('auth_accounts')->insertOrIgnore($users->map(fn ($u) => [
+                    'id' => Str::random(32),
                     'user_id' => $u->id,
                     'account_id' => (string) $u->id,
                     'provider_id' => 'credential',
