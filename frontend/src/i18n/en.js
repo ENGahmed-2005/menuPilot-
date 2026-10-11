@@ -2058,5 +2058,5 @@ export default {
   "كلمة المرور يجب أن تحتوي على رمز مثل ! أو # أو @.": "The password must contain a symbol such as !, # or @.",
   "هذا الحساب محمي بالتحقق بخطوتين: سجّل الدخول بالبريد وكلمة المرور ثم الرمز.": "This account uses two-step verification: sign in with your e-mail and password, then the code.",
   "لا يمكن إزالة كلمة المرور من الحساب.": "The password can't be removed from the account.",
-  "تم تحديث طريقة تسجيل الدخول. حدّث الصفحة أو التطبيق ثم سجّل الدخول من جديد.": "Sign-in has been updated. Reload the page or app, then sign in again.",
+  "تم تحديث طريقة تسجيل الدخول. اضغط «تحديث الآن» أسفل الشاشة، أو أغلق التطبيق وافتحه من جديد، ثم سجّل الدخول.": "Sign-in has been updated. Press “Update now” at the bottom of the screen, or close and reopen the app, then sign in.",
 };

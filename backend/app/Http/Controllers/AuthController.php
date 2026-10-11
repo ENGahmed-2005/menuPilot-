@@ -74,7 +74,7 @@ class AuthController extends Controller
     public function login()
     {
         return response()->json([
-            'message' => 'تم تحديث طريقة تسجيل الدخول. حدّث الصفحة أو التطبيق ثم سجّل الدخول من جديد.',
+            'message' => 'تم تحديث طريقة تسجيل الدخول. اضغط «تحديث الآن» أسفل الشاشة، أو أغلق التطبيق وافتحه من جديد، ثم سجّل الدخول.',
             'code' => 'USE_NEW_LOGIN',
         ], 410);
     }
