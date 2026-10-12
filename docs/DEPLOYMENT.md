@@ -10,7 +10,7 @@
 |---|---|
 | `APP_KEY` | ناتج `php artisan key:generate --show` |
 | `APP_URL` | `https://menupilot-backend.onrender.com` |
-| `FRONTEND_URL` | عنوان الواجهة، مثل `https://menupilot.vercel.app` (روابط QR والبريد) |
+| `FRONTEND_URL` | عنوان الواجهة، مثل `https://menupilot-lilac.vercel.app` (روابط QR والبريد) |
 | `DB_CONNECTION` / `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | MySQL الخارجي |
 | `ADMIN_NAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` | حساب الأدمن (12 حرفًا على الأقل) |
 | `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION=tls`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | لرسائل استعادة كلمة المرور |
@@ -34,7 +34,7 @@
 | `NODE_ENV` | `production` |
 | `AUTH_CLIENT_IP_HEADER` | `x-vercel-forwarded-for,x-forwarded-for` (عنوان الزائر الحقيقي خلف Vercel وRailway) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `MAIL_FROM_ADDRESS` | لتأكيد البريد واستعادة كلمة المرور بالبريد (بدونها يبقى طلب الاستعادة عبر واتساب) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | للدخول بحساب Google. رابط الرجوع: `https://menupilot.vercel.app/api/auth/callback/google` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | للدخول بحساب Google. رابط الرجوع: `https://menupilot-lilac.vercel.app/api/auth/callback/google` |
 
 الخدمة تنتظر حتى تُطبَّق migrations الـ Laravel (تعطي 503 مؤقتًا)، ثم تعمل وحدها.
 
@@ -47,9 +47,9 @@
 ## 5. اختبار الإنتاج (Go / No-Go)
 بعد كل نشر شغّل من جهازك:
 ```bash
-node scripts/smoke-test.mjs https://menupilot.vercel.app
+node scripts/smoke-test.mjs https://menupilot-lilac.vercel.app
 # حساب الأدمن يحذف المطعم التجريبي بعد الاختبار، وينشئه إذا كان تأكيد البريد مفعّلًا:
-SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... node scripts/smoke-test.mjs https://menupilot.vercel.app
+SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... node scripts/smoke-test.mjs https://menupilot-lilac.vercel.app
 ```
 يُعطى عنوان **الواجهة** (هي التي تمرّر `/api` و`/api/auth`). يغطي أكثر من 30 فحصًا: الصحة، وقاعدة البيانات، والمصادقة، ومسار الزبون، والمطبخ، والكاشير، والجلسة/الخروج. النتيجة `🟢 GO` أو `🔴 NO-GO` مع سبب كل فشل.
 

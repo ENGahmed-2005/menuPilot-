@@ -17,7 +17,7 @@ import { useConfirm } from "../../components/ui/ConfirmDialog";
 import GoogleMark from "../../components/auth/GoogleMark";
 import { useAuth } from "../../context/AuthContext";
 import {
-  changePassword, confirmTwoFactor, disableTwoFactor, getAuthConfig, linkGoogle, listDevices, listLinkedAccounts,
+  authErrorMessage, changePassword, confirmTwoFactor, disableTwoFactor, getAuthConfig, linkGoogle, listDevices, listLinkedAccounts,
   newBackupCodes, revokeDevice, revokeOtherDevices, startTwoFactor, unlinkGoogle,
 } from "../../api/auth";
 import { t, dir, locale } from "../../i18n";
@@ -282,7 +282,10 @@ function GoogleCard() {
   const [params] = useSearchParams();
   useEffect(() => {
     listLinkedAccounts().then((accounts) => setLinked(accounts.some((a) => a.providerId === "google"))).catch((err) => setError(err.message));
-  }, []);
+    // Back from Google after a failed link.
+    const failed = params.get("error");
+    if (failed) setError(authErrorMessage(failed, params.get("error_description")) || t("تعذّر ربط حساب Google. حاول مجددًا."));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const unlink = async () => { try { await unlinkGoogle(); setLinked(false); } catch (err) { setError(err.message); } };
   const link = async () => { try { await linkGoogle(); } catch (err) { setError(err.message); } };
   return (

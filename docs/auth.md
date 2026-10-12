@@ -24,7 +24,7 @@ HTTPS, and never readable by JavaScript.
 | Password sign-in | `POST /api/auth/sign-in/email`. 5 wrong passwords lock the account for 15 minutes (`users.login_*`, the rule Laravel had). |
 | Two-step verification (TOTP) | Security page: password → QR (drawn in the browser, the secret never leaves the page) → code → 10 backup codes. Asked at every new sign-in; "remember this device" for 30 days. Wrong codes are rate-limited and lock temporarily. |
 | Devices | Security page lists every signed-in device (browser, OS, IP, last activity), marks this one, signs any other out, or all others at once. |
-| Google | "Sign in with Google" for **existing** accounts only (same e-mail, Google-verified). No sign-up through Google. An account with two-step verification must use password + code. Linking/unlinking from the Security page. Hidden until `GOOGLE_CLIENT_ID/SECRET` are set. |
+| Google | "Sign in with Google" for **existing** accounts only: Google must vouch for the e-mail and the menuPilot account must have confirmed the same e-mail (an unconfirmed account links Google from the Security page while signed in). No sign-up through Google. An account with two-step verification must use password + code. Linking/unlinking from the Security page. Hidden until `GOOGLE_CLIENT_ID/SECRET` are set. |
 | Confirm e-mail | New owners (registered through Laravel) confirm their e-mail before the first sign-in, when e-mail is configured. Existing accounts, staff and admin-created owners count as confirmed. The link signs them in. |
 | Reset password by e-mail | One-time link, valid 1 hour; the reset signs out every device. Without SMTP the app keeps the WhatsApp request to the platform team (Laravel, `/api/account/forgot-password`). |
 | Change password | Security page, with "sign out of other devices". |
@@ -107,8 +107,8 @@ to the auth service behind the proxy.
 | `BETTER_AUTH_SECRET` | — (required, 32+ chars) | Signs cookies and encrypts 2FA secrets. Set the same value in Laravel. `openssl rand -base64 32` |
 | `DATABASE_URL` or `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | local MySQL | Laravel's database. Railway's `MYSQL*` variables are read too. |
 | `PORT` | 3005 | |
-| `AUTH_ALLOWED_HOSTS` | `menupilot.vercel.app`, the Railway frontend (and `localhost:5173` outside production) | Hosts that proxy `/api/auth`. Links and cookies use the host a request came through, so list **exact** hosts: never a wildcard on a shared domain like `*.vercel.app` (anyone could create a matching project and receive reset links). |
-| `AUTH_FALLBACK_URL` | `https://menupilot.vercel.app` | Base for links when the host isn't in the list. |
+| `AUTH_ALLOWED_HOSTS` | `menupilot-lilac.vercel.app`, the Railway frontend (and `localhost:5173` outside production) | Hosts that proxy `/api/auth`. Links and cookies use the host a request came through, so list **exact** hosts: never a wildcard on a shared domain like `*.vercel.app` (anyone could create a matching project and receive reset links). |
+| `AUTH_FALLBACK_URL` | `https://menupilot-lilac.vercel.app` | Base for links when the host isn't in the list. |
 | `FRONTEND_ORIGINS` | — | Extra trusted origins, comma-separated. |
 | `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SECURE` | — | E-mail. Without `SMTP_HOST`, no e-mail features. |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `no-reply@menupilot.app`, `menuPilot` | Sender. |
@@ -129,7 +129,7 @@ on the cookie signature check) and `AUTH_COOKIE_PREFIX`.
 In Google Cloud Console → APIs & Services → Credentials → OAuth client
 (Web application), add one **Authorized redirect URI** per frontend:
 
-- `https://menupilot.vercel.app/api/auth/callback/google`
+- `https://menupilot-lilac.vercel.app/api/auth/callback/google`
 - `https://frontend-production-351d.up.railway.app/api/auth/callback/google`
 - `http://localhost:5173/api/auth/callback/google` (development)
 
