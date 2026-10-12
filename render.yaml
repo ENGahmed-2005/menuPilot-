@@ -34,6 +34,6 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: AUTH_FALLBACK_URL
-        value: https://menupilot.vercel.app
+        value: https://menupilot-lilac.vercel.app
       - key: AUTH_CLIENT_IP_HEADER
         value: x-vercel-forwarded-for,x-forwarded-for

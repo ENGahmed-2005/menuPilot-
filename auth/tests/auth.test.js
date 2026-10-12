@@ -170,6 +170,16 @@ describe("e-mail confirmation and password reset", () => {
     assert.equal((await browser().signIn(owner.email, "Fresh#Pass9")).status, 200);
   });
 
+  it("does not trust menupilot.vercel.app (someone else's project), only the real frontend", async () => {
+    const owner = await makeUser();
+    const res = await browser().call("/api/auth/request-password-reset", {
+      method: "POST", body: { email: owner.email, redirectTo: "/reset-password" },
+      headers: { origin: "https://menupilot.vercel.app", "x-forwarded-host": "menupilot.vercel.app", "x-forwarded-proto": "https" },
+    });
+    assert.equal(res.status, 403);
+    assert.equal(sentMail.length, 0);
+  });
+
   it("never builds e-mail links on a host outside the exact list (no *.vercel.app look-alikes)", async () => {
     const owner = await makeUser();
     const evil = "https://menupilot-x-engahmed-2005.vercel.app";

@@ -7,7 +7,7 @@
    the FRONTEND address: it serves /api (Laravel) and /api/auth (the auth
    service) on one origin, the way the browser uses them.
 
-     node scripts/smoke-test.mjs https://menupilot.vercel.app
+     node scripts/smoke-test.mjs https://menupilot-lilac.vercel.app
 
    Optional: admin credentials delete the temporary restaurant afterwards and,
    when new owners must confirm their e-mail, create the test restaurant:

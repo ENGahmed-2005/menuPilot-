@@ -13,7 +13,7 @@ const production = env.NODE_ENV === "production";
 // wildcard on a shared domain (*.vercel.app) would let anyone with a matching
 // project receive password-reset links. Add Vercel preview hosts one by one.
 const DEFAULT_HOSTS = [
-  "menupilot.vercel.app",
+  "menupilot-lilac.vercel.app",
   "frontend-production-351d.up.railway.app",
   ...(production ? [] : ["localhost:5173"]),
 ].join(",");
@@ -61,7 +61,7 @@ export const config = {
   allowedHosts: list(env.AUTH_ALLOWED_HOSTS, DEFAULT_HOSTS),
   // Used when a request's host is not in the list (e.g. links in e-mails sent
   // from a request that reached the service directly).
-  fallbackURL: env.AUTH_FALLBACK_URL || (production ? "https://menupilot.vercel.app" : "http://localhost:5173"),
+  fallbackURL: env.AUTH_FALLBACK_URL || (production ? "https://menupilot-lilac.vercel.app" : "http://localhost:5173"),
   trustedOrigins: list(env.FRONTEND_ORIGINS),
   database: database(),
   google,
