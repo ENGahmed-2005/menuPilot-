@@ -43,7 +43,8 @@ export default function Login() {
   useEffect(() => {
     const failed = params.get("error");
     if (failed) {
-      setError(authErrorMessage(failed) || t("تعذّر تسجيل الدخول. حاول مجددًا."));
+      // A refusal from our own rules (disabled account, two-step accounts) explains itself in error_description.
+      setError(authErrorMessage(failed, params.get("error_description")) || t("تعذّر تسجيل الدخول. حاول مجددًا."));
       setParams({}, { replace: true });
       return;
     }

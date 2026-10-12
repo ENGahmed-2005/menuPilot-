@@ -34,9 +34,16 @@ const MESSAGES = {
   SESSION_NOT_FRESH: "لأمانك، سجّل الدخول من جديد ثم أعد المحاولة.",
   INVALID_ORIGIN: "تعذّر التحقق من مصدر الطلب. حدّث الصفحة وحاول مجددًا.",
   // Google (the ?error= of the page Google sends you back to)
+  // (Better Auth 1.7: an error's words joined by "_", or OAUTH_CALLBACK_ERROR_CODES)
   signup_disabled: "لا يوجد حساب في menuPilot بهذا البريد. أنشئ حساب مطعمك أولًا، أو اطلب من صاحب المطعم إضافتك.",
   account_not_linked: "تعذّر ربط حساب Google بهذا الحساب. سجّل الدخول بكلمة المرور ثم اربطه من صفحة الأمان.",
-  email_doesn_t_match: "بريد حساب Google لا يطابق بريد حسابك في menuPilot.",
+  unable_to_link_account: "تعذّر ربط حساب Google بهذا الحساب. سجّل الدخول بكلمة المرور ثم اربطه من صفحة الأمان.",
+  email_does_not_match: "بريد حساب Google لا يطابق بريد حسابك في menuPilot.",
+  account_already_linked_to_different_user: "حساب Google هذا مرتبط بحساب آخر في menuPilot.",
+  email_not_verified: "بريد حساب Google هذا غير مؤكَّد لدى Google.",
+  email_not_found: "لم يعطِنا Google بريد هذا الحساب. اختر حسابًا آخر.",
+  state_mismatch: "انتهت محاولة الدخول بحساب Google. حاول مجددًا.",
+  invalid_code: "انتهت محاولة الدخول بحساب Google. حاول مجددًا.",
   access_denied: "تم إلغاء الدخول بحساب Google.",
 };
 // Codes whose server message (Arabic, translated in en.js) says it best.

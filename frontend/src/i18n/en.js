@@ -2059,4 +2059,9 @@ export default {
   "هذا الحساب محمي بالتحقق بخطوتين: سجّل الدخول بالبريد وكلمة المرور ثم الرمز.": "This account uses two-step verification: sign in with your e-mail and password, then the code.",
   "لا يمكن إزالة كلمة المرور من الحساب.": "The password can't be removed from the account.",
   "تم تحديث طريقة تسجيل الدخول. اضغط «تحديث الآن» أسفل الشاشة، أو أغلق التطبيق وافتحه من جديد، ثم سجّل الدخول.": "Sign-in has been updated. Press “Update now” at the bottom of the screen, or close and reopen the app, then sign in.",
+  "حساب Google هذا مرتبط بحساب آخر في menuPilot.": "This Google account is linked to another menuPilot account.",
+  "بريد حساب Google هذا غير مؤكَّد لدى Google.": "Google hasn't verified this Google account's e-mail.",
+  "لم يعطِنا Google بريد هذا الحساب. اختر حسابًا آخر.": "Google didn't share this account's e-mail. Choose another account.",
+  "انتهت محاولة الدخول بحساب Google. حاول مجددًا.": "The Google sign-in attempt expired. Try again.",
+  "تعذّر ربط حساب Google. حاول مجددًا.": "Couldn't link the Google account. Try again.",
 };

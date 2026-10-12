@@ -84,8 +84,11 @@ export const auth = betterAuth({
       accessTokenExpiresAt: "access_token_expires_at", refreshTokenExpiresAt: "refresh_token_expires_at",
       createdAt: "created_at", updatedAt: "updated_at",
     },
-    // Google signs in an existing account with the same (Google-verified) e-mail.
-    accountLinking: { enabled: true, trustedProviders: ["google"], allowDifferentEmails: false },
+    // Google signs in an existing account with the same e-mail only when Google
+    // vouches for that e-mail AND the menuPilot account confirmed it too (no
+    // "trusted provider" shortcut): otherwise an unverified Google address, or
+    // an account pre-registered with someone else's address, could be linked.
+    accountLinking: { enabled: true, allowDifferentEmails: false, requireLocalEmailVerified: true },
     encryptOAuthTokens: true,
   },
   verification: {
