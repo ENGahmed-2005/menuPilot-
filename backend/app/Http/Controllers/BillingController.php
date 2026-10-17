@@ -250,7 +250,7 @@ class BillingController extends Controller
             return DB::table('payments')->find($paymentId);
         });
 
-        if (isset($result['conflict'])) {
+        if (is_array($result) && isset($result['conflict'])) {
             if ($result['conflict'] === 'SESSION_CLOSED') {
                 return response()->json(['message' => 'Session already closed'], 409);
             }
