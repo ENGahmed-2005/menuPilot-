@@ -239,3 +239,78 @@
  .mp-landing .mp-footer{padding-inline:18px;gap:15px}.mp-landing .mp-footer>div{gap:13px}
 }
 @media(prefers-reduced-motion:reduce){.mp-landing *, .mp-landing *:before,.mp-landing *:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
+
+
+
+/* MenuPilot identity correction: exact brand palette and logo contrast */
+.mp-landing {
+  --mp-navy:#1D312F;
+  --mp-deep:#1D312F;
+  --mp-cream:#E6CBB8;
+  --mp-paper:#F8F3EC;
+  --mp-orange:#AC3032;
+  --mp-terracotta:#AC3032;
+  --mp-ink:#1D312F;
+  --mp-muted:#64716A;
+  --mp-line:rgba(29,49,47,.17);
+  --mp-white:#FFF9F3;
+}
+.mp-landing .mp-hero {
+  background:#1D312F;
+  color:#F8F1E8;
+}
+.mp-landing .mp-hero:before {background:rgba(230,203,184,.18)}
+.mp-landing .mp-hero-grid {
+  background-image:linear-gradient(rgba(230,203,184,.075) 1px,transparent 1px),linear-gradient(90deg,rgba(230,203,184,.075) 1px,transparent 1px);
+  opacity:.55;
+}
+.mp-landing .mp-hero h1 {color:#F8F1E8}
+.mp-landing .mp-hero h1 em {color:#E6CBB8}
+.mp-landing .mp-hero-intro {color:#D2C5B8}
+.mp-landing .mp-eyebrow {
+  border-color:rgba(230,203,184,.28);
+  background:rgba(230,203,184,.07);
+  color:#E6CBB8;
+}
+.mp-landing .mp-eyebrow-mark {background:#AC3032;color:#FFF9F3}
+.mp-landing .mp-button-ghost {color:#F4E7DB}
+.mp-landing .mp-proof {color:#C8CFC7}
+.mp-landing .mp-proof svg {color:#E6CBB8}
+.mp-landing .mp-proof-dot {background:rgba(230,203,184,.5)}
+.mp-landing .mp-hero-bottom {color:#C1C8C0}
+.mp-landing .mp-hero-bottom>div {background:rgba(230,203,184,.24)}
+.mp-landing .mp-hero-bottom>div i {background:#AC3032}
+.mp-landing .mp-visual-orb.orb-one {background:radial-gradient(circle,rgba(172,48,50,.26),rgba(172,48,50,0) 70%)}
+.mp-landing .mp-visual-orb.orb-two {background:radial-gradient(circle,rgba(230,203,184,.16),rgba(230,203,184,0) 70%)}
+.mp-landing .mp-visual-caption {color:#C8CFC7}
+.mp-landing .mp-platform {background:#F8F3EC}
+.mp-landing .mp-roles {background:#E6CBB8}
+.mp-landing .mp-feature-card {background:#FFFAF4;border-color:rgba(29,49,47,.14)}
+.mp-landing .mp-workflow {background:#1D312F}
+.mp-landing .mp-pricing-card {background:#E6CBB8}
+.mp-landing .mp-closing {background:#AC3032}
+.mp-landing .mp-system-bar {background:#E6CBB8;border-bottom-color:rgba(29,49,47,.16)}
+.mp-landing .mp-nav {background:rgba(248,243,236,.96)}
+.mp-landing .mp-nav-cta {background:#1D312F;border-color:#1D312F}
+.mp-landing .mp-nav-cta:hover {background:#294641}
+.mp-landing .mp-button-primary {background:#AC3032;border-color:#AC3032}
+.mp-landing .mp-button-primary:hover {background:#8F2528}
+.mp-landing .mp-price-panel {background:#1D312F}
+.mp-landing .mp-price-panel>button {background:#AC3032}
+.mp-landing .mp-price-panel>button:hover {background:#8F2528}
+.mp-landing .mp-footer {background:#142522}
+.mp-landing .mp-footer .mp-top-link {color:#E6CBB8}
+.mp-landing .mp-feature-arrow {color:#AC3032}
+.mp-landing .mp-feature-line i {background:#AC3032}
+.mp-landing .mp-kicker {color:#AC3032}
+.mp-landing .mp-workflow .mp-kicker {color:#E6CBB8}
+.mp-landing .mp-step-icon {color:#E6CBB8}
+.mp-landing .mp-role-icon.role-1 {background:#F1DCD0;color:#AC3032}
+.mp-landing .mp-role-icon.role-2 {background:#D7E2D7;color:#1D312F}
+.mp-landing .mp-role-icon.role-3 {background:#F1E5D2;color:#8C5A3A}
+.mp-landing .mp-closing .mp-kicker {color:#F1D5C4}
+.mp-landing .mp-closing .mp-button-primary {background:#E6CBB8;border-color:#E6CBB8;color:#1D312F}
+.mp-landing .mp-closing .mp-button-primary:hover {background:#F8F3EC}
+@media(max-width:850px) {
+  .mp-landing .mp-mobile-menu {background:rgba(248,243,236,.99)}
+}
