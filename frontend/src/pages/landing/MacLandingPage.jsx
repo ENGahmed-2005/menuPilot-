@@ -110,7 +110,7 @@ export default function MacLandingPage() {
     <div className="mp-system-bar" dir="ltr"><div className="mp-system-brand"><span className="mp-system-symbol">m.</span><span>menuPilot</span></div><div className="mp-system-menu"><span>{english ? "Platform" : "المنصة"}</span><span>{english ? "Product" : "المنتج"}</span><span>{english ? "Restaurant OS" : "نظام المطعم"}</span></div><div className="mp-system-right"><span className="mp-system-live"><i/> {english ? "All systems ready" : "جاهز للتشغيل"}</span><span className="mp-system-version">v1.0</span></div></div>
     <header className="mp-nav-wrap">
       <div className="mp-nav">
-        <button className="mp-brand" onClick={() => window.scrollTo({top:0,behavior:"smooth"})} aria-label="menuPilot"><BrandLogo on="dark" height={34} /></button>
+        <button className="mp-brand" onClick={() => window.scrollTo({top:0,behavior:"smooth"})} aria-label="menuPilot"><BrandLogo on="light" height={34} /></button>
         <nav className="mp-nav-links">{c.nav.map(([href,label]) => <a href={href} key={href}>{label}</a>)}</nav>
         <div className="mp-nav-actions">
           <button className="mp-language" onClick={() => setLang(english ? "ar" : "en")}><Globe2 size={15}/>{english ? "عربي" : "English"}</button>
