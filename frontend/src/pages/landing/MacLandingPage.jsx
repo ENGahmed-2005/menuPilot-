@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpLeft, BellRing, ChefHat,
-  Check, ChevronDown, CircleHelp, ClipboardList, Clock3, CreditCard,
+  ArrowDownLeft, ArrowRight, ArrowUpLeft, BellRing, ChefHat,
+  Check, CircleHelp, ClipboardList, CreditCard,
   Globe2, LayoutDashboard, Menu as MenuIcon, QrCode, ShieldCheck,
   Smartphone, Sparkles, Users, WalletCards, X, Zap,
 } from "lucide-react";
