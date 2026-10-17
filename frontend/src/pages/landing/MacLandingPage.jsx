@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowDownLeft, ArrowRight, ArrowUpLeft, BellRing, ChefHat,
+  ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpLeft, BellRing, ChefHat,
   Check, CircleHelp, ClipboardList, CreditCard,
   Globe2, LayoutDashboard, Menu as MenuIcon, QrCode, ShieldCheck,
   Smartphone, Sparkles, Users, WalletCards, X, Zap,
