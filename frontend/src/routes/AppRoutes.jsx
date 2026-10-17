@@ -5,7 +5,7 @@ import FeatureProtectedRoute from "./FeatureProtectedRoute";
 import DashboardShell from "../components/layout/DashboardShell";
 import { PageLoader } from "../components/loading/LoadingScreen";
 import SubscriptionGuard from "../components/subscription/SubscriptionGuard";
-import Landing from "../pages/landing/LandingPage";
+import Landing from "../pages/landing/MacLandingPage";
 import Login from "../pages/auth/Login";
 const Register = lazy(() => import("../pages/auth/Register"));
 const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
