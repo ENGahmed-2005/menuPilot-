@@ -107,6 +107,7 @@ export default function MacLandingPage() {
   const Arrow = english ? ArrowRight : ArrowLeft;
 
   return <main className={`mp-landing ${english ? "mp-en" : "mp-ar"}`} dir={english ? "ltr" : "rtl"}>
+    <div className="mp-system-bar" dir="ltr"><div className="mp-system-brand"><span className="mp-system-symbol">m.</span><span>menuPilot</span></div><div className="mp-system-menu"><span>{english ? "Platform" : "المنصة"}</span><span>{english ? "Product" : "المنتج"}</span><span>{english ? "Restaurant OS" : "نظام المطعم"}</span></div><div className="mp-system-right"><span className="mp-system-live"><i/> {english ? "All systems ready" : "جاهز للتشغيل"}</span><span className="mp-system-version">v1.0</span></div></div>
     <header className="mp-nav-wrap">
       <div className="mp-nav">
         <button className="mp-brand" onClick={() => window.scrollTo({top:0,behavior:"smooth"})} aria-label="menuPilot"><BrandLogo on="dark" height={34} /></button>
