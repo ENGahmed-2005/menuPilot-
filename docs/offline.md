@@ -27,8 +27,13 @@ their changes when the connection returns.
   - which calls may wait is the `RULES` table;
   - a new change queues behind older ones, so order is kept;
   - each carries an `Idempotency-Key`; the API (`Idempotency` middleware)
-    replays the first answer for a repeated key from the same account (also
-    after signing in again) instead of running it twice;
+    stores the request fingerprint and successful response in the database in
+    the same transaction as the mutation. A retry after a lost response replays
+    the first answer even after a process restart or cache loss. Reusing the key
+    with different request data returns `409 IDEMPOTENCY_KEY_REUSED`;
+  - the `idempotency_records` table is required. Apply the Laravel migrations
+    before deploying this middleware version; production instances must share
+    the same database for cross-instance duplicate protection;
   - offline: it waits; an expired login (401): it waits for a new sign-in and
     the banner says why; 5xx/408/429: retried up to 5 times, then it is given
     up; a change the server refuses (order cancelled meanwhile…) goes straight
@@ -49,7 +54,7 @@ their changes when the connection returns.
    (see `Billing.jsx`, `CloseSessionButton.jsx`).
 3. If a list screen re-reads the data, overlay waiting changes with
    `useOutbox()` (see `KitchenDashboard.jsx`, `TableStatus.jsx`).
-4. The `Idempotency` middleware covers 2xx answers for any route.
+4. The `Idempotency` middleware covers 2xx answers for any state-changing API route with a valid key. The database record and endpoint mutation commit together.
 
 ## Deploying
 
