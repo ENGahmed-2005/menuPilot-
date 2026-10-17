@@ -197,7 +197,33 @@ class BillingController extends Controller
         }
 
         $result = DB::transaction(function () use ($r, $v, $session, $restaurantId) {
+            // Use the same session-row lock as customer payment submission so
+            // cashier and customer payment flows cannot pass their guards together.
+            $lockedSession = DB::table('dining_sessions')
+                ->where('id', $session->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedSession || $lockedSession->closed_at) {
+                return ['conflict' => 'SESSION_CLOSED'];
+            }
+
+            $pendingCustomerPayment = DB::table('payments')
+                ->where('dining_session_id', $session->id)
+                ->where('status', PaymentStatus::Pending->value)
+                ->exists();
+
+            if ($pendingCustomerPayment) {
+                return ['conflict' => 'PAYMENT_PENDING'];
+            }
+
+            // Recalculate only after the lock: a concurrent cashier may have
+            // settled the bill while this request was waiting.
             $outstanding = $this->summary($session)['outstanding'];
+            if ($outstanding <= 0) {
+                return ['conflict' => 'NOTHING_OUTSTANDING'];
+            }
+
             $isUssd = $v['method'] === 'ussd';
             $now = now();
 
@@ -223,6 +249,17 @@ class BillingController extends Controller
 
             return DB::table('payments')->find($paymentId);
         });
+
+        if (isset($result['conflict'])) {
+            if ($result['conflict'] === 'SESSION_CLOSED') {
+                return response()->json(['message' => 'Session already closed'], 409);
+            }
+            if ($result['conflict'] === 'PAYMENT_PENDING') {
+                return response()->json(['message' => 'يوجد طلب دفع من العميل قيد المراجعة. يرجى تأكيده أو رفضه أولاً.'], 409);
+            }
+
+            return response()->json(['message' => 'لا يوجد رصيد مستحق على هذه الجلسة.'], 409);
+        }
 
         return $this->out($result, 201);
     }
