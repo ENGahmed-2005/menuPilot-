@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Route;
 // the app, whose origin proxies every /api/auth/* path to the auth service —
 // which owns /api/auth/reset-password too.
 $accountRoutes = function () {
+    Route::post('register/google', [AuthController::class, 'registerGoogle'])->middleware('throttle:10,1');
     Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
     Route::post('login', [AuthController::class, 'login']);
     Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');

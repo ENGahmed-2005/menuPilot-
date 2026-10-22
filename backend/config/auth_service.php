@@ -20,6 +20,7 @@ $prefix = env('AUTH_COOKIE_PREFIX', 'menupilot');
 
 return [
     'secret' => env('BETTER_AUTH_SECRET'),
+    'google_registration_cookies' => ["__Secure-{$prefix}.google_registration", "{$prefix}.google_registration"],
 
     // Better Auth names the cookie "<prefix>.session_token", with the
     // "__Secure-" prefix over https. Both are accepted (local dev is http).

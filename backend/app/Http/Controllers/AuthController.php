@@ -7,6 +7,8 @@ use App\Support\AuthSessions;
 use App\Support\CredentialAccount;
 use App\Support\Permissions;
 use App\Support\SubscriptionAccess;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -47,17 +49,8 @@ class AuthController extends Controller
         // (plan, trial_ends_at, status…) are ignored. No token: the app signs
         // in through the auth service (after verifying the e-mail when it asks).
         $u = DB::transaction(function () use ($v, $email) {
-            $u = User::create([
-                'name' => $v['restaurant_name'],
-                'restaurant_name' => $v['restaurant_name'],
-                'email' => $email,
-                'password' => Hash::make($v['password']),
-                'role' => 'owner',
-                'login_failed_attempts' => 0,
-                'login_locked_until' => null,
-            ]);
+            $u = $this->createRestaurant($v['restaurant_name'], $email, $v['password']);
             CredentialAccount::sync($u->id, $u->password);
-            SubscriptionAccess::startTrial($u);
 
             return $u->fresh();
         });
@@ -65,6 +58,74 @@ class AuthController extends Controller
         $u->setAttribute('subscription', SubscriptionAccess::for($u)->toArray());
 
         return $this->out(['user' => $u], 201);
+    }
+
+    /** Complete a server-verified Google identity without trusting browser identity fields. */
+    public function registerGoogle(Request $r): JsonResponse
+    {
+        $secret = (string) config('auth_service.secret');
+        abort_if(strlen($secret) < 32, 503, 'Google registration is not configured.');
+        abort_if($r->header('Sec-Fetch-Site') === 'cross-site', 403);
+        $cookies = [];
+        foreach (explode(';', (string) $r->header('Cookie')) as $pair) {
+            $parts = explode('=', trim($pair), 2);
+            if (count($parts) === 2) {
+                $cookies[$parts[0]] = rawurldecode($parts[1]);
+            }
+        }
+        $token = null;
+        foreach (config('auth_service.google_registration_cookies') as $name) {
+            if (isset($cookies[$name])) {
+                $token = AuthSessions::tokenFromSignedValue($cookies[$name], $secret);
+                break;
+            }
+        }
+        abort_unless($token, 401, 'Start Google sign-in again.');
+        $digest = hash('sha256', $token);
+        // Same-origin GET supplies this value; a cross-site form cannot read it.
+        abort_unless(hash_equals($digest, (string) $r->header('X-Google-Registration')), 403);
+        $v = $r->validate([
+            'restaurant_name' => 'required|string|max:255',
+            'restaurant_type' => 'required|in:restaurant,cafe,fast-food,other',
+        ]);
+        try {
+            DB::transaction(function () use ($digest, $v) {
+                $pending = DB::table('google_registrations')->where('token_hash', $digest)->lockForUpdate()->first();
+                abort_unless($pending && now()->lt($pending->expires_at), 401, 'Start Google sign-in again.');
+                if ($pending->user_id) {
+                    return $pending->user_id;
+                }
+                // An account created since OAuth must go through the normal linking policy.
+                abort_if(User::whereRaw('LOWER(email) = ?', [$pending->email])->exists(), 409, 'Please sign in with Google again.');
+                $u = $this->createRestaurant($v['restaurant_name'], $pending->email, Str::random(64));
+                $u->forceFill(['email_verified' => true, 'email_verified_at' => now(), 'restaurant_type' => $v['restaurant_type']])->save();
+                DB::table('auth_accounts')->insert([
+                    'id' => Str::random(32), 'user_id' => $u->id,
+                    'provider_id' => 'google', 'account_id' => $pending->subject,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                DB::table('google_registrations')->where('token_hash', $digest)->update(['user_id' => $u->id]);
+
+                return $u->id;
+            }, 3);
+        } catch (UniqueConstraintViolationException $e) {
+            return response()->json(['message' => 'Please sign in with Google again.'], 409);
+        }
+
+        return $this->out(['registered' => true]);
+    }
+
+    /** Both registration methods use the same owner defaults and trial operation. */
+    private function createRestaurant(string $name, string $email, string $password): User
+    {
+        $u = User::create([
+            'name' => $name, 'restaurant_name' => $name, 'email' => $email,
+            'password' => Hash::make($password), 'role' => 'owner',
+            'login_failed_attempts' => 0, 'login_locked_until' => null,
+        ]);
+        SubscriptionAccess::startTrial($u);
+
+        return $u;
     }
 
     /**
