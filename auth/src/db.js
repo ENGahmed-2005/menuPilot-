@@ -1,11 +1,15 @@
 /* db.js — one MySQL pool for Better Auth (through Kysely) and the gates' own queries.
    All times are UTC, as in Laravel (config/app.php timezone). */
 import { createPool } from "mysql2";
+import { readFileSync } from "node:fs";
 import { Kysely, MysqlDialect } from "kysely";
 import { config } from "./config.js";
 
 const pool = createPool({
   ...config.database,
+  ...(process.env.MYSQL_ATTR_SSL_CA
+    ? { ssl: { ca: readFileSync(process.env.MYSQL_ATTR_SSL_CA), rejectUnauthorized: true } }
+    : {}),
   connectionLimit: Number(process.env.DB_POOL_SIZE || 10),
   timezone: "Z",
   dateStrings: false,
