@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BrandLogo from "../../components/brand/Logo";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Gift, LockKeyhole, Mail, MailCheck, Store, UserRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { t, dir } from "../../i18n";
 import LanguageSwitch from "../../components/ui/LanguageSwitch";
+import GoogleMark from "../../components/auth/GoogleMark";
+import { authErrorMessage, completeGoogleRegistration, getAuthConfig, googleRegistrationInfo, loginWithGoogle } from "../../api/auth";
 
 const inputClass = "w-full rounded-2xl border border-[#5A6574]/20 bg-white px-4 py-3.5 text-sm text-[#172331] outline-none transition placeholder:text-[#5A6574]/70 focus:border-[#EEA122] focus:ring-4 focus:ring-[#EEA122]/10";
 
@@ -16,7 +18,10 @@ const Logo = ({ on = "dark", height = 40 }) => <BrandLogo on={on} height={height
 export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { register } = useAuth();
+  const { register, refreshUser } = useAuth();
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleIdentity, setGoogleIdentity] = useState(null);
+  const [checkingGoogle, setCheckingGoogle] = useState(searchParams.get("google") === "1" || searchParams.get("error") === "GOOGLE_REGISTRATION_REQUIRED");
   const planFromUrl = searchParams.get("plan");
   // The plan is chosen after the free trial, so registration starts with the restaurant.
   const [step, setStep] = useState(2);
@@ -28,6 +33,27 @@ export default function Register() {
   const [errors, setErrors] = useState({});
   const [verifySent, setVerifySent] = useState(false);
   const [formData, setFormData] = useState({ restaurantName: "", restaurantType: "", email: "", password: "", confirmPassword: "" });
+
+  useEffect(() => {
+    getAuthConfig().then((config) => setGoogleEnabled(config.googleEnabled));
+    const error = searchParams.get("error");
+    if (checkingGoogle) {
+      googleRegistrationInfo().then((identity) => {
+        setGoogleIdentity(identity);
+        setFormData((old) => ({ ...old, email: identity.email }));
+      }).catch((err) => setErrors({ form: err.message })).finally(() => setCheckingGoogle(false));
+    } else if (error) {
+      setErrors({ form: authErrorMessage(error, searchParams.get("error_description")) || t("تعذر إنشاء الحساب. حاول مرة أخرى.") });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const google = async () => {
+    setLoading(true);
+    setErrors({});
+    try { await loginWithGoogle("/register"); }
+    catch (err) { setErrors({ form: err.message }); }
+    finally { setLoading(false); }
+  };
 
 
   const change = (event) => {
@@ -60,6 +86,12 @@ export default function Register() {
     setErrors({});
     setLoading(true);
     try {
+      if (googleIdentity) {
+        await completeGoogleRegistration({ restaurantName: formData.restaurantName.trim(), restaurantType: formData.restaurantType, csrf: googleIdentity.csrf });
+        await refreshUser();
+        navigate("/welcome", { replace: true });
+        return;
+      }
       const data = await register({
         restaurantName: formData.restaurantName.trim(),
         restaurantType: formData.restaurantType,
@@ -132,6 +164,9 @@ export default function Register() {
 
             <div className="rounded-[28px] border border-[#5A6574]/10 bg-white p-5 shadow-[0_24px_70px_rgba(23,35,49,.08)] sm:p-8 md:p-10">
               {errors.form && <div className="mb-6 rounded-2xl border border-[#B33F32]/20 bg-[#B33F32]/5 px-4 py-3 text-sm font-semibold text-[#B33F32]">{errors.form}</div>}
+              {googleEnabled && (!googleIdentity || errors.form) && !verifySent && <button type="button" disabled={loading || checkingGoogle} onClick={google} className="mb-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-[#5A6574]/20 bg-white px-5 py-3.5 text-sm font-bold transition hover:border-[#EEA122] disabled:opacity-60"><GoogleMark />{t("إنشاء حساب باستخدام Google")}</button>}
+              {checkingGoogle && <p role="status">{t("جارٍ التحقق من حساب Google…")}</p>}
+              {googleIdentity && <p className="mb-6 text-sm text-[#5A6574]">{t("تم تأكيد حساب Google. أكمل معلومات المطعم دون كلمة مرور.")} <strong dir="ltr">{googleIdentity.email}</strong></p>}
 
               {verifySent && (
                 <div className="py-6 text-center">
@@ -159,7 +194,7 @@ export default function Register() {
                   <Field label={t("اسم المطعم")} name="restaurantName" value={formData.restaurantName} onChange={change} placeholder={t("مثال: مطعم الزيتونة")} icon={Store} error={errors.restaurantName} />
                   <Field label={t("نوع المطعم")} name="restaurantType" value={formData.restaurantType} onChange={change} placeholder={t("اختر النوع")} icon={Store} error={errors.restaurantType} select options={RESTAURANT_TYPES} />
                 </div>
-                <Actions onBack={() => navigate("/")} backLabel={t("الرئيسية")} onNext={() => validateRestaurant() && setStep(3)} />
+                <Actions onBack={() => navigate("/")} backLabel={t("الرئيسية")} onNext={() => !checkingGoogle && validateRestaurant() && setStep(googleIdentity ? 4 : 3)} />
               </StepFrame>}
 
               {step === 3 && <StepFrame eyebrow={t("الخطوة 2 من 3")} title={t("معلومات الحساب")} description={t("أنشئ بيانات الدخول الخاصة بحسابك.")}>
@@ -176,7 +211,7 @@ export default function Register() {
                   {[[t("التجربة"), t("14 يومًا مجانًا، تبدأ اليوم")], [t("المطعم"), formData.restaurantName], [t("النوع"), RESTAURANT_TYPES.find(([id]) => id === formData.restaurantType)?.[1] || formData.restaurantType], [t("البريد"), formData.email]].map(([label, value], index) => <div key={label} className={`grid grid-cols-[90px_1fr] gap-4 px-4 py-4 text-sm ${index < 3 ? "border-b border-[#5A6574]/10" : ""}`}><span className="text-[#5A6574]/50">{label}</span><strong className="break-words">{value || "—"}</strong></div>)}
                 </div>
                 <div className="mt-6 flex gap-3">
-                  <button type="button" onClick={() => setStep(3)} className={SECONDARY}>{t("رجوع")}</button>
+                  <button type="button" onClick={() => setStep(googleIdentity ? 2 : 3)} className={SECONDARY}>{t("رجوع")}</button>
                   <button type="button" disabled={loading} onClick={submit} aria-busy={loading || undefined} className={`${PRIMARY} flex-[2]`}>{loading ? t("جارٍ إنشاء الحساب…") : <>{t("ابدأ التجربة المجانية")} <ArrowLeft size={17} aria-hidden="true" /></>}</button>
                 </div>
               </StepFrame>}

@@ -18,6 +18,7 @@ const authClient = () => (clientPromise ??= import("./authClient").then((m) => m
 
 /* ---- errors: one Error with a translated message and the server's code ---- */
 const MESSAGES = {
+  GOOGLE_REGISTRATION_EXPIRED: "انتهت مهلة التسجيل. حاول باستخدام Google مجددًا.",
   INVALID_EMAIL_OR_PASSWORD: "البريد الإلكتروني أو كلمة المرور غير صحيحة. تأكد منهما وحاول مجددًا.",
   INVALID_PASSWORD: "كلمة المرور الحالية غير صحيحة.",
   EMAIL_NOT_VERIFIED: "لم تؤكد بريدك الإلكتروني بعد. أرسلنا لك رابط التأكيد من جديد، افتح بريدك ثم سجّل الدخول.",
@@ -118,9 +119,20 @@ export async function verifyTwoFactor({ code, backup = false, trustDevice = fals
 }
 
 /** Leaves for Google; comes back to /login (which then opens the right dashboard). */
-export async function loginWithGoogle() {
+export async function loginWithGoogle(errorCallbackURL = "/login") {
   setToken(null);
-  await call((c) => c.signIn.social({ provider: "google", callbackURL: "/login?google=1", errorCallbackURL: "/login" }));
+  await call((c) => c.signIn.social({ provider: "google", callbackURL: "/login?google=1", errorCallbackURL }));
+}
+
+export const googleRegistrationInfo = () => call((c) => c.$fetch("/google-registration"));
+export async function completeGoogleRegistration({ restaurantName, restaurantType, csrf }) {
+  const response = await fetch("/api/account/register/google", {
+    method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Google-Registration": csrf },
+    body: JSON.stringify({ restaurant_name: restaurantName, restaurant_type: restaurantType }),
+  });
+  if (!response.ok) throw new Error(response.status === 401 || response.status === 409
+    ? t("انتهت مهلة التسجيل. حاول باستخدام Google مجددًا.") : t("تعذر إنشاء الحساب. حاول مرة أخرى."));
+  await call((c) => c.$fetch("/google-registration/session", { method: "POST", body: {} }));
 }
 
 /* ---- register (Laravel creates the restaurant and its trial) --------------- */

@@ -1,6 +1,10 @@
 /* English for every Arabic string in the app, keyed by the Arabic text (see i18n/index.js).
    Placeholders like {0} must stay in the English text. Missing keys show the Arabic. */
 export default {
+  "إنشاء حساب باستخدام Google": "Create an account with Google",
+  "جارٍ التحقق من حساب Google…": "Checking your Google account…",
+  "تم تأكيد حساب Google. أكمل معلومات المطعم دون كلمة مرور.": "Google account verified. Complete your restaurant details without a password.",
+  "انتهت مهلة التسجيل. حاول باستخدام Google مجددًا.": "Registration expired or the account changed. Please try Google again.",
   "تحديد الموقع يحتاج إلى HTTPS عند فتح الموقع من هاتف أو جهاز آخر. افتح نسخة HTTPS من النظام ثم حاول مرة أخرى.": "Finding your location needs HTTPS when the site is opened from a phone or another device. Open the HTTPS version and try again.",
   "هذا المتصفح لا يدعم تحديد الموقع.": "This browser can't find your location.",
   "تم رفض صلاحية الموقع. اسمح للموقع بالوصول إلى موقعك ثم أعد المحاولة.": "Location access was denied. Allow the site to use your location, then try again.",

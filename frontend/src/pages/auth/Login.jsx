@@ -43,6 +43,10 @@ export default function Login() {
   useEffect(() => {
     const failed = params.get("error");
     if (failed) {
+      if (failed === "GOOGLE_REGISTRATION_REQUIRED") {
+        navigate("/register?google=1", { replace: true });
+        return;
+      }
       // A refusal from our own rules (disabled account, two-step accounts) explains itself in error_description.
       setError(authErrorMessage(failed, params.get("error_description")) || t("تعذّر تسجيل الدخول. حاول مجددًا."));
       setParams({}, { replace: true });

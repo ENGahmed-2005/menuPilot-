@@ -1,7 +1,8 @@
 /* auth.js — Better Auth for menuPilot, on Laravel's MySQL tables (docs/auth.md).
    Laravel owns accounts (registration, staff, admin) and the schema; this
-   service only signs people in and out: password (+ two-step code), Google
-   for existing accounts, e-mail confirmation, password reset, devices.
+   service verifies Google identity and holds new identities pending Laravel
+   registration; it never inserts users. Also password (+ two-step code),
+   e-mail confirmation, password reset, devices.
    Laravel reads the same auth_sessions rows (App\Support\AuthSessions). */
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
@@ -10,6 +11,7 @@ import { invalidateSchemaChecks } from "@better-auth/core/db/internal";
 import { assertConfig, config } from "./config.js";
 import { db } from "./db.js";
 import { devices } from "./devices.js";
+import { googleRegistration, googleRegistrationGate } from "./google-registration.js";
 import {
   accountLocked, assertMaySignIn, clearFailures, findUserByEmail, isLocked, mayReceiveMail,
   recordFailure, syncCredentialFromUser, syncUserFromCredential,
@@ -64,6 +66,7 @@ export const auth = betterAuth({
   telemetry: { enabled: false },
 
   user: {
+    validateUserInfo: googleRegistrationGate,
     modelName: "users",
     fields: { emailVerified: "email_verified", createdAt: "created_at", updatedAt: "updated_at" },
   },
@@ -135,10 +138,11 @@ export const auth = betterAuth({
       }
     : undefined,
   socialProviders: config.google
-    ? { google: { ...config.google, prompt: "select_account", disableImplicitSignUp: true, disableSignUp: true } }
+    ? { google: { ...config.google, prompt: "select_account" } }
     : {},
 
   plugins: [
+    googleRegistration(),
     twoFactor({
       issuer: "menuPilot",
       backupCodeOptions: { amount: 10, length: 10 },
@@ -177,7 +181,7 @@ export const auth = betterAuth({
           const user = await assertMaySignIn(session.userId);
           // Google can't skip the two-step code: those accounts sign in with password + code.
           const path = ctx?.path || "";
-          if (user.two_factor_enabled && (path.startsWith("/callback") || path.startsWith("/oauth2/callback") || path === "/sign-in/social")) {
+          if (user.two_factor_enabled && (path.startsWith("/callback") || path.startsWith("/oauth2/callback") || path === "/sign-in/social" || path === "/google-registration/session")) {
             throw fail("FORBIDDEN", "TWO_FACTOR_USE_PASSWORD", "هذا الحساب محمي بالتحقق بخطوتين: سجّل الدخول بالبريد وكلمة المرور ثم الرمز.");
           }
         },
@@ -251,4 +255,5 @@ export async function checkSchema() {
     const problems = (error?.findings ?? [error]).filter((f) => !EXPECTED(f));
     if (problems.length) throw new Error(`Database schema doesn't match the auth service (run Laravel's migrations): ${JSON.stringify(problems)}`);
   }
+  await db.selectFrom("google_registrations").select("token_hash").limit(0).execute();
 }

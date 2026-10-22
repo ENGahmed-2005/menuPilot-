@@ -24,7 +24,7 @@ HTTPS, and never readable by JavaScript.
 | Password sign-in | `POST /api/auth/sign-in/email`. 5 wrong passwords lock the account for 15 minutes (`users.login_*`, the rule Laravel had). |
 | Two-step verification (TOTP) | Security page: password → QR (drawn in the browser, the secret never leaves the page) → code → 10 backup codes. Asked at every new sign-in; "remember this device" for 30 days. Wrong codes are rate-limited and lock temporarily. |
 | Devices | Security page lists every signed-in device (browser, OS, IP, last activity), marks this one, signs any other out, or all others at once. |
-| Google | "Sign in with Google" for **existing** accounts only: Google must vouch for the e-mail and the menuPilot account must have confirmed the same e-mail (an unconfirmed account links Google from the Security page while signed in). No sign-up through Google. An account with two-step verification must use password + code. Linking/unlinking from the Security page. Hidden until `GOOGLE_CLIENT_ID/SECRET` are set. |
+| Google | Existing accounts keep the verified-email linking policy (an unconfirmed account links Google from the Security page while signed in). New identities complete restaurant name and type, without a password; Laravel creates the owner and trial before Better Auth opens a session. An account with two-step verification must use password + code. Linking/unlinking from the Security page. Hidden until `GOOGLE_CLIENT_ID/SECRET` are set. |
 | Confirm e-mail | New owners (registered through Laravel) confirm their e-mail before the first sign-in, when e-mail is configured. Existing accounts, staff and admin-created owners count as confirmed. The link signs them in. |
 | Reset password by e-mail | One-time link, valid 1 hour; the reset signs out every device. Without SMTP the app keeps the WhatsApp request to the platform team (Laravel, `/api/account/forgot-password`). |
 | Change password | Security page, with "sign out of other devices". |
@@ -62,6 +62,20 @@ server).
   disables a restaurant (`AuthSessions::revokeFor`).
 - **Registration** stays in Laravel (`POST /api/account/register`): it creates
   the restaurant and its trial. Better Auth's own sign-up is off.
+- **Google onboarding**: `user.validateUserInfo` stops user creation after a
+  server-side Google code exchange. A verified Google email and subject go in
+  `google_registrations` for 10 minutes; only a random signed httpOnly cookie
+  reaches the browser. `GET /api/auth/google-registration` returns email and a
+  CSRF value (no-store). `POST /api/account/register/google` checks both, locks
+  the pending row and uses the same owner/trial operation as password registration.
+  A random unrecoverable password hash satisfies the existing schema; no known
+  password or credential account is provisioned. Google subject and email unique
+  constraints roll back conflicting creations; replaying a completed pending row
+  never restarts the trial. `POST /api/auth/google-registration/session` opens
+  a session through the normal gates only after Laravel commits the binding.
+  The pending proof is consumed once before publishing the session cookie;
+  concurrent losers discard their sessions, and the onboarding cookie is cleared.
+  Expired pending rows are removed at the next Google onboarding attempt.
 - The **"Try it" demo** keeps its shared Bearer token (Laravel's legacy
   `api_token`, accepted only for `is_demo` accounts).
 - Laravel's old `POST /api/auth/login` answers `410 USE_NEW_LOGIN`, so an app
@@ -134,6 +148,20 @@ In Google Cloud Console → APIs & Services → Credentials → OAuth client
 - `http://localhost:5173/api/auth/callback/google` (development)
 
 Then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the auth service.
+
+Before deploying this onboarding flow, run Laravel's migration
+`2026_10_22_092029_create_google_registrations_table`. Both Render services must
+share the database, `BETTER_AUTH_SECRET` (32+ characters), and `AUTH_COOKIE_PREFIX`.
+Keep exact frontend hosts in `AUTH_ALLOWED_HOSTS` and trusted origins in
+`FRONTEND_ORIGINS`; use HTTPS in production. The existing Vercel rewrites already
+route the new endpoints to the correct services; no Google secret belongs in a
+`VITE_*` variable. Deploy Laravel/migration first, then auth, then frontend.
+
+For the concurrent integration tests, run two local Laravel HTTP servers on the
+same dedicated migrated test database and set `LARAVEL_TEST_URLS` to their
+comma-separated URLs when running `auth` tests. Use the same test secret on both
+services. Google itself is simulated; real Cloud consent and production proxies
+still require an approved deployment smoke test.
 
 ## Running it locally
 
