@@ -128,9 +128,9 @@ export default function Login() {
   };
 
   return (
-    <main dir={dir} className="min-h-screen bg-[#F3EFE5] font-[Cairo] text-[#1F2420]">
+    <main dir={dir} className="min-h-dvh bg-[#F3EFE5] font-[Cairo] text-[#1F2420]">
       <LanguageSwitch className="fixed end-4 top-4 z-50 bg-white shadow-sm" />
-      <div className="grid min-h-screen lg:grid-cols-[.82fr_1.18fr]">
+      <div className="grid min-h-dvh lg:grid-cols-[.82fr_1.18fr]">
         <aside className="relative hidden overflow-hidden bg-[#1F2420] p-10 text-[#F3EFE5] lg:flex lg:flex-col lg:justify-between xl:p-14">
           <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[#EEA122]/10 blur-3xl" />
           <div className="absolute -bottom-32 -right-20 h-80 w-80 rounded-full bg-[#5B7A52]/10 blur-3xl" />
@@ -150,20 +150,20 @@ export default function Login() {
           <p className="relative z-10 text-xs text-[#F3EFE5]/35">{t("نظام إدارة مطاعم حديث · menuPilot")}</p>
         </aside>
 
-        <section className="flex min-h-screen items-center justify-center px-4 py-6 sm:px-8 sm:py-10">
+        <section className="flex items-center justify-center px-4 pb-4 pt-16 sm:px-8 sm:pb-6 lg:py-10">
           <div className="w-full max-w-md">
-            <div className="mb-7 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <Link to="/" className="lg:hidden" dir="ltr" aria-label="menuPilot">
                 <Logo on="light" height={34} />
               </Link>
               <Link to="/register" className="flex items-center gap-2 text-sm font-bold text-[#4B5147] transition hover:text-[#E67E22]">{t("ليس لديك حساب؟ إنشاء حساب")} <ArrowLeft size={16} /></Link>
             </div>
 
-            <div className="rounded-[28px] border border-[#4B5147]/10 bg-white p-5 shadow-[0_24px_70px_rgba(31,36,32,.08)] sm:p-8 md:p-10">
-              <div className="mb-8 text-center">
+            <div className="rounded-[28px] border border-[#4B5147]/10 bg-white p-4 shadow-[0_24px_70px_rgba(31,36,32,.08)] sm:p-8 md:p-10">
+              <div className="mb-4 text-center sm:mb-8">
                 <span className="inline-flex rounded-full bg-[#EEA122]/10 px-3 py-1 text-xs font-bold text-[#E67E22]">{t("تسجيل الدخول")}</span>
-                <h1 className="mt-4 font-[Aref_Ruqaa] text-4xl leading-tight text-[#1F2420] sm:text-5xl">{t("أهلاً بعودتك")}</h1>
-                <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-[#4B5147]/65">{t("أدخل بيانات حسابك للوصول إلى لوحة إدارة المطعم.")}</p>
+                <h1 className="mt-3 font-[Aref_Ruqaa] text-4xl leading-tight text-[#1F2420] sm:mt-4 sm:text-5xl">{t("أهلاً بعودتك")}</h1>
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-7 text-[#4B5147]/65 sm:mt-3">{t("أدخل بيانات حسابك للوصول إلى لوحة إدارة المطعم.")}</p>
               </div>
 
               {notice && <div role="status" className="mb-6 flex gap-2 rounded-2xl border border-[#5B7A52]/25 bg-[#5B7A52]/5 px-4 py-3 text-sm font-semibold text-[#3F5A38]"><CheckCircle2 size={18} className="mt-0.5 shrink-0" aria-hidden="true" />{notice}</div>}
@@ -177,7 +177,7 @@ export default function Login() {
               )}
 
               {step === "code" ? (
-                <form onSubmit={submitCode} className="grid gap-5" noValidate>
+                <form onSubmit={submitCode} className="grid gap-3 sm:gap-5" noValidate>
                   <div className="flex gap-3 rounded-2xl bg-[#F3EFE5] p-4 text-sm leading-7 text-[#4B5147]">
                     <ShieldCheck size={22} className="mt-0.5 shrink-0 text-[#5B7A52]" aria-hidden="true" />
                     <span>{useBackup ? t("أدخل أحد رموز الاحتياط التي حفظتها عند تفعيل التحقق بخطوتين. كل رمز يعمل مرة واحدة.") : t("حسابك محمي بالتحقق بخطوتين. أدخل الرمز الظاهر في تطبيق المصادقة على هاتفك.")}</span>
@@ -206,7 +206,7 @@ export default function Login() {
                   </div>
                 </form>
               ) : (
-              <form onSubmit={submit} className="grid gap-5" noValidate>
+              <form onSubmit={submit} className="grid gap-3 sm:gap-5" noValidate>
                 <div>
                   <label htmlFor="email" className="mb-2 block text-sm font-bold text-[#1F2420]">{t("البريد الإلكتروني")}</label>
                   <div className="relative">
