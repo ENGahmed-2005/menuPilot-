@@ -102,6 +102,7 @@ class AuthController extends Controller
                 DB::table('auth_accounts')->insert([
                     'id' => Str::random(32), 'user_id' => $u->id,
                     'provider_id' => 'google', 'account_id' => $pending->subject,
+                    'google_email' => $pending->email,
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
                 DB::table('google_registrations')->where('token_hash', $digest)->update(['user_id' => $u->id]);
