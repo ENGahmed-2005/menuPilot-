@@ -1,0 +1,326 @@
+<!doctype html>
+<!-- ==========================================================================
+     launch.html — the beta-launch video (9:16, 1080×1920, 58 s) as one timeline.
+     --------------------------------------------------------------------------
+     Every scene, graphic and caption lives here, timed with the Web Animations
+     API, so render.js can seek to any frame and screenshot it.
+       ?mode=animatic  (default) live shots are labelled placeholders — the
+                       preview the team films against.
+       ?mode=overlay   live shots are transparent: the graphics and captions
+                       as a PNG layer to lay over the footage in the final cut.
+     Shot codes (L1, L6, …) match docs/video/PLAN.md.
+     ========================================================================== -->
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>menuPilot — إعلان الإطلاق التجريبي</title>
+<style>
+  @import url("../../../frontend/node_modules/@fontsource/tajawal/arabic-500.css");
+  @import url("../../../frontend/node_modules/@fontsource/tajawal/arabic-700.css");
+  @import url("../../../frontend/node_modules/@fontsource/tajawal/arabic-800.css");
+  @import url("../../../frontend/node_modules/@fontsource/tajawal/arabic-900.css");
+  @import url("../../../frontend/node_modules/@fontsource/tajawal/latin-500.css");
+  @import url("../../../frontend/node_modules/@fontsource/tajawal/latin-700.css");
+  @import url("../../../frontend/node_modules/@fontsource/tajawal/latin-800.css");
+  @import url("../../../frontend/node_modules/@fontsource/tajawal/latin-900.css");
+
+  :root {
+    --navy: #1F2D3D; --navy-deep: #172331; --raised: #2A3B50;
+    --orange: #E67E22; --amber: #EEA122; --cream: #F4EFE6; --surface: #FFFDF9;
+    --herb: #1C714B; --muted: #5A6574;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #000; }
+  body { font-family: "Tajawal", sans-serif; color: var(--cream); }
+  body.overlay, body.overlay #stage { background: transparent; }
+
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--navy); }
+  .t { opacity: 0; }                       /* everything timed starts hidden */
+  .abs { position: absolute; }
+  .full { position: absolute; inset: 0; }
+  .row { position: absolute; left: 0; right: 0; display: flex; justify-content: center; align-items: center; text-align: center; }
+
+  /* Live-shot placeholder (animatic only). */
+  .ph { position: absolute; inset: 0; background:
+          repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 26px, transparent 26px 52px), #24364A; }
+  .ph .card { position: absolute; left: 90px; right: 90px; top: 1560px; padding: 26px 34px; border-radius: 28px;
+              background: rgba(10,17,24,.55); border: 2px dashed rgba(244,239,230,.25); display: flex; gap: 26px; align-items: center; }
+  .ph .code { flex: none; display: grid; place-items: center; width: 118px; height: 118px; border-radius: 26px;
+              background: rgba(230,126,34,.16); color: var(--amber); font: 900 46px/1 "Tajawal"; }
+  .ph b { display: block; font: 800 38px/1.35 "Tajawal"; color: var(--cream); }
+  .ph em { display: block; margin-top: 6px; font: 500 28px/1.3 "Tajawal"; font-style: normal; color: rgba(244,239,230,.6); }
+  .ph .cam { position: absolute; top: 330px; left: 0; right: 0; display: flex; justify-content: center; opacity: .18; }
+  body.overlay .ph { display: none; }
+
+  /* Brand backgrounds for the graphic scenes. */
+  .bg { position: absolute; inset: 0; background:
+          radial-gradient(70% 45% at 50% 22%, rgba(230,126,34,.20), transparent 70%),
+          radial-gradient(60% 40% at 50% 100%, rgba(238,161,34,.08), transparent 70%), var(--navy); }
+
+  .big { display: block; font: 900 128px/1.12 "Tajawal"; color: #fff; text-shadow: 0 6px 30px rgba(0,0,0,.55); }
+  .o { color: var(--amber); }
+  .word { font: 900 150px/1 "Tajawal"; color: #fff; text-shadow: 0 8px 36px rgba(0,0,0,.6); }
+
+  /* Captions (what's said), inside the Reels safe area. */
+  .cap { position: absolute; left: 80px; right: 80px; top: 1395px; display: flex; justify-content: center; }
+  .cap span { padding: 18px 34px; border-radius: 30px; background: rgba(15,23,32,.72); text-align: center;
+              font: 800 50px/1.4 "Tajawal"; color: #fff; }
+
+  /* Step pill on the product scenes. */
+  .step { position: absolute; top: 290px; left: 0; right: 0; display: flex; justify-content: center; }
+  .step span { display: inline-flex; align-items: center; gap: 18px; padding: 16px 34px 16px 22px; border-radius: 999px;
+               background: rgba(244,239,230,.10); border: 2px solid rgba(244,239,230,.14); font: 800 44px/1 "Tajawal"; color: #fff; }
+  .step i { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; background: var(--orange);
+            color: var(--navy-deep); font: 900 34px/1 "Tajawal"; font-style: normal; }
+
+  /* Devices. */
+  .phone { position: absolute; left: 320px; top: 390px; width: 440px; padding: 12px; border-radius: 56px; background: #0b1118;
+           box-shadow: 0 50px 100px -30px rgba(0,0,0,.75), inset 0 0 0 2px rgba(255,255,255,.07); }
+  .screen { position: relative; width: 416px; height: 900px; border-radius: 46px; overflow: hidden; background: #f4efe6; }
+  .screen > img { display: block; width: 416px; height: auto; }
+  .tablet { position: absolute; left: 40px; top: 560px; width: 1000px; padding: 16px; border-radius: 40px; background: #0b1118;
+            box-shadow: 0 50px 100px -30px rgba(0,0,0,.75), inset 0 0 0 2px rgba(255,255,255,.07); }
+  .tablet .screen { width: 968px; height: 605px; border-radius: 26px; }
+  .zoom { position: absolute; inset: 0; transform-origin: 66% 38%; }
+  .zoom img { display: block; width: 968px; height: auto; }
+
+  .ripple { position: absolute; width: 96px; height: 96px; margin: -48px 0 0 -48px; border-radius: 50%;
+            border: 6px solid var(--orange); background: rgba(230,126,34,.22); opacity: 0; }
+  .toast { position: absolute; left: 22px; right: 22px; top: 24px; display: flex; align-items: center; gap: 16px; padding: 18px 20px;
+           border-radius: 24px; background: var(--surface); color: var(--navy-deep); box-shadow: 0 18px 40px -12px rgba(0,0,0,.45); }
+  .toast .ic { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 16px; flex: none; }
+  .toast b { font: 900 30px/1.2 "Tajawal"; }
+  .toast small { display: block; font: 500 23px/1.3 "Tajawal"; color: var(--muted); }
+
+  .ring { position: absolute; width: 62px; height: 62px; margin: -31px 0 0 -31px; border-radius: 50%; border: 5px solid var(--orange); opacity: 0; }
+  .dot { position: absolute; width: 35px; height: 35px; margin: -17.5px 0 0 -17.5px; border-radius: 50%; display: grid; place-items: center;
+         font: 800 20px/1 "Tajawal"; color: #fff; }
+  .dot.go { background: var(--herb); } .dot.now { background: var(--orange); }
+
+  /* The three differences. */
+  .card3 { position: absolute; left: 0; right: 0; top: 560px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .card3 .tile { display: grid; place-items: center; width: 230px; height: 230px; border-radius: 60px; background: rgba(230,126,34,.16); color: var(--amber); }
+  .card3 h2 { margin-top: 70px; font: 900 112px/1.15 "Tajawal"; color: #fff; }
+  .card3 p { margin-top: 26px; font: 700 46px/1.4 "Tajawal"; color: rgba(244,239,230,.75); }
+
+  /* Lower third for the team. */
+  .lower { position: absolute; right: 70px; top: 1200px; display: flex; align-items: center; gap: 24px; padding: 22px 34px 22px 26px;
+           border-radius: 30px; background: rgba(15,23,32,.78); border: 2px solid rgba(244,239,230,.12); }
+  .lower .av { display: grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; background: var(--orange); color: var(--navy-deep); font: 900 34px/1 "Tajawal"; }
+  .lower b { display: block; font: 900 52px/1.2 "Tajawal"; color: #fff; }
+  .lower small { display: block; margin-top: 4px; font: 700 34px/1.3 "Tajawal"; color: rgba(244,239,230,.72); }
+
+  .pill { display: inline-flex; padding: 16px 38px; border-radius: 999px; background: var(--orange); color: var(--navy-deep); font: 900 44px/1 "Tajawal"; }
+  svg.i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #black { position: absolute; inset: 0; background: #000; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ── S1 · Hook (0–3) ─────────────────────────────────────────────── -->
+  <div class="ph t" data-in="0" data-out="3" data-p="cut"><div class="cam"><svg class="i" width="260" height="260" viewBox="0 0 24 24"><use href="#i-camera"/></svg></div>
+    <div class="card"><span class="code">L1</span><span><b>زبون يرفع إيده: «لو سمحت!»… وما حدا منتبه</b><em>لقطة متوسطة · 3 ث</em></span></div></div>
+  <div class="row" style="top:560px; flex-direction:column;">
+    <span class="big t" data-in="0.25" data-out="2.9" data-p="pop">كم مرة</span>
+    <span class="big t" data-in="0.65" data-out="2.9" data-p="pop">استنّيت</span>
+    <span class="big o t" data-in="1.05" data-out="2.9" data-p="pop">النادل؟</span>
+  </div>
+
+  <!-- ── S2 · The problem (3–8) ──────────────────────────────────────── -->
+  <div class="ph t" data-in="3" data-out="4.6" data-p="cut"><div class="card"><span class="code">L2</span><span><b>النادل يكتب الطلب على ورقة</b><em>قريبة على الإيد · 1.6 ث</em></span></div></div>
+  <div class="ph t" data-in="4.6" data-out="6.2" data-p="cut"><div class="card"><span class="code">L3</span><span><b>ورقة الطلب مرمية على طاولة المطبخ</b><em>قريبة · 1.6 ث</em></span></div></div>
+  <div class="ph t" data-in="6.2" data-out="8" data-p="cut"><div class="card"><span class="code">L4</span><span><b>الزبون يطّلع على الساعة ويتأفف</b><em>قريبة · 1.8 ث</em></span></div></div>
+  <div class="row" style="top:700px; height:200px;"><span class="word t" data-in="3.05" data-out="4.6" data-p="pop">ورقة…</span></div>
+  <div class="row" style="top:700px; height:200px;"><span class="word t" data-in="4.65" data-out="6.2" data-p="pop">انتظار…</span></div>
+  <div class="row" style="top:700px; height:200px;"><span class="word o t" data-in="6.25" data-out="8" data-p="pop">طلب ضايع</span></div>
+
+  <!-- ── S3 · The turn (8–11) ────────────────────────────────────────── -->
+  <div class="t" data-in="8" data-out="11" data-p="cut">
+    <div class="bg"></div>
+    <div class="row" style="top:440px;"><img class="t" data-in="8.15" data-out="11" data-p="zoom" src="../../../frontend/public/brand/logo-stacked-on-dark.png" width="431" height="360" alt=""></div>
+    <div class="row" style="top:930px; flex-direction:column;">
+      <span class="big t" style="font-size:112px" data-in="8.7" data-out="11" data-p="up">الفوضى</span>
+      <span class="big o t" style="font-size:112px" data-in="9.0" data-out="11" data-p="up">صارت نظام</span>
+    </div>
+  </div>
+
+  <!-- ── S4 · Scan and order (11–20) ─────────────────────────────────── -->
+  <div class="ph t" data-in="11" data-out="13.5" data-p="cut"><div class="card"><span class="code">L6</span><span><b>الزبون يمسح كود QR عن الطاولة بجواله</b><em>من فوق الكتف · 2.5 ث</em></span></div></div>
+  <div class="t" data-in="13.5" data-out="20" data-p="cut">
+    <div class="bg"></div>
+    <div class="phone t" id="ph1" data-in="13.55" data-out="20" data-p="up">
+      <div class="screen">
+        <img src="../../presentation/deck_menu_phone.png" alt="">
+        <div class="ripple" id="tap1" style="left:51px; top:453px;"></div>
+        <div class="ripple" id="tap2" style="left:208px; top:805px;"></div>
+        <div class="toast t" data-in="17.3" data-out="20" data-p="drop">
+          <span class="ic" style="background:rgba(28,113,75,.14); color:var(--herb)"><svg class="i" width="34" height="34" viewBox="0 0 24 24"><use href="#i-circle-check"/></svg></span>
+          <span><b>تم إرسال طلبك</b><small>وصل المطبخ · مطعم الزيتونة</small></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="step t" data-in="11.2" data-out="20" data-p="fade"><span><i>1</i>امسح واطلب من جوالك</span></div>
+
+  <!-- ── S5 · The kitchen (20–27) ────────────────────────────────────── -->
+  <div class="t" data-in="20" data-out="23.5" data-p="cut">
+    <div class="bg"></div>
+    <div class="tablet t" data-in="20.05" data-out="23.5" data-p="up">
+      <div class="screen">
+        <div class="zoom" id="kz">
+          <img src="../../presentation/deck_kitchen.png" alt="">
+          <div class="abs t" data-in="20.7" data-out="23.5" data-p="fade" style="left:510px; top:172px; width:242px; height:184px; border-radius:18px; border:5px solid var(--orange); box-shadow:0 0 0 10px rgba(230,126,34,.18);"></div>
+        </div>
+        <div class="toast t" data-in="20.6" data-out="23.5" data-p="drop" style="left:auto; right:22px; width:470px;">
+          <span class="ic" style="background:rgba(230,126,34,.16); color:#A15818"><svg class="i" width="34" height="34" viewBox="0 0 24 24"><use href="#i-bell-ring"/></svg></span>
+          <span><b>طلب جديد #7</b><small>مقلوبة دجاج × 2</small></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ph t" data-in="23.5" data-out="27" data-p="cut"><div class="card"><span class="code">L8</span><span><b>الطبّاخ يضغط «ابدأ التحضير» على الشاشة</b><em>جانبية · 3.5 ث</em></span></div></div>
+  <div class="step t" data-in="20.2" data-out="27" data-p="fade"><span><i>2</i>يوصل المطبخ فورًا</span></div>
+
+  <!-- ── S6 · Live tracking (27–34) ──────────────────────────────────── -->
+  <div class="t" data-in="27" data-out="30.5" data-p="cut">
+    <div class="bg"></div>
+    <div class="phone t" data-in="27.05" data-out="30.5" data-p="up">
+      <div class="screen">
+        <img src="../../presentation/deck_tracking_phone.png" alt="">
+        <div class="dot go t" data-in="28.3" data-out="30.5" data-p="fade" style="left:356px; top:230px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24" style="stroke-width:3"><use href="#i-check"/></svg></div>
+        <div class="dot now t" data-in="28.3" data-out="29.3" data-p="fade" style="left:356px; top:282px;">3</div>
+        <div class="dot go t" data-in="29.3" data-out="30.5" data-p="fade" style="left:356px; top:282px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24" style="stroke-width:3"><use href="#i-check"/></svg></div>
+        <div class="dot now t" data-in="29.3" data-out="30.5" data-p="fade" style="left:356px; top:333px;">4</div>
+        <div class="ring" id="ring" style="left:356px; top:230px;"></div>
+        <div class="toast t" data-in="29.6" data-out="30.5" data-p="drop" style="top:auto; bottom:150px;">
+          <span class="ic" style="background:rgba(28,113,75,.14); color:var(--herb)"><svg class="i" width="34" height="34" viewBox="0 0 24 24"><use href="#i-bell-ring"/></svg></span>
+          <span><b>طلبك جاهز!</b><small>تفضّل استلمه</small></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ph t" data-in="30.5" data-out="34" data-p="cut"><div class="card"><span class="code">L11</span><span><b>النادل يقدّم الطبق… والزبون مبسوط</b><em>متوسطة · 3.5 ث</em></span></div></div>
+  <div class="step t" data-in="27.2" data-out="34" data-p="fade"><span><i>3</i>تابع طلبك لحظة بلحظة</span></div>
+
+  <!-- ── S7 · Three differences (34–42) ──────────────────────────────── -->
+  <div class="t" data-in="34" data-out="42" data-p="cut"><div class="bg"></div></div>
+  <div class="card3 t" data-in="34.1" data-out="36.65" data-p="slide">
+    <span class="tile"><svg class="i" width="120" height="120" viewBox="0 0 24 24"><use href="#i-smartphone"/></svg></span>
+    <h2>بدون تطبيق</h2><p>الزبون يمسح الكود ويطلب من المتصفح</p>
+  </div>
+  <div class="card3 t" data-in="36.75" data-out="39.3" data-p="slide">
+    <span class="tile"><svg class="i" width="120" height="120" viewBox="0 0 24 24"><use href="#i-wifi-off"/></svg></span>
+    <h2>يكمل لو انقطع النت</h2><p>والتغييرات بتتزامن لحالها</p>
+  </div>
+  <div class="card3 t" data-in="39.4" data-out="42" data-p="slide">
+    <span class="tile"><svg class="i" width="120" height="120" viewBox="0 0 24 24"><use href="#i-badge-percent"/></svg></span>
+    <h2>بلا عمولة</h2><p>اشتراك ثابت يبدأ من 15 دولار</p>
+  </div>
+
+  <!-- ── S8 · The team (42–52) ───────────────────────────────────────── -->
+  <div class="ph t" data-in="42" data-out="43.2" data-p="cut"><div class="card"><span class="code">L13</span><span><b>أحمد: نظرة للكاميرا وابتسامة</b><em>قريبة · 1.2 ث</em></span></div></div>
+  <div class="ph t" data-in="43.2" data-out="44.4" data-p="cut"><div class="card"><span class="code">L14</span><span><b>علي: نظرة للكاميرا وابتسامة</b><em>قريبة · 1.2 ث</em></span></div></div>
+  <div class="ph t" data-in="44.4" data-out="45.6" data-p="cut"><div class="card"><span class="code">L15</span><span><b>عمار: نظرة للكاميرا وابتسامة</b><em>قريبة · 1.2 ث</em></span></div></div>
+  <div class="ph t" data-in="45.6" data-out="46.8" data-p="cut"><div class="card"><span class="code">L16</span><span><b>سجى: نظرة للكاميرا وابتسامة</b><em>قريبة · 1.2 ث</em></span></div></div>
+  <div class="ph t" data-in="46.8" data-out="48" data-p="cut"><div class="card"><span class="code">L17</span><span><b>رنين: نظرة للكاميرا وابتسامة</b><em>قريبة · 1.2 ث</em></span></div></div>
+  <div class="lower t" data-in="42.1" data-out="43.15" data-p="lower"><span class="av">أ ك</span><span><b>أحمد الكحلوت</b><small>قائد الفريق</small></span></div>
+  <div class="lower t" data-in="43.3" data-out="44.35" data-p="lower"><span class="av">ع س</span><span><b>علي أبو سويلم</b><small>مطوّر الخادم</small></span></div>
+  <div class="lower t" data-in="44.5" data-out="45.55" data-p="lower"><span class="av">ع ع</span><span><b>عمار العرعير</b><small>مطوّر الخادم</small></span></div>
+  <div class="lower t" data-in="45.7" data-out="46.75" data-p="lower"><span class="av">س س</span><span><b>سجى ساق الله</b><small>مطوّرة الواجهات</small></span></div>
+  <div class="lower t" data-in="46.9" data-out="47.95" data-p="lower"><span class="av">ر ر</span><span><b>رنين ريان</b><small>مطوّرة الواجهات</small></span></div>
+  <div class="ph t" data-in="48" data-out="52" data-p="cut"><div class="card"><span class="code">L18</span><span><b>الفريق كامل، وأحمد يحكي جملته للكاميرا</b><em>متوسطة واسعة · 4 ث</em></span></div></div>
+
+  <!-- ── S9 · End card (52–58) ───────────────────────────────────────── -->
+  <div class="t" data-in="52" data-out="58" data-p="fade">
+    <div class="bg"></div>
+    <div class="row" style="top:330px;"><img class="t" data-in="52.2" data-out="58" data-p="zoom" src="../../../frontend/public/brand/logo-stacked-on-dark.png" width="431" height="360" alt=""></div>
+    <div class="row" style="top:790px;"><span class="pill t" data-in="52.6" data-out="58" data-p="pop">الإطلاق التجريبي</span></div>
+    <div class="row" style="top:900px; flex-direction:column;">
+      <span class="big t" style="font-size:104px" data-in="52.9" data-out="58" data-p="up">جرّبه مجانًا</span>
+      <span class="big o t" style="font-size:104px" data-in="53.1" data-out="58" data-p="up">14 يومًا</span>
+    </div>
+    <div class="row t" style="top:1170px; font:700 42px/1.4 'Tajawal'; color:rgba(244,239,230,.78);" data-in="53.5" data-out="58" data-p="up">منيو QR · مطبخ لحظي · بلا عمولة</div>
+    <div class="row t" style="top:1290px; gap:14px; font:800 46px/1 'Tajawal'; color:#fff;" data-in="54" data-out="58" data-p="up">
+      <svg class="i" width="48" height="48" viewBox="0 0 24 24" style="color:var(--amber)"><use href="#i-arrow-up"/></svg>الرابط في البايو
+    </div>
+  </div>
+
+  <!-- ── Captions: what's said (voice-over and Ahmed) ────────────────── -->
+  <div class="cap t" data-in="3.2" data-out="7.85" data-p="cap"><span>كل يوم بالمطاعم: انتظار، ورقة، وطلبات بتضيع</span></div>
+  <div class="cap t" data-in="8.3" data-out="10.85" data-p="cap"><span>عشان هيك عملنا menuPilot</span></div>
+  <div class="cap t" data-in="11.3" data-out="15.2" data-p="cap"><span>الزبون بيمسح الكود، وبيطلب من جواله</span></div>
+  <div class="cap t" data-in="15.4" data-out="19.7" data-p="cap"><span>بدون ما ينزّل أي تطبيق</span></div>
+  <div class="cap t" data-in="20.3" data-out="23.35" data-p="cap"><span>والطلب بيوصل المطبخ فورًا</span></div>
+  <div class="cap t" data-in="27.3" data-out="30.4" data-p="cap"><span>وبيتابع طلبه لحظة بلحظة</span></div>
+  <div class="cap t" data-in="48.3" data-out="51.85" data-p="cap"><span>إحنا فريق menuPilot، والنسخة التجريبية صارت متاحة</span></div>
+
+  <div id="black"></div>
+</div>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-smartphone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol>
+  <symbol id="i-badge-percent" viewBox="0 0 24 24"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m15 9-6 6"/><path d="M9 9h.01"/><path d="M15 15h.01"/></symbol>
+  <symbol id="i-bell-ring" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M22 8c0-2.3-.8-4.3-2-6"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/><path d="M4 2C2.8 3.7 2 5.7 2 8"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/></symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol>
+</svg>
+
+<script>
+  const DURATION = 58;
+  const mode = new URLSearchParams(location.search).get("mode") || "animatic";
+  if (mode === "overlay") document.body.classList.add("overlay");
+
+  // Every timed element: in at data-in, out at data-out, moving the way its preset says.
+  const PRESETS = {
+    cut:   { fin: .04, fout: .04 },
+    fade:  { fin: .3,  fout: .3 },
+    up:    { fin: .5,  fout: .3, from: "translateY(46px)" },
+    pop:   { fin: .35, fout: .25, from: "scale(.82)" },
+    zoom:  { fin: .7,  fout: .3, from: "scale(.9)" },
+    cap:   { fin: .2,  fout: .2, from: "translateY(18px)" },
+    drop:  { fin: .45, fout: .25, from: "translateY(-40px)" },
+    slide: { fin: .45, fout: .35, from: "translateX(-160px)", to: "translateX(160px)" },
+    lower: { fin: .3,  fout: .2, from: "translateX(60px)" },
+  };
+  const play = (el, frames, start, dur, easing = "cubic-bezier(.2,.8,.2,1)", extra = {}) =>
+    el.animate(frames, { delay: start * 1000, duration: dur * 1000, fill: "forwards", easing, ...extra });
+
+  document.querySelectorAll("[data-in]").forEach((el) => {
+    const p = PRESETS[el.dataset.p || "fade"];
+    const start = +el.dataset.in, end = +el.dataset.out;
+    play(el, [{ opacity: 0, transform: p.from || "none" }, { opacity: 1, transform: "none" }], start, p.fin);
+    if (end < DURATION) play(el, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: p.to || "none" }], end - p.fout, p.fout, "ease-in");
+  });
+
+  // Taps on the menu: the «+» of a dish, then the cart bar.
+  const tap = (el, at) => play(el, [
+    { opacity: 0, transform: "scale(.4)" }, { opacity: 1, transform: "scale(1)", offset: .35 }, { opacity: 0, transform: "scale(1.9)" },
+  ], at, .75, "ease-out");
+  tap(document.getElementById("tap1"), 15.0);
+  tap(document.getElementById("tap2"), 16.6);
+
+  // The kitchen screen leans in on the new ticket.
+  play(document.getElementById("kz"), [{ transform: "scale(1)" }, { transform: "scale(1.55)" }], 20.9, 2.4, "cubic-bezier(.45,0,.25,1)");
+
+  // Tracking: the ring follows the order from step 2 to 4.
+  const ring = document.getElementById("ring");
+  play(ring, [{ opacity: 0 }, { opacity: 1 }], 27.5, .3);
+  play(ring, [{ top: "230px" }, { top: "282px" }], 28.3, .35);
+  play(ring, [{ top: "282px" }, { top: "333px" }], 29.3, .35);
+  play(ring, [{ transform: "scale(1)" }, { transform: "scale(1.25)" }, { transform: "scale(1)" }], 27.6, .9, "ease-in-out", { iterations: 3 });
+
+  play(document.getElementById("black"), [{ opacity: 0 }, { opacity: 1 }], DURATION - .6, .6, "linear");
+
+  // render.js seeks every frame; a plain browser plays it once.
+  const all = document.getAnimations();
+  window.seek = (t) => all.forEach((a) => { a.currentTime = t * 1000; });
+  window.DURATION = DURATION;
+  if (new URLSearchParams(location.search).has("render")) all.forEach((a) => a.pause());
+  window.timelineReady = true;
+</script>
+</body>
+</html>
