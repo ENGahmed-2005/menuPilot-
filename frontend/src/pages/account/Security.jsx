@@ -17,8 +17,8 @@ import { useConfirm } from "../../components/ui/ConfirmDialog";
 import GoogleMark from "../../components/auth/GoogleMark";
 import { useAuth } from "../../context/AuthContext";
 import {
-  authErrorMessage, changePassword, confirmTwoFactor, disableTwoFactor, getAuthConfig, linkGoogle, listDevices, listLinkedAccounts,
-  newBackupCodes, revokeDevice, revokeOtherDevices, startTwoFactor, unlinkGoogle,
+  authErrorMessage, changePassword, confirmTwoFactor, disableTwoFactor, getAuthConfig, googleLinkStatus, linkGoogle, listDevices,
+  newBackupCodes, revokeDevice, revokeOtherDevices, startTwoFactor, unlinkGoogle, verifyGoogleOperation,
 } from "../../api/auth";
 import { t, dir, locale } from "../../i18n";
 
@@ -277,28 +277,71 @@ function DevicesCard() {
 
 /* ---- Google -------------------------------------------------------------------- */
 function GoogleCard() {
-  const [linked, setLinked] = useState(null);
+  const { user } = useAuth();
+  const [status, setStatus] = useState(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [operation, setOperation] = useState(null);
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
   const [params] = useSearchParams();
+  const load = () => googleLinkStatus().then(setStatus);
   useEffect(() => {
-    listLinkedAccounts().then((accounts) => setLinked(accounts.some((a) => a.providerId === "google"))).catch((err) => setError(err.message));
-    // Back from Google after a failed link.
+    load().catch((err) => setError(err.message));
     const failed = params.get("error");
-    if (failed) setError(authErrorMessage(failed, params.get("error_description")) || t("تعذّر ربط حساب Google. حاول مجددًا."));
+    if (failed === "GOOGLE_REAUTHENTICATED") setNotice(t("تم تأكيد هويتك. تابع العملية خلال خمس دقائق."));
+    else if (failed) setError(authErrorMessage(failed, params.get("error_description")) || t("تعذّر ربط حساب Google. حاول مجددًا."));
+    if (params.get("linked") === "google") setNotice(t("تم ربط حساب Google."));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const unlink = async () => { try { await unlinkGoogle(); setLinked(false); } catch (err) { setError(err.message); } };
-  const link = async () => { try { await linkGoogle(); } catch (err) { setError(err.message); } };
+  function begin(action, accountId) { setPassword(""); setCode(""); setError(""); setNotice(""); setOperation({ action, accountId }); }
+  async function continueOperation(action) {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      if (action === "unlink") { await unlinkGoogle(); await load(); setNotice(t("تم فك ربط حساب Google.")); }
+      else await linkGoogle();
+    } catch (err) { setError(err.message); await load().catch(() => {}); }
+    finally { setBusy(false); }
+  }
+  async function verify(e) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      const result = await verifyGoogleOperation({ ...operation, password, code });
+      setPassword(""); setCode("");
+      if (result.reauthGoogle || operation.action === "link") await linkGoogle();
+      else { await unlinkGoogle(); await load(); setNotice(t("تم فك ربط حساب Google.")); }
+      setOperation(null);
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  }
   return (
     <Card>
-      <CardHeader title={t("الدخول بحساب Google")} description={t("اربط حساب Google الذي يحمل نفس بريدك لتسجّل الدخول بضغطة واحدة.")} />
-      <div className="flex flex-wrap items-center gap-3 p-5">
+      <CardHeader title={t("الدخول بحساب Google")} description={t("يمكن أن يختلف بريد Google عن بريد حسابك الأساسي. نطلب تأكيد هويتك قبل الربط أو فكّه.")} />
+      <div className="grid gap-4 p-5">
         <Notice tone="error">{error}</Notice>
-        {params.get("linked") === "google" && linked && <Notice>{t("تم ربط حساب Google.")}</Notice>}
-        <GoogleMark size={22} />
-        <span className="flex-1 text-sm font-bold">{linked == null ? "…" : linked ? t("مرتبط") : t("غير مرتبط")}</span>
-        {linked === false && <Button variant="secondary" onClick={link}>{t("ربط حساب Google")}</Button>}
-        {linked && <Button variant="ghost" className="text-brick" onClick={unlink}>{t("إلغاء الربط")}</Button>}
+        <Notice>{notice}</Notice>
+        {!status ? <Spinner label={t("جارٍ التحقق…")} /> : <>
+          <p className="text-sm text-muted">{t("البريد الأساسي")} <bdi className="font-bold text-ink">{user.email}</bdi></p>
+          {status.accounts.map((account) => <div key={account.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3">
+            <GoogleMark size={22} /><div className="min-w-0 flex-1"><p className="text-sm font-bold">{t("حساب Google المرتبط")}</p><p className="break-all text-sm text-ink-soft"><bdi>{account.email || t("سيظهر البريد عند الدخول مجددًا بحساب Google.")}</bdi></p></div>
+            <Button disabled={busy} variant="ghost" className="text-brick" onClick={() => begin("unlink", account.id)}>{t("إلغاء الربط")}</Button>
+          </div>)}
+          {!status.accounts.length && <p className="text-sm text-muted">{t("غير مرتبط")}</p>}
+          {status.verifiedAction && <Button loading={busy} onClick={() => continueOperation(status.verifiedAction)}>{t("متابعة العملية بعد تأكيد الهوية")}</Button>}
+          <div><Button disabled={busy} variant="secondary" onClick={() => begin("link")}><GoogleMark />{t("ربط حساب Google")}</Button></div>
+        </>}
       </div>
+      <Modal open={Boolean(operation)} onClose={() => !busy && setOperation(null)} size="sm" title={t("تأكيد هويتك")} description={status?.hasPassword ? t("أدخل كلمة مرورك الحالية للمتابعة.") : t("ستؤكد هويتك بحساب Google المرتبط حاليًا قبل اختيار حساب آخر.")}>
+        <form onSubmit={verify} className="grid gap-4" aria-busy={busy}>
+          <Notice tone="error">{error}</Notice>
+          {status?.hasPassword && <label className="text-sm font-bold">{t("كلمة المرور الحالية")}<input required autoFocus type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={`${fieldClass} mt-2`} /></label>}
+          {Boolean(user.two_factor_enabled) && <label className="text-sm font-bold">{t("رمز التحقق")}<input required inputMode="numeric" autoComplete="one-time-code" dir="ltr" value={code} onChange={(e) => setCode(e.target.value)} className={`${fieldClass} mt-2`} /></label>}
+          <div className="flex flex-wrap justify-end gap-2"><Button disabled={busy} variant="secondary" type="button" onClick={() => setOperation(null)}>{t("تراجع")}</Button><Button type="submit" loading={busy}>{status?.hasPassword ? t("تأكيد ومتابعة") : t("تأكيد الهوية باستخدام Google")}</Button></div>
+        </form>
+      </Modal>
     </Card>
   );
 }

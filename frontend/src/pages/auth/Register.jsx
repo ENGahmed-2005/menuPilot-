@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BrandLogo from "../../components/brand/Logo";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Gift, LockKeyhole, Mail, MailCheck, Store, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Gift, LoaderCircle, LockKeyhole, Mail, MailCheck, ShieldCheck, Store } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { t, dir } from "../../i18n";
 import LanguageSwitch from "../../components/ui/LanguageSwitch";
@@ -11,13 +11,14 @@ import { authErrorMessage, completeGoogleRegistration, getAuthConfig, googleRegi
 const inputClass = "w-full rounded-2xl border border-[#5A6574]/20 bg-white px-4 py-3.5 text-sm text-[#172331] outline-none transition placeholder:text-[#5A6574]/70 focus:border-[#EEA122] focus:ring-4 focus:ring-[#EEA122]/10";
 
 const RESTAURANT_TYPES = [["restaurant",t("مطعم")],["cafe",t("مقهى")],["fast-food",t("وجبات سريعة")],["other",t("أخرى")]];
+const NextArrow = dir === "rtl" ? ArrowLeft : ArrowRight;
 
 // on="dark" for the dark side panel, default light for the mobile header.
 const Logo = ({ on = "dark", height = 40 }) => <BrandLogo on={on} height={height} priority />;
 
 export default function Register() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { register, refreshUser } = useAuth();
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleIdentity, setGoogleIdentity] = useState(null);
@@ -28,11 +29,25 @@ export default function Register() {
   // A plan picked on the pricing page (?plan=) is kept as the owner's preference.
   const selectedPlan = planFromUrl || "pro";
   const [loading, setLoading] = useState(false);
+  const sending = useRef(false);
+  const formRef = useRef(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
   const [verifySent, setVerifySent] = useState(false);
   const [formData, setFormData] = useState({ restaurantName: "", restaurantType: "", email: "", password: "", confirmPassword: "" });
+  const steps = googleIdentity ? [[2, t("المطعم")], [4, t("المراجعة")]] : [[2, t("المطعم")], [3, t("الحساب")], [4, t("المراجعة")]];
+  const stepLabel = t("الخطوة {0} من {1}", { 0: steps.findIndex(([id]) => id === step) + 1, 1: steps.length });
+
+  useEffect(() => { formRef.current?.querySelector("h1")?.focus(); }, [step]);
+
+  const useEmail = () => {
+    if (sending.current) return;
+    setGoogleIdentity(null); setCheckingGoogle(false); setErrors({}); setStep(2);
+    setFormData((old) => ({ ...old, email: "", password: "", confirmPassword: "" }));
+    const next = new URLSearchParams(searchParams); next.delete("google"); next.delete("error"); next.delete("error_description");
+    setSearchParams(next, { replace: true });
+  };
 
   useEffect(() => {
     getAuthConfig().then((config) => setGoogleEnabled(config.googleEnabled));
@@ -48,11 +63,13 @@ export default function Register() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const google = async () => {
+    if (sending.current) return;
+    sending.current = true;
     setLoading(true);
     setErrors({});
     try { await loginWithGoogle("/register"); }
     catch (err) { setErrors({ form: err.message }); }
-    finally { setLoading(false); }
+    finally { sending.current = false; setLoading(false); }
   };
 
 
@@ -67,6 +84,7 @@ export default function Register() {
     if (!formData.restaurantName.trim()) next.restaurantName = t("اسم المطعم مطلوب.");
     if (!formData.restaurantType) next.restaurantType = t("يرجى اختيار نوع المطعم.");
     setErrors(next);
+    if (Object.keys(next).length) requestAnimationFrame(() => document.getElementById(Object.keys(next)[0])?.focus());
     return !Object.keys(next).length;
   };
 
@@ -79,10 +97,13 @@ export default function Register() {
     if (!formData.confirmPassword) next.confirmPassword = t("يرجى تأكيد كلمة المرور.");
     else if (formData.password !== formData.confirmPassword) next.confirmPassword = t("كلمتا المرور غير متطابقتين.");
     setErrors(next);
+    if (Object.keys(next).length) requestAnimationFrame(() => document.getElementById(Object.keys(next)[0])?.focus());
     return !Object.keys(next).length;
   };
 
   const submit = async () => {
+    if (sending.current || checkingGoogle) return;
+    sending.current = true;
     setErrors({});
     setLoading(true);
     try {
@@ -108,8 +129,13 @@ export default function Register() {
       // No checkout at registration: the free trial starts right away.
       navigate("/welcome", { replace: true });
     } catch (error) {
-      setErrors({ form: error?.message || t("تعذر إنشاء الحساب. حاول مرة أخرى.") });
+      const fields = { restaurant_name: "restaurantName", restaurant_type: "restaurantType", email: "email", password: "password", password_confirmation: "confirmPassword" };
+      const fieldErrors = Object.fromEntries(Object.entries(error.errors || {}).map(([key, value]) => [fields[key] || key, t(Array.isArray(value) ? value[0] : value)]));
+      setErrors({ ...fieldErrors, form: error?.message || t("تعذر إنشاء الحساب. حاول مرة أخرى.") });
+      if (fieldErrors.restaurantName || fieldErrors.restaurantType) setStep(2);
+      else if (fieldErrors.email || fieldErrors.password || fieldErrors.confirmPassword) setStep(3);
     } finally {
+      sending.current = false;
       setLoading(false);
     }
   };
@@ -137,7 +163,7 @@ export default function Register() {
           <p className="relative z-10 text-xs text-[#F3EFE5]/35">{t("نظام إدارة مطاعم حديث · menuPilot")}</p>
         </aside>
 
-        <section className="flex min-h-screen items-start justify-center px-4 py-6 sm:px-8 sm:py-10">
+        <section className="flex min-h-screen items-start justify-center px-4 pb-8 pt-20 sm:px-8 sm:pb-10 sm:pt-16 lg:py-12">
           <div className="w-full max-w-2xl">
             <div className="mb-7 flex items-center justify-between">
               <Link to="/" className="lg:hidden" dir="ltr" aria-label="menuPilot">
@@ -146,30 +172,38 @@ export default function Register() {
               <Link to="/login" className="flex items-center gap-2 text-sm font-bold text-[#5A6574] transition hover:text-[#E67E22]">{t("لديك حساب؟ تسجيل الدخول")} <ArrowLeft size={16} /></Link>
             </div>
 
-            <div className="mb-7 flex items-center justify-center gap-0">
-              {[t("المطعم"), t("الحساب"), t("المراجعة")].map((label, index) => {
-                const number = index + 2;
+            <nav aria-label={t("خطوات إنشاء الحساب")} className="mb-7 flex items-center justify-center gap-0">
+              {steps.map(([number, label], index) => {
                 const active = step >= number;
                 return (
-                  <div key={label} className="flex items-center">
+                  <div key={label} aria-current={step === number ? "step" : undefined} className="flex items-center">
                     <div className="flex flex-col items-center gap-2">
-                      <span className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs font-black transition ${active ? "border-[#EEA122] bg-[#EEA122] text-[#172331]" : "border-[#5A6574]/20 bg-white text-[#5A6574]"}`}>{active && step > number ? <Check size={15} /> : number - 1}</span>
+                      <span className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs font-black transition ${active ? "border-[#EEA122] bg-[#EEA122] text-[#172331]" : "border-[#5A6574]/20 bg-white text-[#5A6574]"}`}>{active && step > number ? <Check size={15} /> : index + 1}</span>
                       <span className={`text-xs font-bold ${active ? "text-[#172331]" : "text-[#5A6574]"}`}>{label}</span>
                     </div>
-                    {number < 4 && <span className={`mx-1 h-px w-8 sm:w-12 ${step > number ? "bg-[#EEA122]" : "bg-[#5A6574]/15"}`} />}
+                    {index < steps.length - 1 && <span className={`mx-3 h-px w-8 sm:w-16 ${step > number ? "bg-[#EEA122]" : "bg-[#5A6574]/15"}`} />}
                   </div>
                 );
               })}
-            </div>
+            </nav>
 
-            <div className="rounded-[28px] border border-[#5A6574]/10 bg-white p-5 shadow-[0_24px_70px_rgba(23,35,49,.08)] sm:p-8 md:p-10">
-              {errors.form && <div className="mb-6 rounded-2xl border border-[#B33F32]/20 bg-[#B33F32]/5 px-4 py-3 text-sm font-semibold text-[#B33F32]">{errors.form}</div>}
-              {googleEnabled && (!googleIdentity || errors.form) && !verifySent && <button type="button" disabled={loading || checkingGoogle} onClick={google} className="mb-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-[#5A6574]/20 bg-white px-5 py-3.5 text-sm font-bold transition hover:border-[#EEA122] disabled:opacity-60"><GoogleMark />{t("إنشاء حساب باستخدام Google")}</button>}
-              {checkingGoogle && <p role="status">{t("جارٍ التحقق من حساب Google…")}</p>}
-              {googleIdentity && <p className="mb-6 text-sm text-[#5A6574]">{t("تم تأكيد حساب Google. أكمل معلومات المطعم دون كلمة مرور.")} <strong dir="ltr">{googleIdentity.email}</strong></p>}
+            <form ref={formRef} noValidate aria-busy={loading || checkingGoogle} onSubmit={(event) => { event.preventDefault(); if (loading || checkingGoogle) return; if (step === 2) { if (validateRestaurant()) setStep(googleIdentity ? 4 : 3); } else if (step === 3) { if (validateAccount()) setStep(4); } else if (step === 4) submit(); }} className="rounded-[28px] border border-[#5A6574]/10 bg-white p-5 shadow-[0_24px_70px_rgba(23,35,49,.08)] sm:p-8 md:p-10">
+              {errors.form && <div role="alert" className="mb-6 rounded-2xl border border-[#B33F32]/20 bg-[#B33F32]/5 px-4 py-3 text-sm font-semibold leading-7 text-[#B33F32]">{errors.form}<div className="mt-2 flex flex-wrap gap-4">{googleEnabled && <button type="button" disabled={loading || checkingGoogle} onClick={google} className="min-h-11 font-bold underline underline-offset-4">{t("إعادة المحاولة باستخدام Google")}</button>}<button type="button" disabled={loading || checkingGoogle} onClick={useEmail} className="min-h-11 font-bold underline underline-offset-4">{t("التسجيل بالبريد الإلكتروني")}</button></div></div>}
+              {googleEnabled && !googleIdentity && !verifySent && !checkingGoogle && <div className="mb-7">
+                <p className="mb-3 text-center text-sm font-bold text-[#172331]">{t("ابدأ بالطريقة التي تناسبك")}</p>
+                <button type="button" disabled={loading} onClick={google} className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl border-2 border-[#172331]/15 bg-white px-4 py-3 text-sm font-extrabold transition hover:border-[#EEA122] hover:bg-[#F3EFE5]/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#172331] disabled:opacity-60">{loading ? <LoaderCircle size={20} className="animate-spin" aria-hidden="true" /> : <GoogleMark size={22} />}{t("إنشاء حساب باستخدام Google")}</button>
+                <div className="mt-6 flex items-center gap-3 text-xs font-semibold text-[#5A6574]"><span className="h-px flex-1 bg-[#5A6574]/15" /><span>{t("أو باستخدام البريد الإلكتروني")}</span><span className="h-px flex-1 bg-[#5A6574]/15" /></div>
+              </div>}
+              {checkingGoogle && <p role="status" className="mb-6 flex items-center justify-center gap-3 rounded-2xl bg-[#F3EFE5] p-5 text-sm font-bold"><LoaderCircle size={20} className="animate-spin" aria-hidden="true" />{t("جارٍ التحقق من حساب Google…")}</p>}
+              {googleIdentity && <div className="mb-7 rounded-2xl border border-[#4B6A8A]/20 bg-[#4B6A8A]/5 p-4">
+                <div className="flex items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white"><GoogleMark size={24} /></span><div className="min-w-0"><p className="flex items-center gap-1.5 text-xs font-bold text-[#37516B]"><ShieldCheck size={15} aria-hidden="true" />{t("حساب Google مؤكّد")}</p><p className="mt-1 break-all text-sm font-extrabold"><bdi>{googleIdentity.email}</bdi></p></div></div>
+                <p className="mt-3 text-sm leading-6 text-[#5A6574]">{t("بيانات المطعم فقط، لن تحتاج إلى كلمة مرور.")}</p>
+                <button type="button" disabled={loading} onClick={google} className="mt-2 min-h-11 text-xs font-bold text-[#37516B] underline underline-offset-4">{t("استخدام حساب Google آخر")}</button>
+              </div>}
+              <p role="status" aria-live="polite" className="sr-only">{loading ? t("جارٍ إنشاء الحساب…") : ""}</p>
 
               {verifySent && (
-                <div className="py-6 text-center">
+                <div role="status" className="py-6 text-center">
                   <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#EEA122]/15 text-[#E67E22]"><MailCheck size={26} aria-hidden="true" /></span>
                   <h2 className="mt-5 text-2xl font-black">{t("تحقق من بريدك الإلكتروني")}</h2>
                   <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-[#5A6574]">
@@ -181,7 +215,7 @@ export default function Register() {
 
               {/* Step 1 (plan choice) removed: the free trial comes first; plans are chosen after it. */}
 
-              {step === 2 && <StepFrame eyebrow={t("الخطوة 1 من 3")} title={t("معلومات المطعم")} description={t("أخبرنا قليلًا عن المطعم لنجهز حسابك.")}>
+              {step === 2 && <StepFrame eyebrow={stepLabel} title={t("معلومات المطعم")} description={t("أخبرنا قليلًا عن المطعم لنجهز حسابك.")}>
                 <div className="mb-6 flex items-start gap-3 rounded-2xl border border-[#EEA122]/25 bg-[#EEA122]/[0.07] p-4">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEA122] text-[#172331]"><Gift size={19} aria-hidden="true" /></span>
                   <div className="min-w-0 text-sm leading-6">
@@ -194,29 +228,32 @@ export default function Register() {
                   <Field label={t("اسم المطعم")} name="restaurantName" value={formData.restaurantName} onChange={change} placeholder={t("مثال: مطعم الزيتونة")} icon={Store} error={errors.restaurantName} />
                   <Field label={t("نوع المطعم")} name="restaurantType" value={formData.restaurantType} onChange={change} placeholder={t("اختر النوع")} icon={Store} error={errors.restaurantType} select options={RESTAURANT_TYPES} />
                 </div>
-                <Actions onBack={() => navigate("/")} backLabel={t("الرئيسية")} onNext={() => !checkingGoogle && validateRestaurant() && setStep(googleIdentity ? 4 : 3)} />
+                <Actions disabled={loading || checkingGoogle} onBack={() => navigate("/")} backLabel={t("الرئيسية")} />
               </StepFrame>}
 
-              {step === 3 && <StepFrame eyebrow={t("الخطوة 2 من 3")} title={t("معلومات الحساب")} description={t("أنشئ بيانات الدخول الخاصة بحسابك.")}>
+              {step === 3 && !googleIdentity && <StepFrame eyebrow={stepLabel} title={t("معلومات الحساب")} description={t("أنشئ بيانات الدخول الخاصة بحسابك.")}>
                 <div className="grid gap-5">
                   <Field label={t("البريد الإلكتروني")} name="email" type="email" value={formData.email} onChange={change} placeholder="you@example.com" icon={Mail} error={errors.email} />
                   <PasswordField label={t("كلمة المرور")} name="password" value={formData.password} onChange={change} placeholder={t("أنشئ كلمة مرور قوية")} visible={showPassword} onToggle={() => setShowPassword((v) => !v)} error={errors.password} />
+                  <ul id="password-help" aria-label={t("متطلبات كلمة المرور")} className="grid gap-2 rounded-2xl bg-[#F3EFE5]/70 p-4 text-xs leading-5 sm:grid-cols-2">
+                    {[[formData.password.length >= 8, t("8 أحرف على الأقل")], [/[a-z]/.test(formData.password) && /[A-Z]/.test(formData.password), t("حرف إنجليزي كبير وصغير")], [/\d/.test(formData.password), t("رقم واحد على الأقل")], [/[^A-Za-z0-9]/.test(formData.password), t("رمز مثل ! أو # أو @")]].map(([met, label]) => <li key={label} className={`flex items-center gap-2 ${met ? "font-bold text-[#375D36]" : "text-[#5A6574]"}`}><span aria-hidden="true" className={`grid h-4 w-4 shrink-0 place-items-center rounded-full ${met ? "bg-[#375D36]/10" : "border border-[#5A6574]/30"}`}>{met && <Check size={12} />}</span>{label}</li>)}
+                  </ul>
                   <PasswordField label={t("تأكيد كلمة المرور")} name="confirmPassword" value={formData.confirmPassword} onChange={change} placeholder={t("أعد كتابة كلمة المرور")} visible={showConfirm} onToggle={() => setShowConfirm((v) => !v)} error={errors.confirmPassword} />
                 </div>
-                <Actions onBack={() => setStep(2)} onNext={() => validateAccount() && setStep(4)} />
+                <Actions disabled={loading} onBack={() => setStep(2)} />
               </StepFrame>}
 
-              {step === 4 && <StepFrame eyebrow={t("الخطوة 3 من 3")} title={t("راجع بياناتك")} description={t("تأكد من صحة المعلومات قبل إنشاء الحساب.")}>
+              {step === 4 && <StepFrame eyebrow={stepLabel} title={t("راجع بياناتك")} description={t("تأكد من صحة المعلومات قبل إنشاء الحساب.")}>
                 <div className="overflow-hidden rounded-2xl border border-[#5A6574]/10 bg-[#F3EFE5]/35">
                   {[[t("التجربة"), t("14 يومًا مجانًا، تبدأ اليوم")], [t("المطعم"), formData.restaurantName], [t("النوع"), RESTAURANT_TYPES.find(([id]) => id === formData.restaurantType)?.[1] || formData.restaurantType], [t("البريد"), formData.email]].map(([label, value], index) => <div key={label} className={`grid grid-cols-[90px_1fr] gap-4 px-4 py-4 text-sm ${index < 3 ? "border-b border-[#5A6574]/10" : ""}`}><span className="text-[#5A6574]/50">{label}</span><strong className="break-words">{value || "—"}</strong></div>)}
                 </div>
                 <div className="mt-6 flex gap-3">
-                  <button type="button" onClick={() => setStep(googleIdentity ? 2 : 3)} className={SECONDARY}>{t("رجوع")}</button>
-                  <button type="button" disabled={loading} onClick={submit} aria-busy={loading || undefined} className={`${PRIMARY} flex-[2]`}>{loading ? t("جارٍ إنشاء الحساب…") : <>{t("ابدأ التجربة المجانية")} <ArrowLeft size={17} aria-hidden="true" /></>}</button>
+                  <button type="button" disabled={loading} onClick={() => setStep(googleIdentity ? 2 : 3)} className={SECONDARY}>{t("رجوع")}</button>
+                  <button type="submit" disabled={loading} aria-busy={loading || undefined} className={`${PRIMARY} flex-[2]`}>{loading ? <><LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("جارٍ إنشاء الحساب…")}</> : <>{t("ابدأ التجربة المجانية")} <NextArrow size={17} aria-hidden="true" /></>}</button>
                 </div>
               </StepFrame>}
-            </div>
-            <p className="mt-5 text-center text-xs text-[#5A6574]/45">{t("بإنشاء الحساب تبدأ تجربة مجانية لمدة 14 يومًا، ولن نطلب منك أي بيانات دفع.")}</p>
+            </form>
+            <p className="mt-5 text-center text-xs leading-6 text-[#5A6574]">{t("بإنشاء الحساب تبدأ تجربة مجانية لمدة 14 يومًا، ولن نطلب منك أي بيانات دفع.")}</p>
           </div>
         </section>
       </div>
@@ -225,22 +262,23 @@ export default function Register() {
 }
 
 function StepFrame({ eyebrow, title, description, children }) {
-  return <div><div className="mb-6 text-center"><span className="inline-flex rounded-full bg-[#EEA122]/10 px-3 py-1 text-xs font-bold text-[#B35A0F]">{eyebrow}</span><h1 className="mt-3 text-2xl font-extrabold leading-tight text-[#172331] sm:text-3xl">{title}</h1><p className="mx-auto mt-2 max-w-lg text-sm leading-7 text-[#5A6574]">{description}</p></div>{children}</div>;
+  return <div><div className="mb-6 text-center"><span className="inline-flex rounded-full bg-[#EEA122]/10 px-3 py-1 text-xs font-bold text-[#B35A0F]">{eyebrow}</span><h1 tabIndex={-1} style={{ outline: "none" }} className="mt-3 text-2xl font-extrabold leading-tight text-[#172331] sm:text-3xl">{title}</h1><p className="mx-auto mt-2 max-w-lg text-sm leading-7 text-[#5A6574]">{description}</p></div>{children}</div>;
 }
 
 function Field({ label, name, type = "text", value, onChange, placeholder, icon: Icon, error, select, options = [] }) {
-  return <div><label htmlFor={name} className="mb-2 block text-sm font-bold text-[#172331]">{label}</label><div className="relative">{Icon && <Icon size={18} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#5A6574]/35" />}{select ? <select id={name} name={name} value={value} onChange={onChange} className={`${inputClass} appearance-none pr-11`}><option value="">{placeholder}</option>{options.map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select> : <input id={name} name={name} type={type} value={value} onChange={onChange} placeholder={placeholder} className={`${inputClass} pr-11`} />}</div>{error && <p className="mt-2 text-xs font-semibold text-[#B33F32]">{error}</p>}</div>;
+  const props = { id: name, name, value, onChange, required: true, "aria-invalid": Boolean(error), "aria-describedby": error ? `${name}-error` : undefined };
+  return <div><label htmlFor={name} className="mb-2 block text-sm font-bold text-[#172331]">{label}</label><div className="relative">{Icon && <Icon size={18} aria-hidden="true" className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-[#5A6574]/60" />}{select ? <select {...props} className={`${inputClass} min-h-12 appearance-none ps-11`}><option value="">{placeholder}</option>{options.map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select> : <input {...props} type={type} dir={type === "email" ? "ltr" : undefined} autoComplete={type === "email" ? "email" : "organization"} maxLength={255} placeholder={placeholder} className={`${inputClass} min-h-12 ${type === "email" ? "px-11" : "ps-11"}`} />}</div>{error && <p id={`${name}-error`} role="alert" className="mt-2 text-xs font-semibold text-[#B33F32]">{error}</p>}</div>;
 }
 
 function PasswordField({ label, name, value, onChange, placeholder, visible, onToggle, error }) {
-  return <div><label htmlFor={name} className="mb-2 block text-sm font-bold text-[#172331]">{label}</label><div className="relative"><LockKeyhole size={18} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#5A6574]/35" /><input id={name} name={name} type={visible ? "text" : "password"} value={value} onChange={onChange} placeholder={placeholder} className={`${inputClass} px-12`} /><button type="button" onClick={onToggle} className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-[#5A6574]/45 transition hover:bg-[#F3EFE5] hover:text-[#172331]" aria-label={visible ? t("إخفاء كلمة المرور") : t("إظهار كلمة المرور")}>{visible ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>{error && <p className="mt-2 text-xs font-semibold text-[#B33F32]">{error}</p>}</div>;
+  return <div><label htmlFor={name} className="mb-2 block text-sm font-bold text-[#172331]">{label}</label><div className="relative"><LockKeyhole size={18} aria-hidden="true" className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-[#5A6574]/60" /><input id={name} name={name} type={visible ? "text" : "password"} autoComplete="new-password" required maxLength={72} aria-invalid={Boolean(error)} aria-describedby={[name === "password" ? "password-help" : "", error ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined} value={value} onChange={onChange} placeholder={placeholder} className={`${inputClass} min-h-12 px-12`} /><button type="button" onClick={onToggle} aria-pressed={visible} className="absolute end-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-lg text-[#5A6574] transition hover:bg-[#F3EFE5] hover:text-[#172331] focus-visible:outline-2" aria-label={visible ? t("إخفاء كلمة المرور") : t("إظهار كلمة المرور")}>{visible ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>{error && <p id={`${name}-error`} role="alert" className="mt-2 text-xs font-semibold text-[#B33F32]">{error}</p>}</div>;
 }
 
 const PRIMARY = "inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#EEA122] px-5 text-sm font-black text-[#172331] transition hover:brightness-95 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60";
 const SECONDARY = "inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-[#5A6574]/20 bg-white px-5 text-sm font-bold text-[#172331] transition hover:border-[#EEA122]";
 
-function Actions({ onBack, onNext, backLabel = t("رجوع") }) {
-  return <div className="mt-7 flex gap-3"><button type="button" onClick={onBack} className={SECONDARY}>{backLabel}</button><button type="button" onClick={onNext} className={`${PRIMARY} flex-[2]`}>{t("التالي")} <ArrowLeft size={17} aria-hidden="true" /></button></div>;
+function Actions({ onBack, disabled, backLabel = t("رجوع") }) {
+  return <div className="mt-7 flex gap-3"><button type="button" disabled={disabled} onClick={onBack} className={SECONDARY}>{backLabel}</button><button type="submit" disabled={disabled} className={`${PRIMARY} flex-[2]`}>{t("التالي")} <NextArrow size={17} aria-hidden="true" /></button></div>;
 }
 
 function PrimaryButton({ onClick, children }) {

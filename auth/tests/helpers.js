@@ -22,7 +22,7 @@ export async function reset() {
   const { rows } = await sql`select database() as name`.execute(db);
   if (!/test/i.test(rows[0].name)) throw new Error(`Refusing to empty "${rows[0].name}": use a database whose name contains "test".`);
   await sql`SET FOREIGN_KEY_CHECKS = 0`.execute(db);
-  for (const table of ["google_registrations", "auth_rate_limits", "auth_two_factors", "auth_verifications", "auth_accounts", "auth_sessions", "staff", "users"]) {
+  for (const table of ["auth_google_proofs", "google_registrations", "auth_rate_limits", "auth_two_factors", "auth_verifications", "auth_accounts", "auth_sessions", "staff", "users"]) {
     await sql`DELETE FROM ${sql.table(table)}`.execute(db);
   }
   await sql`SET FOREIGN_KEY_CHECKS = 1`.execute(db);

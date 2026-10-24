@@ -12,6 +12,7 @@ import { assertConfig, config } from "./config.js";
 import { db } from "./db.js";
 import { devices } from "./devices.js";
 import { googleRegistration, googleRegistrationGate } from "./google-registration.js";
+import { beforeGoogleLink, googleAccountData, googleLinks, validateGoogleLink } from "./google-links.js";
 import {
   accountLocked, assertMaySignIn, clearFailures, findUserByEmail, isLocked, mayReceiveMail,
   recordFailure, syncCredentialFromUser, syncUserFromCredential,
@@ -39,6 +40,7 @@ const WEAK_PASSWORD = {
 const LIMITS = [
   [/^\/sign-in\//, { window: 60, max: 10 }],
   [/^\/two-factor\/verify-/, { window: 60, max: 10 }],
+  [/^\/google-link\//, { window: 60, max: 10 }],
   [/^\/(request-password-reset|send-verification-email)$/, { window: 15 * 60, max: 5 }],
   [/^\/(reset-password|change-password)/, { window: 10 * 60, max: 10 }],
 ];
@@ -64,9 +66,11 @@ export const auth = betterAuth({
   trustedOrigins: config.trustedOrigins,
   database: { db, type: "mysql", transaction: true },
   telemetry: { enabled: false },
+  // Better Auth errors may contain OAuth state in their nested details.
+  logger: { log: (level) => console.warn(`[auth] ${level}: authentication operation reported an error`) },
 
   user: {
-    validateUserInfo: googleRegistrationGate,
+    validateUserInfo: async (data, ctx) => (await validateGoogleLink(data, ctx)) || googleRegistrationGate(data, ctx),
     modelName: "users",
     fields: { emailVerified: "email_verified", createdAt: "created_at", updatedAt: "updated_at" },
   },
@@ -81,17 +85,16 @@ export const auth = betterAuth({
   },
   account: {
     modelName: "auth_accounts",
+    additionalFields: { googleEmail: { type: "string", required: false, input: false, fieldName: "google_email" } },
     fields: {
       accountId: "account_id", providerId: "provider_id", userId: "user_id",
       accessToken: "access_token", refreshToken: "refresh_token", idToken: "id_token",
       accessTokenExpiresAt: "access_token_expires_at", refreshTokenExpiresAt: "refresh_token_expires_at",
       createdAt: "created_at", updatedAt: "updated_at",
     },
-    // Google signs in an existing account with the same e-mail only when Google
-    // vouches for that e-mail AND the menuPilot account confirmed it too (no
-    // "trusted provider" shortcut): otherwise an unverified Google address, or
-    // an account pre-registered with someone else's address, could be linked.
-    accountLinking: { enabled: true, allowDifferentEmails: false, requireLocalEmailVerified: true },
+    // Different emails are accepted ONLY after google-links.js validates a
+    // session-bound, single-use proof. Email matching never links implicitly.
+    accountLinking: { enabled: true, allowDifferentEmails: true, disableImplicitLinking: true, requireLocalEmailVerified: true },
     encryptOAuthTokens: true,
   },
   verification: {
@@ -142,6 +145,7 @@ export const auth = betterAuth({
     : {},
 
   plugins: [
+    googleLinks(() => auth),
     googleRegistration(),
     twoFactor({
       issuer: "menuPilot",
@@ -173,6 +177,7 @@ export const auth = betterAuth({
   onAPIError: { errorURL: "/login" },
 
   databaseHooks: {
+    account: { create: { before: googleAccountData }, update: { before: googleAccountData } },
     // Accounts are created by Laravel only (it starts the trial, the restaurant…).
     user: { create: { before: async () => false } },
     session: {
@@ -197,6 +202,9 @@ export const auth = betterAuth({
       if (origin && !ctx.context.isTrustedOrigin(origin)) throw fail("FORBIDDEN", "INVALID_ORIGIN", "Invalid origin");
 
       switch (ctx.path) {
+        case "/link-social":
+          await beforeGoogleLink(ctx);
+          return;
         case "/sign-in/email": {
           const user = await findUserByEmail(ctx.body?.email);
           if (isLocked(user)) throw accountLocked();
@@ -216,7 +224,7 @@ export const auth = betterAuth({
           throw fail("NOT_FOUND", "NOT_AVAILABLE", "Not available");
         case "/unlink-account":
           if (ctx.body?.providerId === "credential") throw fail("BAD_REQUEST", "CANNOT_UNLINK_PASSWORD", "لا يمكن إزالة كلمة المرور من الحساب.");
-          return;
+          throw fail("FORBIDDEN", "GOOGLE_REAUTH_REQUIRED", "Confirm your identity from Security first.");
         default:
       }
     }),
@@ -256,4 +264,5 @@ export async function checkSchema() {
     if (problems.length) throw new Error(`Database schema doesn't match the auth service (run Laravel's migrations): ${JSON.stringify(problems)}`);
   }
   await db.selectFrom("google_registrations").select("token_hash").limit(0).execute();
+  await db.selectFrom("auth_google_proofs").select("id").limit(0).execute();
 }

@@ -18,6 +18,11 @@ const authClient = () => (clientPromise ??= import("./authClient").then((m) => m
 
 /* ---- errors: one Error with a translated message and the server's code ---- */
 const MESSAGES = {
+  GOOGLE_REAUTH_REQUIRED: "أكّد هويتك مجددًا من صفحة الأمان. انتهت المحاولة أو تغيّرت جلسة الدخول.",
+  GOOGLE_WRONG_REAUTH_ACCOUNT: "اختر حساب Google المرتبط حاليًا لإثبات هويتك، ثم حاول مجددًا.",
+  GOOGLE_EMAIL_CONFLICT: "بريد Google مستخدم في حساب menuPilot آخر. لن نربط الحسابين أو ندمجهما. استخدم حساب Google آخر.",
+  FAILED_TO_UNLINK_LAST_ACCOUNT: "لا يمكن فك آخر وسيلة دخول صالحة. أضف وسيلة دخول أخرى أولًا.",
+  account_not_linked: "حساب Google غير مرتبط. سجّل الدخول بالطريقة الحالية ثم اربطه من صفحة الأمان.",
   GOOGLE_REGISTRATION_EXPIRED: "انتهت مهلة التسجيل. حاول باستخدام Google مجددًا.",
   INVALID_EMAIL_OR_PASSWORD: "البريد الإلكتروني أو كلمة المرور غير صحيحة. تأكد منهما وحاول مجددًا.",
   INVALID_PASSWORD: "كلمة المرور الحالية غير صحيحة.",
@@ -37,7 +42,6 @@ const MESSAGES = {
   // Google (the ?error= of the page Google sends you back to)
   // (Better Auth 1.7: an error's words joined by "_", or OAUTH_CALLBACK_ERROR_CODES)
   signup_disabled: "لا يوجد حساب في menuPilot بهذا البريد. أنشئ حساب مطعمك أولًا، أو اطلب من صاحب المطعم إضافتك.",
-  account_not_linked: "تعذّر ربط حساب Google بهذا الحساب. سجّل الدخول بكلمة المرور ثم اربطه من صفحة الأمان.",
   unable_to_link_account: "تعذّر ربط حساب Google بهذا الحساب. سجّل الدخول بكلمة المرور ثم اربطه من صفحة الأمان.",
   email_does_not_match: "بريد حساب Google لا يطابق بريد حسابك في menuPilot.",
   account_already_linked_to_different_user: "حساب Google هذا مرتبط بحساب آخر في menuPilot.",
@@ -126,12 +130,20 @@ export async function loginWithGoogle(errorCallbackURL = "/login") {
 
 export const googleRegistrationInfo = () => call((c) => c.$fetch("/google-registration"));
 export async function completeGoogleRegistration({ restaurantName, restaurantType, csrf }) {
-  const response = await fetch("/api/account/register/google", {
-    method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Google-Registration": csrf },
-    body: JSON.stringify({ restaurant_name: restaurantName, restaurant_type: restaurantType }),
-  });
-  if (!response.ok) throw new Error(response.status === 401 || response.status === 409
-    ? t("انتهت مهلة التسجيل. حاول باستخدام Google مجددًا.") : t("تعذر إنشاء الحساب. حاول مرة أخرى."));
+  let response;
+  try {
+    response = await fetch("/api/account/register/google", {
+      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Google-Registration": csrf },
+      body: JSON.stringify({ restaurant_name: restaurantName, restaurant_type: restaurantType }),
+    });
+  } catch { throw toError({ status: 0 }); }
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    const error = new Error(response.status === 401 || response.status === 409
+      ? t("انتهت مهلة التسجيل. حاول باستخدام Google مجددًا.") : t("تعذر إنشاء الحساب. حاول مرة أخرى."));
+    error.errors = body?.errors;
+    throw error;
+  }
   await call((c) => c.$fetch("/google-registration/session", { method: "POST", body: {} }));
 }
 
@@ -199,8 +211,10 @@ export const revokeDevice = (id) => call((c) => c.$fetch("/revoke-device", { met
 export const revokeOtherDevices = () => call((c) => c.revokeOtherSessions());
 
 export const listLinkedAccounts = () => call((c) => c.listAccounts());
+export const googleLinkStatus = () => call((c) => c.$fetch("/google-link/status"));
+export const verifyGoogleOperation = (body) => call((c) => c.$fetch("/google-link/verify", { method: "POST", body }));
 export const linkGoogle = () => call((c) => c.linkSocial({ provider: "google", callbackURL: "/account/security?linked=google", errorCallbackURL: "/account/security" }));
-export const unlinkGoogle = () => call((c) => c.unlinkAccount({ providerId: "google" }));
+export const unlinkGoogle = () => call((c) => c.$fetch("/google-link/unlink", { method: "POST", body: {} }));
 
 /** Step 1: {totpURI, backupCodes}. Two-step sign-in is on once confirmTwoFactor() accepts a code. */
 export const startTwoFactor = (password) => call((c) => c.twoFactor.enable({ password, issuer: "menuPilot" }));

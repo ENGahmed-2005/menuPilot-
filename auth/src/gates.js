@@ -79,6 +79,9 @@ export async function syncCredentialFromUser(user) {
     }
     return;
   }
+  // A Google-only owner's schema placeholder is not a usable password.
+  // Password reset explicitly provisions a real credential when requested.
+  if (await db.selectFrom("auth_accounts").select("id").where("user_id", "=", user.id).where("provider_id", "=", "google").executeTakeFirst()) return;
   const now = new Date();
   await db.insertInto("auth_accounts")
     .values({ id: randomId(), user_id: user.id, account_id: String(user.id), provider_id: "credential", password: user.password, created_at: now, updated_at: now })

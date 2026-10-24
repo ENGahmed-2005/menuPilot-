@@ -82,7 +82,7 @@ app.on(["GET", "POST"], "/api/auth/*", bodyLimit({ maxSize: 64 * 1024 }), async 
 
 app.notFound((c) => c.json({ message: "Not found" }, 404));
 app.onError((error, c) => {
-  console.error("[auth] unhandled error:", error?.message || error);
+  console.error("[auth] unhandled request error");
   return c.json({ message: "Internal server error" }, 500);
 });
 

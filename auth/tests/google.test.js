@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 
 process.env.GOOGLE_CLIENT_ID = "test-client.apps.googleusercontent.com";
 process.env.GOOGLE_CLIENT_SECRET = "test-client-secret";
-const { browser, db, makeStaff, makeUser, reset, sessionsOf } = await import("./helpers.js");
+const { browser, db, makeStaff, makeUser, PASSWORD, reset, sessionsOf } = await import("./helpers.js");
 
 beforeEach(reset);
 after(() => db.destroy());
@@ -50,8 +50,9 @@ describe("Google sign-in", () => {
     assert.match(url.searchParams.get("scope"), /email/);
   });
 
-  it("signs an existing account in and links Google to it", async () => {
+  it("signs an existing linked identity in by subject", async () => {
     const owner = await makeUser();
+    await db.insertInto("auth_accounts").values({ id: "google-linked-1", user_id: owner.id, provider_id: "google", account_id: "google-1" }).execute();
     const b = browser();
     const res = await googleSignIn(b, { sub: "google-1", email: owner.email });
     assert.equal(res.status, 302);
@@ -162,11 +163,13 @@ describe("Google sign-in", () => {
   it("refuses a disabled staff member, and accounts with two-step verification", async () => {
     const owner = await makeUser();
     const cashier = await makeStaff(owner.id, "cashier", { active: 0 });
+    await db.insertInto("auth_accounts").values({ id: "disabled-google", user_id: cashier.id, provider_id: "google", account_id: "google-3" }).execute();
     let res = await googleSignIn(browser(), { sub: "google-3", email: cashier.email });
     assert.match(res.location, /^\/login\?error=ACCOUNT_DISABLED&error_description=/);
     assert.equal((await sessionsOf(cashier.id)).length, 0);
 
     const guarded = await makeUser({ two_factor_enabled: 1 });
+    await db.insertInto("auth_accounts").values({ id: "guarded-google", user_id: guarded.id, provider_id: "google", account_id: "google-4" }).execute();
     res = await googleSignIn(browser(), { sub: "google-4", email: guarded.email });
     assert.match(res.location, /^\/login\?error=TWO_FACTOR_USE_PASSWORD/);
     assert.equal((await sessionsOf(guarded.id)).length, 0);
@@ -187,22 +190,23 @@ describe("Google sign-in", () => {
     assert.equal((await db.selectFrom("auth_accounts").select("id").where("provider_id", "=", "google").execute()).length, 0);
   });
 
-  it("links Google from the Security page while signed in, only for the same e-mail", async () => {
+  it("links Google from Security only after reauthentication, including a different email", async () => {
     const owner = await makeUser();
     const b = browser();
     assert.equal((await b.signIn(owner.email)).status, 200);
 
     const link = async (user) => {
+      assert.equal((await b.call("/api/auth/google-link/verify", { method: "POST", body: { action: "link", password: PASSWORD } })).status, 200);
       const start = await b.call("/api/auth/link-social", { method: "POST", body: { provider: "google", callbackURL: "/account/security?linked=google", errorCallbackURL: "/account/security" } });
       assert.equal(start.status, 200);
       googleUser = user;
       const state = new URL(start.json.url).searchParams.get("state");
       return (await b.call(`/api/auth/callback/google?code=test-code&state=${encodeURIComponent(state)}`)).headers.get("location") || "";
     };
-    assert.match(await link({ sub: "google-7", email: "someone-else@gmail.test" }), /^\/account\/security\?error=/);
+    assert.equal(await link({ sub: "google-7", email: "someone-else@gmail.test" }), "/account/security?linked=google");
     assert.equal(await link({ sub: "google-8", email: owner.email }), "/account/security?linked=google");
     const accounts = (await b.call("/api/auth/list-accounts")).json.map((a) => a.providerId).sort();
-    assert.deepEqual(accounts, ["credential", "google"]);
+    assert.deepEqual(accounts, ["credential", "google", "google"]);
 
     // And Google signs that account in from now on.
     const res = await googleSignIn(browser(), { sub: "google-8", email: owner.email });
