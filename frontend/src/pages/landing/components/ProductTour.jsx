@@ -48,7 +48,7 @@ const FEATURES = [
 function Screen({ feature }) {
   return (
     // Phone shots get a taller box on small screens, so the screen stays readable.
-    <div className={`relative overflow-hidden rounded-2xl border border-[#F3EFE5]/10 bg-[#0d1620] shadow-2xl ${feature.phone ? "aspect-[4/5] sm:aspect-[16/10]" : "aspect-[16/10]"}`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-[#f4efe6]/10 bg-[#0d1620] shadow-2xl ${feature.phone ? "aspect-[4/5] sm:aspect-[16/10]" : "aspect-[16/10]"}`}>
       {feature.phone ? (
         // A flex box with a definite height (inset-0), so the phone fits its full height on any width.
         <div className="absolute inset-0 flex items-center justify-center py-[3%] bg-[radial-gradient(60%_80%_at_50%_30%,rgba(238,161,34,0.14),transparent_70%)]">
@@ -58,7 +58,7 @@ function Screen({ feature }) {
       ) : (
         <>
           <div className="flex h-7 items-center gap-1.5 border-b border-white/10 bg-[#0a1118] px-3" aria-hidden="true">
-            <i className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><i className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><i className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+            <i className="h-2.5 w-2.5 rounded-full bg-[#e67e22]" /><i className="h-2.5 w-2.5 rounded-full bg-[#f4efe6]" /><i className="h-2.5 w-2.5 rounded-full bg-[#1f2d3d]" />
           </div>
           <img key={feature.img} src={shot(feature.img)} alt={feature.title} width="1600" height="1000" decoding="async" className="tour-in block w-full" />
         </>
@@ -97,7 +97,7 @@ export default function ProductTour() {
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={() => setPaused(false)}>
       <Reveal className="max-w-2xl">
         <h2 className="text-3xl font-black leading-tight sm:text-4xl">{t("كل ما يحتاجه مطعمك، في نظام واحد.")}</h2>
-        <p className="mt-3 text-base leading-7 text-[#F3EFE5]/70">{t("اختر جزءًا لترى شاشته الحقيقية من النظام، من طاولة الزبون إلى أرباح الشهر.")}</p>
+        <p className="mt-3 text-base leading-7 text-[#f4efe6]/70">{t("اختر جزءًا لترى شاشته الحقيقية من النظام، من طاولة الزبون إلى أرباح الشهر.")}</p>
       </Reveal>
       <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-start lg:gap-10">
         <div role="tablist" aria-label={t("أجزاء menuPilot")} className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0">
@@ -106,14 +106,14 @@ export default function ProductTour() {
             const Icon = x.icon;
             return (
               <button key={x.id} type="button" role="tab" id={`tour-${x.id}`} aria-selected={on} aria-controls="tour-panel" onClick={() => pick(i)}
-                className={`relative min-h-11 shrink-0 overflow-hidden rounded-xl border px-4 py-2.5 text-start transition-colors lg:w-full ${on ? "border-[#EEA122]/45 bg-[#F3EFE5]/[.07]" : "border-[#F3EFE5]/10 lg:border-transparent hover:bg-[#F3EFE5]/[.04]"}`}>
+                className={`relative min-h-11 shrink-0 overflow-hidden rounded-xl border px-4 py-2.5 text-start transition-colors lg:w-full ${on ? "border-[#e67e22]/45 bg-[#f4efe6]/[.07]" : "border-[#f4efe6]/10 lg:border-transparent hover:bg-[#f4efe6]/[.04]"}`}>
                 <span className="flex items-center gap-3">
-                  <Icon size={18} aria-hidden="true" className={on ? "text-[#EEA122]" : "text-[#F3EFE5]/55"} />
-                  <b className={`whitespace-nowrap text-sm lg:whitespace-normal ${on ? "text-[#F3EFE5]" : "text-[#F3EFE5]/75"}`}>{x.title}</b>
+                  <Icon size={18} aria-hidden="true" className={on ? "text-[#e67e22]" : "text-[#f4efe6]/55"} />
+                  <b className={`whitespace-nowrap text-sm lg:whitespace-normal ${on ? "text-[#f4efe6]" : "text-[#f4efe6]/75"}`}>{x.title}</b>
                 </span>
-                {on && <span className="mt-1.5 hidden text-sm leading-6 text-[#F3EFE5]/70 lg:block">{x.text}</span>}
+                {on && <span className="mt-1.5 hidden text-sm leading-6 text-[#f4efe6]/70 lg:block">{x.text}</span>}
                 {on && auto && !reduce && (
-                  <span key={active} aria-hidden="true" className="tour-progress absolute inset-x-0 bottom-0 h-0.5 bg-[#EEA122]" style={{ animationDuration: `${STEP_MS}ms`, animationPlayState: paused ? "paused" : "running" }} />
+                  <span key={active} aria-hidden="true" className="tour-progress absolute inset-x-0 bottom-0 h-0.5 bg-[#e67e22]" style={{ animationDuration: `${STEP_MS}ms`, animationPlayState: paused ? "paused" : "running" }} />
                 )}
               </button>
             );
@@ -121,10 +121,10 @@ export default function ProductTour() {
         </div>
         <div id="tour-panel" role="tabpanel" aria-labelledby={`tour-${f.id}`}>
           <Screen feature={f} />
-          <p className="mt-5 text-base leading-7 text-[#F3EFE5]/80 lg:hidden">{f.text}</p>
+          <p className="mt-5 text-base leading-7 text-[#f4efe6]/80 lg:hidden">{f.text}</p>
           <ul className="mt-4 grid gap-2 sm:grid-cols-3">
             {f.points.map((p) => (
-              <li key={p} className="flex items-start gap-2 text-sm leading-6 text-[#F3EFE5]/80"><Check size={16} className="mt-1 shrink-0 text-[#EEA122]" aria-hidden="true" />{p}</li>
+              <li key={p} className="flex items-start gap-2 text-sm leading-6 text-[#f4efe6]/80"><Check size={16} className="mt-1 shrink-0 text-[#e67e22]" aria-hidden="true" />{p}</li>
             ))}
           </ul>
         </div>

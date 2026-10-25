@@ -1,27 +1,50 @@
-import { Clock3, LayoutDashboard, QrCode, ShieldCheck } from "lucide-react";
-import { t } from "../../../i18n";
-
-const ITEMS = [
-  [QrCode,          t("الطلب عبر QR"),    t("اطلب بدون نادل")],
-  [Clock3,          t("تشغيل أسرع"),    t("وقت أقل، إنتاج أكثر")],
-  [ShieldCheck,     t("صلاحيات آمنة"),  t("كل دور بحدوده")],
-  [LayoutDashboard, t("إدارة مركزية"),  t("كل شيء في مكان")],
-];
+import { useEffect, useRef, useState } from "react";
+import { landingCopy } from "./landingCopy";
 
 export default function ValueStrip() {
+  const ref = useRef(null);
+  const [counts, setCounts] = useState(() => landingCopy.stats.map(() => 0));
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return undefined;
+
+    const targets = landingCopy.stats.map(({ amount }) => amount);
+    let frame;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setCounts(targets);
+        return;
+      }
+
+      const startedAt = performance.now();
+      const animate = (now) => {
+        const progress = Math.min((now - startedAt) / 1100, 1);
+        const eased = 1 - (1 - progress) ** 3;
+        setCounts(targets.map((target) => Math.round(target * eased)));
+        if (progress < 1) frame = requestAnimationFrame(animate);
+      };
+      frame = requestAnimationFrame(animate);
+    }, { threshold: 0.35 });
+
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
-    <section className="border-y border-[#F3EFE5]/8 bg-[#F3EFE5]/[.02]">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-x-reverse divide-[#F3EFE5]/8 px-0 sm:grid-cols-4">
-        {ITEMS.map(([Icon, title, sub]) => (
-          <div
-            key={title}
-            className="flex flex-col items-center gap-2 px-4 py-7 text-center sm:px-6"
-          >
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EEA122]/10 text-[#EEA122]">
-              <Icon size={18} />
-            </span>
-            <span className="text-sm font-black text-[#F3EFE5]/90">{title}</span>
-            <span className="text-[11px] text-[#F3EFE5]/70">{sub}</span>
+    <section className="landing-value-strip">
+      <div ref={ref} className="landing-value-strip-inner">
+        {landingCopy.stats.map((item, index) => (
+          <div key={item.title} className="landing-value-item" aria-label={`${item.amount}${item.suffix} ${item.title}`}>
+            <span className="landing-value-number" aria-hidden="true">{counts[index]}{item.suffix}</span>
+            <span className="landing-value-title">{item.title}</span>
+            <span className="landing-value-subtitle">{item.caption}</span>
           </div>
         ))}
       </div>

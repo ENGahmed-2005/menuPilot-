@@ -4,27 +4,27 @@ import { t } from "../../../i18n";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-[#F3EFE5]/8 bg-[#172331]">
+    <footer className="border-t border-[#f4efe6]/8 bg-[#172331]">
       <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-10">
         <div className="grid gap-10 md:grid-cols-[1fr_auto]">
 
           {/* Brand */}
           <div>
             <BrandLogo on="dark" height={32} />
-            <p className="mt-4 max-w-xs text-sm leading-7 text-[#F3EFE5]/70">
+            <p className="mt-4 max-w-xs text-sm leading-7 text-[#f4efe6]/70">
               {t("نظام إدارة مطاعم مبني ليجعل التشغيل أبسط، الطلبات أسرع، وفريقك أكثر تنسيقًا.")}
             </p>
           </div>
 
           {/* Nav */}
           <div>
-            <p className="mb-4 text-[11px] font-black tracking-[.15em] text-[#F3EFE5]/30 uppercase">{t("الأقسام")}</p>
+            <p className="mb-4 text-[11px] font-black tracking-[.15em] text-[#f4efe6]/30 uppercase">{t("الأقسام")}</p>
             <nav className="flex flex-col gap-2.5">
               {NAV_LINKS.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
-                  className="text-sm text-[#F3EFE5]/70 transition hover:text-[#EEA122]"
+                  className="text-sm text-[#f4efe6]/70 transition hover:text-[#e67e22]"
                 >
                   {link.label}
                 </a>
@@ -33,9 +33,9 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-[#F3EFE5]/8 pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[#F3EFE5]/30">© {new Date().getFullYear()} {t("menuPilot. جميع الحقوق محفوظة.")}</p>
-          <p className="text-xs text-[#F3EFE5]/25">{t("تجربة مجانية 14 يومًا — بدون بطاقة ائتمانية")}</p>
+        <div className="mt-10 flex flex-col gap-3 border-t border-[#f4efe6]/8 pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-[#f4efe6]/30">© {new Date().getFullYear()} {t("menuPilot. جميع الحقوق محفوظة.")}</p>
+          <p className="text-xs text-[#f4efe6]/25">{t("تجربة مجانية 14 يومًا — بدون بطاقة ائتمانية")}</p>
         </div>
       </div>
     </footer>

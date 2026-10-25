@@ -50,26 +50,26 @@ export default function TryDemo() {
 
   return (
     <section id="demo" className="mx-auto max-w-7xl scroll-mt-24 px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
-      <Reveal className="rounded-3xl border border-[#EEA122]/30 bg-[#EEA122]/[.06] p-6 sm:p-10">
+      <Reveal className="rounded-3xl border border-[#e67e22]/30 bg-[#e67e22]/[.06] p-6 sm:p-10">
         <h2 className="text-3xl font-black tracking-tight sm:text-4xl">{t("جرّبه الآن، دون تسجيل.")}</h2>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-[#F3EFE5]/75">{t("مطعم تجريبي حي فيه طلبات وطاولات ومبيعات أشهر. اختر من تريد أن تكون. تُعاد بياناته كل يوم.")}</p>
+        <p className="mt-3 max-w-2xl text-base leading-7 text-[#f4efe6]/75">{t("مطعم تجريبي حي فيه طلبات وطاولات ومبيعات أشهر. اختر من تريد أن تكون. تُعاد بياناته كل يوم.")}</p>
         <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {ROLES.map((role) => {
             const Icon = role.icon;
             const loading = busy === role.id;
             return (
               <button key={role.id} type="button" onClick={() => open(role)} disabled={Boolean(busy)}
-                className="group flex min-h-11 flex-col items-start rounded-2xl border border-[#F3EFE5]/12 bg-[#0d1620] p-4 text-start transition-colors hover:border-[#EEA122]/60 disabled:opacity-60 sm:p-5">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EEA122]/15 text-[#EEA122]">
+                className="group flex min-h-11 flex-col items-start rounded-2xl border border-[#f4efe6]/12 bg-[#0d1620] p-4 text-start transition-colors hover:border-[#e67e22]/60 disabled:opacity-60 sm:p-5">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e67e22]/15 text-[#e67e22]">
                   {loading ? <Loader2 size={20} className="animate-spin" aria-hidden="true" /> : <Icon size={20} aria-hidden="true" />}
                 </span>
-                <b className="mt-3 text-base font-black text-[#F3EFE5]">{loading ? t("جارٍ فتح المطعم…") : role.cta}</b>
-                <span className="mt-1 text-sm leading-6 text-[#F3EFE5]/65">{role.text}</span>
+                <b className="mt-3 text-base font-black text-[#f4efe6]">{loading ? t("جارٍ فتح المطعم…") : role.cta}</b>
+                <span className="mt-1 text-sm leading-6 text-[#f4efe6]/65">{role.text}</span>
               </button>
             );
           })}
         </div>
-        {error && <p role="alert" className="mt-4 text-sm font-bold text-[#ff8a7a]">{error}</p>}
+        {error && <p role="alert" className="mt-4 text-sm font-bold text-[#e67e22]">{error}</p>}
       </Reveal>
     </section>
   );

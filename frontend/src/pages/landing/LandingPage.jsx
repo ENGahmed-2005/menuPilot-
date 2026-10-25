@@ -21,7 +21,11 @@ import Pricing from "./components/Pricing";
 import TeamSection from "./components/TeamSection";
 import CTASection from "./components/CTASection";
 import Footer from "./components/Footer";
+import ValueStrip from "./components/ValueStrip";
+import OrderJourney from "./components/OrderJourney";
+import LandingCursor from "./components/LandingCursor";
 import { dir } from "../../i18n";
+import "./landing.css";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -29,25 +33,24 @@ export default function LandingPage() {
   return (
     <main
       dir={dir}
-      className="min-h-screen scroll-smooth overflow-x-hidden bg-navy text-[#F3EFE5] [cursor:url('/cursor_eat.cur'),_auto]"
+      className="landing-page min-h-screen scroll-smooth"
     >
       <Navbar onNavigate={navigate} />
-      {/* Spacer to compensate for the fixed navbar height (4.25rem ≈ 68px) */}
-      <div className="h-[4.25rem]" aria-hidden="true" />
+      <div className="landing-nav-spacer" aria-hidden="true" />
       <Hero onNavigate={navigate} />
+      <OrderJourney />
+      <ValueStrip />
       <ProductTour />
       <HowItWorks />
       <Roles />
       <TryDemo />
       <Pricing />
-
-      {/* TEAM: intentionally before CTA + footer */}
-      <section id="team" className="border-t border-[#F3EFE5]/10 bg-[#F3EFE5]/[.02]">
+      <section className="landing-team-wrap border-t border-[#f4efe6]/10 bg-[#f4efe6]/[.02]">
         <TeamSection />
       </section>
-
       <CTASection onNavigate={navigate} />
       <Footer />
+      <LandingCursor />
     </main>
   );
 }

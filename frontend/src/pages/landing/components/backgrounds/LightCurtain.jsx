@@ -7,7 +7,7 @@
    تستخدمها في قسم تاني لاحقًا. مثال استخدام:
      import LightCurtain from "./backgrounds/LightCurtain";
      <div style={{ position: "absolute", inset: 0 }}>
-       <LightCurtain background="#172331" baseColor="#B8793E" accentColor="#4B6A8A" highlight="#EEA122" />
+       <LightCurtain background="#172331" baseColor="#B8793E" accentColor="#4B6A8A" highlight="#e67e22" />
      </div>
    ========================================================================== */
 import * as React from "react"
