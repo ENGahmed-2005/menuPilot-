@@ -21,6 +21,9 @@ function Thumb({ src, alt, tint, className, iconSize = 22 }) {
 }
 
 export default function MenuItemCard({ item, style, brand, radius, count = 0, onOpen, onAdd }) {
+  const unavailable = item.is_available === false;
+  const disabledLook = unavailable ? "opacity-60 grayscale" : "";
+  const availability = unavailable && <span className="mt-1 block text-xs font-bold text-brick">{t("غير متوفر حاليًا")}</span>;
   const priceColor = style.price_color === "text" ? brand.text_color : brand.primary_color;
   // A dish without a photo gets no empty box: the card simply has no image.
   const showImage = style.show_images && Boolean(item.imageUrl);
@@ -29,19 +32,19 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
   // Grid cards use the reference's small rounded-square button; the others a round one.
   const square = style.layout === "grid";
   const add = (
-    <button type="button" onClick={() => onAdd(item)} aria-label={t("إضافة {0} إلى السلة", { 0: item.name })}
-      className={`pointer-events-auto relative z-10 grid shrink-0 place-items-center text-white shadow-sm transition-transform active:scale-90 ${square ? "h-10 w-10 rounded-xl" : "h-11 w-11 rounded-full"}`}
+    <button type="button" disabled={unavailable} onClick={() => onAdd(item)} aria-label={t("إضافة {0} إلى السلة", { 0: item.name })}
+      className={`pointer-events-auto relative z-10 grid shrink-0 place-items-center text-white shadow-sm transition-transform active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 ${square ? "h-10 w-10 rounded-xl" : "h-11 w-11 rounded-full"}`}
       style={{ background: brand.button_color }}>
       <Plus size={square ? 19 : 20} strokeWidth={2.5} aria-hidden="true" />
     </button>
   );
-  const open = <button type="button" onClick={() => onOpen(item)} className="absolute inset-0 z-0" style={{ borderRadius: radius }} aria-label={t("تفاصيل {0}", { 0: item.name })} />;
+  const open = <button type="button" disabled={unavailable} onClick={() => onOpen(item)} className="absolute inset-0 z-0 disabled:cursor-not-allowed" style={{ borderRadius: radius }} aria-label={t("تفاصيل {0}", { 0: item.name })} />;
   const badge = count > 0 && <span className="absolute start-2 top-2 z-[1] rounded-full bg-black/70 px-2 py-1 text-xs font-black leading-none text-white">×{count}</span>;
   const price = <span className="text-[15px] font-black tabular-nums" style={{ color: priceColor }}>{money(item.price)}</span>;
 
   if (style.layout === "text") {
     return (
-      <div className="relative flex items-center gap-3 px-3 py-3" style={{ borderRadius: radius }}>
+      <div className={`relative flex items-center gap-3 px-3 py-3 ${disabledLook}`} style={{ borderRadius: radius }}>
         {open}
         <div className="pointer-events-none min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
@@ -50,6 +53,7 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
             {price}
           </div>
           {showDescription && <p className="mt-0.5 line-clamp-2 text-[13px] leading-5 opacity-70">{item.description}</p>}
+          {availability}
         </div>
         {add}
       </div>
@@ -59,7 +63,7 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
   if (style.layout === "photo" || style.layout === "grid") {
     const grid = style.layout === "grid";
     return (
-      <div className="relative flex h-full flex-col overflow-hidden shadow-sm ring-1 ring-black/5" style={surface}>
+      <div className={`relative flex h-full flex-col overflow-hidden shadow-sm ring-1 ring-black/5 ${disabledLook}`} style={surface}>
         {open}
         {style.show_images && (
           <div className="pointer-events-none relative">
@@ -69,6 +73,7 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
         )}
         <div className={`pointer-events-none flex flex-1 flex-col ${grid ? "p-3" : "p-3.5"}`}>
           <h3 className={`line-clamp-2 font-black ${grid ? "min-h-10 text-[15px] leading-5" : "text-base leading-6"}`}>{item.name}</h3>
+          {availability}
           {showDescription && !grid && <p className="mt-1 line-clamp-2 text-[13px] leading-5 opacity-70">{item.description}</p>}
           <div className="mt-auto flex items-center justify-between gap-2 pt-2">{price}{add}</div>
         </div>
@@ -79,7 +84,7 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
   // compact: a small horizontal card — image, text, and the + button at the
   // side, about 100px tall with a photo and 86px without.
   return (
-    <div className={`relative flex items-center gap-3 p-2.5 shadow-sm ring-1 ring-black/5 ${style.image_side === "end" ? "flex-row-reverse" : ""}`} style={surface}>
+    <div className={`relative flex items-center gap-3 p-2.5 shadow-sm ring-1 ring-black/5 ${disabledLook} ${style.image_side === "end" ? "flex-row-reverse" : ""}`} style={surface}>
       {open}
       {showImage && (
         <div className="pointer-events-none relative shrink-0">
@@ -90,6 +95,7 @@ export default function MenuItemCard({ item, style, brand, radius, count = 0, on
       <div className="pointer-events-none min-w-0 flex-1">
         <h3 className="line-clamp-1 text-[15px] font-black leading-6">{item.name}{!showImage && count > 0 && <span className="ms-1.5 text-xs font-black opacity-60">×{count}</span>}</h3>
         {showDescription && <p className="line-clamp-1 text-[13px] leading-5 opacity-70">{item.description}</p>}
+        {availability}
         <div className="mt-0.5">{price}</div>
       </div>
       {add}

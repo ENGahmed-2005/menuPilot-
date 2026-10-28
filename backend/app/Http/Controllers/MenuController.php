@@ -100,6 +100,7 @@ class MenuController extends Controller
         }
 
         $item->imageUrl = $item->image_url;
+        $item->is_available = (bool) $item->is_available;
         unset($item->image_url);
         $item->prepTimeMinutes = (int) ($item->prep_time_minutes ?? 15);
         $item->options = MenuOptions::decode($item->options ?? null);
@@ -242,7 +243,6 @@ class MenuController extends Controller
         $items = DB::table('menu_items')
             ->where('user_id', $t->user_id)
             ->whereNull('deleted_at')
-            ->where('is_available', true)
             ->orderBy('category')
             ->orderBy('name')
             ->get()

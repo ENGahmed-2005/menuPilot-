@@ -163,12 +163,14 @@ export default function Menu() {
 
   // A dish with extras opens its details, so the guest can choose them.
   function quickAdd(item) {
+    if (item.is_available === false) return;
     if (item.options?.length) { setSheetItem(item); return; }
     addItem(item, 1, "");
     toast.success(t("أُضيف «{0}» إلى السلة", { 0: item.name }));
   }
 
   function addFromSheet({ quantity, note, options }) {
+    if (!sheetItem || sheetItem.is_available === false) return;
     addItem(sheetItem, quantity, note, options);
     toast.success(t("أُضيف {0} × «{1}» إلى السلة", { 0: quantity, 1: sheetItem.name }));
     setSheetItem(null);

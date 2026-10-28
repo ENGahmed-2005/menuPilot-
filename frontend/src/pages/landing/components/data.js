@@ -21,6 +21,7 @@ export const ROLES = [
 ];
 
 export const NAV_LINKS = [
+  { href: "/restaurants", label: t("اطلب توصيل") },
   { href: "#features", label: t("المميزات") },
   { href: "#how", label: t("كيف يعمل") },
   { href: "#roles", label: t("الأدوار") },

@@ -62,6 +62,25 @@ export default function MenuManagement() {
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [editImageError, setEditImageError] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [availabilityBusy, setAvailabilityBusy] = useState(null);
+
+  async function toggleAvailability(item) {
+    if (!canOperate || availabilityBusy !== null) return;
+    setAvailabilityBusy(item.id);
+    setError(null);
+    setNotice("");
+    try {
+      const updated = await updateMenuItem(item.id, { is_available: !item.is_available });
+      setItems((current) => current.map((row) => row.id === item.id ? updated : row));
+      setNotice(updated.is_available
+        ? t("أصبح «{0}» متوفرًا للطلب.", { 0: item.name })
+        : t("أصبح «{0}» غير متوفر وسيظهر معطّلًا للزبائن.", { 0: item.name }));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setAvailabilityBusy(null);
+    }
+  }
 
   function load() {
     setLoading(true);
@@ -440,6 +459,12 @@ export default function MenuManagement() {
                         )}
                         <div className="min-w-0">
                           <div className="truncate font-medium text-ink">{item.name}</div>
+                          <button type="button" role="switch" aria-checked={item.is_available} aria-label={t("توفر {0} للطلب", { 0: item.name })}
+                            disabled={!canOperate || availabilityBusy !== null} onClick={() => toggleAvailability(item)}
+                            className={`mt-1 inline-flex min-h-9 items-center gap-2 rounded-full px-3 py-1 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${item.is_available ? "bg-herb/10 text-herb" : "bg-brick/10 text-brick"}`}>
+                            <span aria-hidden="true" className={`h-2 w-2 rounded-full ${item.is_available ? "bg-herb" : "bg-brick"}`} />
+                            {availabilityBusy === item.id ? t("جارٍ الحفظ…") : item.is_available ? t("متوفر للطلب") : t("غير متوفر حاليًا")}
+                          </button>
                           {(item.description || item.options.length > 0) && (
                             <div className="flex min-w-0 items-center gap-2 text-xs text-ink-soft">
                               {item.options.length > 0 && (

@@ -26,6 +26,7 @@ const Tables = lazy(() => import("../pages/owner/Tables"));
 const Orders = lazy(() => import("../pages/owner/Orders"));
 const Welcome = lazy(() => import("../pages/auth/Welcome"));
 const OnlineOrder = lazy(() => import("../pages/customer/OnlineOrder"));
+const DeliveryRestaurants = lazy(() => import("../pages/customer/DeliveryRestaurants"));
 const OnlineOrderTracking = lazy(() => import("../pages/customer/OnlineOrderTracking"));
 const OutsideOrders = lazy(() => import("../pages/owner/OutsideOrders"));
 const DeliveryBoard = lazy(() => import("../pages/owner/DeliveryBoard"));
@@ -82,6 +83,7 @@ export default function AppRoutes() {
         <Route path="/owner/dashboard" element={<DashboardShell><SubscriptionDashboard /></DashboardShell>} />
       </Route>
       {/* Ordering from outside the restaurant (public, no login). */}
+      <Route path="/restaurants" element={<DeliveryRestaurants />} />
       <Route path="/r/:slug" element={<OnlineOrder />} />
       <Route path="/o/:id" element={<OnlineOrderTracking />} />
       <Route element={<ProtectedRoute allow={["owner", "manager", "cashier"]} permission="view_orders" />}>

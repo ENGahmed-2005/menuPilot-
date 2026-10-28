@@ -28,15 +28,15 @@ function Photo({ src, alt, color }) {
   return <img src={src} alt={alt} onError={() => setFailed(true)} className="block aspect-[4/3] w-full object-cover sm:aspect-[16/10]" />;
 }
 
-function Stepper({ value, onChange, label }) {
+function Stepper({ value, onChange, label, disabled }) {
   const box = "grid h-10 w-10 place-items-center rounded-full transition-colors disabled:opacity-35";
   return (
     <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-black/10 bg-white p-1">
-      <button type="button" onClick={() => onChange(value - 1)} disabled={value <= 1} aria-label={t("إنقاص {0}", { 0: label })} className={`${box} hover:bg-black/5`}>
+      <button type="button" onClick={() => onChange(value - 1)} disabled={disabled || value <= 1} aria-label={t("إنقاص {0}", { 0: label })} className={`${box} hover:bg-black/5`}>
         <Minus size={16} aria-hidden="true" />
       </button>
       <span className="min-w-7 text-center text-base font-black tabular-nums" aria-live="polite">{value}</span>
-      <button type="button" onClick={() => onChange(value + 1)} disabled={value >= MAX_QUANTITY} aria-label={t("زيادة {0}", { 0: label })} className={`${box} hover:bg-black/5`}>
+      <button type="button" onClick={() => onChange(value + 1)} disabled={disabled || value >= MAX_QUANTITY} aria-label={t("زيادة {0}", { 0: label })} className={`${box} hover:bg-black/5`}>
         <Plus size={16} aria-hidden="true" />
       </button>
     </div>
@@ -47,7 +47,7 @@ function Stepper({ value, onChange, label }) {
  * @param {{ item: object|null, brand: { primary_color: string, button_color: string }, onAdd: (choice: { quantity: number, note: string, options: object[] }) => void, onClose: () => void }} props
  * Render it with key={item.id} so each dish opens with a fresh choice.
  */
-export default function ProductSheet({ item, brand, onAdd, onClose }) {
+export default function ProductSheet({ item, brand, onAdd, onClose, disabled = false }) {
   const panelRef = useRef(null);
   const titleId = useId();
   const [quantity, setQuantity] = useState(1);
@@ -60,6 +60,8 @@ export default function ProductSheet({ item, brand, onAdd, onClose }) {
   const picked = useMemo(() => options.filter((o) => chosen.has(o.id)), [options, chosen]);
   if (!item) return null;
 
+  const unavailable = item.is_available === false;
+  const blocked = disabled || unavailable;
   const total = unitPrice(item.price, picked) * quantity;
   const toggle = (id) => setChosen((prev) => {
     const next = new Set(prev);
@@ -85,14 +87,15 @@ export default function ProductSheet({ item, brand, onAdd, onClose }) {
             <div>
               <div className="flex items-start justify-between gap-3">
                 <h2 id={titleId} className="text-xl font-black leading-8">{item.name}</h2>
-                <Stepper value={quantity} label={item.name} onChange={(n) => setQuantity(Math.min(MAX_QUANTITY, Math.max(1, n)))} />
+                <Stepper disabled={blocked} value={quantity} label={item.name} onChange={(n) => setQuantity(Math.min(MAX_QUANTITY, Math.max(1, n)))} />
               </div>
               {item.description && <p className="mt-2 text-sm leading-7 text-ink-soft">{item.description}</p>}
+              {unavailable && <p role="status" className="mt-2 text-sm font-bold text-brick">{t("غير متوفر حاليًا")}</p>}
               <p className="mt-2 text-lg font-black tabular-nums" style={{ color: brand.primary_color }}>{money(item.price)}</p>
             </div>
 
             {options.length > 0 && (
-              <fieldset>
+              <fieldset disabled={blocked}>
                 <legend className="text-base font-black">{t("الإضافات")} <span className="text-sm font-bold text-muted">{t("(اختياري)")}</span></legend>
                 <ul className="mt-2 divide-y divide-black/[0.06]">
                   {options.map((option) => {
@@ -126,10 +129,10 @@ export default function ProductSheet({ item, brand, onAdd, onClose }) {
         </div>
 
         <div className="border-t border-black/[0.06] bg-white px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3">
-          <button type="button" onClick={() => onAdd({ quantity, note: note.trim(), options: picked })}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-black text-white shadow-lg transition-transform active:scale-[0.99]"
+          <button type="button" disabled={blocked} onClick={() => { if (!blocked) onAdd({ quantity, note: note.trim(), options: picked }); }}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-black text-white shadow-lg transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
             style={{ background: brand.button_color }}>
-            <span>{t("أضف إلى الطلب")}</span>
+            <span>{unavailable ? t("غير متوفر حاليًا") : t("أضف إلى الطلب")}</span>
             <span aria-hidden="true">•</span>
             <span className="tabular-nums">{money(total)}</span>
           </button>

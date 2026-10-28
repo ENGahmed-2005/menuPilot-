@@ -18,6 +18,7 @@ export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
 
   function addItem(menuItem, quantity = 1, note = "", options = []) {
+    if (!menuItem || menuItem.is_available === false) return;
     const key = lineKey(menuItem.id, options, note);
     setItems((prev) => {
       if (prev.some((it) => it.key === key)) {

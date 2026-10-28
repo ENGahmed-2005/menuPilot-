@@ -10,6 +10,7 @@ import { api } from "./client";
  */
 export const normalizeMenuItem = (item) => ({
   ...item,
+  is_available: ![false, 0, "0", "false"].includes(item.is_available),
   imageUrl: item.imageUrl ?? item.image_url ?? null,
   options: Array.isArray(item.options)
     ? item.options.map((option) => ({ ...option, price: Number(option.price) || 0 }))

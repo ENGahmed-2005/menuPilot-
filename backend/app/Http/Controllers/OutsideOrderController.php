@@ -11,6 +11,7 @@ use App\Support\Permissions;
 use App\Support\Realtime;
 use App\Support\ResolvesRestaurant;
 use App\Support\SubscriptionAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +55,7 @@ class OutsideOrderController extends Controller
     /** Delivery add-on (or trial) and not in restricted mode. */
     private function planAllows(User $owner): bool
     {
-        return SubscriptionAccess::forOwner($owner)->canOperate() && $owner->hasFeature('online_orders');
+        return $owner->is_active && SubscriptionAccess::forOwner($owner)->canOperate() && $owner->hasFeature('online_orders');
     }
 
     private function isOpenNow(object $s): bool
@@ -124,6 +125,38 @@ class OutsideOrderController extends Controller
 
     // ── public ─────────────────────────────────────────────────────────────
 
+    /** Public directory of restaurants configured to deliver to an active zone. */
+    public function restaurants(): JsonResponse
+    {
+        $settings = DB::table('online_ordering_settings')->where('enabled', true)->where('delivery_enabled', true)->get()->keyBy('user_id');
+        $owners = User::where('role', 'owner')->where('is_active', true)->where('is_demo', false)
+            ->whereIn('id', $settings->keys())->with('restaurantSetting:user_id,logo_url')
+            ->orderBy('restaurant_name')->get()->filter(fn (User $owner) => $this->planAllows($owner));
+        $zones = DB::table('delivery_zones')->whereIn('user_id', $owners->modelKeys())->where('active', true)
+            ->orderBy('name')->get(['user_id', 'id', 'name', 'fee', 'min_order'])->groupBy('user_id');
+
+        $restaurants = $owners->filter(fn (User $owner) => $zones->has($owner->id))->map(function (User $owner) use ($settings, $zones): array {
+            $s = $settings[$owner->id];
+
+            return [
+                'slug' => $s->slug,
+                'name' => $owner->restaurant_name,
+                'description' => $owner->restaurant_description,
+                'address' => $owner->restaurant_address,
+                'logo_url' => $owner->restaurantSetting?->logo_url,
+                'open' => $this->isOpenNow($s),
+                'paused' => (bool) $s->paused,
+                'hours' => $s->opens_at && $s->closes_at ? ['opens_at' => $s->opens_at, 'closes_at' => $s->closes_at] : null,
+                'prep_minutes' => (int) $s->prep_minutes,
+                'zones' => $zones[$owner->id]->map(fn (object $zone): array => [
+                    'id' => (int) $zone->id, 'name' => $zone->name, 'fee' => (float) $zone->fee, 'min_order' => (float) $zone->min_order,
+                ])->values(),
+            ];
+        })->sortByDesc('open')->values();
+
+        return response()->json(['data' => $restaurants]);
+    }
+
     /** GET /public/restaurants/{slug} — menu, open status, zones. */
     public function restaurant(string $slug)
     {
@@ -144,9 +177,9 @@ class OutsideOrderController extends Controller
             'delivery' => (bool) $s->delivery_enabled,
             'prep_minutes' => (int) $s->prep_minutes,
             'zones' => $s->delivery_enabled ? DB::table('delivery_zones')->where('user_id', $owner->id)->where('active', true)->orderBy('name')->get(['id', 'name', 'fee', 'min_order']) : [],
-            'items' => DB::table('menu_items')->where('user_id', $owner->id)->where('is_available', true)->whereNull('deleted_at')
-                ->orderBy('category')->orderBy('name')->get(['id', 'name', 'description', 'price', 'category', 'image_url', 'options'])
-                ->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'description' => $i->description, 'price' => (float) $i->price, 'category' => $i->category, 'imageUrl' => $i->image_url, 'options' => MenuOptions::decode($i->options)]),
+            'items' => DB::table('menu_items')->where('user_id', $owner->id)->whereNull('deleted_at')
+                ->orderBy('category')->orderBy('name')->get(['id', 'name', 'description', 'price', 'category', 'image_url', 'options', 'is_available'])
+                ->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'description' => $i->description, 'price' => (float) $i->price, 'category' => $i->category, 'imageUrl' => $i->image_url, 'options' => MenuOptions::decode($i->options), 'is_available' => (bool) $i->is_available]),
         ]]);
     }
 

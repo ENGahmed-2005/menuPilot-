@@ -6,6 +6,7 @@ import { api } from "./client";
 import { normalizeMenuItem } from "./menu";
 
 // Public (customer). Dishes get the same shape as the table menu (imageUrl, options).
+export const getDeliveryRestaurants = () => api.get("/public/restaurants");
 export const getOnlineRestaurant = async (slug) => {
   const data = await api.get(`/public/restaurants/${encodeURIComponent(slug)}`);
   return { ...data, items: (data?.items || []).map(normalizeMenuItem) };
