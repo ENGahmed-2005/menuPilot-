@@ -41,6 +41,16 @@
 .mp-login:hover {
   color: #b95c17;
 }
+.mp-nav .mp-delivery-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eddfce;
+  color: #85420e;
+  white-space: nowrap;
+}
 .mp-header-actions {
   gap: 17px;
 }
@@ -165,6 +175,60 @@
 }
 .mp-checks svg {
   color: #73866b;
+}
+.mp-delivery-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 450px;
+  margin-top: 28px;
+  padding: 17px;
+  border: 1px solid #d8bf9f;
+  border-radius: 14px;
+  background: #fffaf2;
+  text-align: start;
+  transition: border-color 0.2s, background 0.2s;
+}
+.mp-delivery-card:hover {
+  background: #f6ecdf;
+  border-color: #b95c17;
+}
+.mp-delivery-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eddfce;
+  color: #85420e;
+}
+.mp-delivery-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.mp-delivery-copy small {
+  color: #85420e;
+  font-size: 12px;
+  font-weight: 700;
+}
+.mp-delivery-copy strong {
+  font-size: 17px;
+  line-height: 1.4;
+}
+.mp-delivery-copy > span {
+  color: #647078;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.mp-delivery-arrow {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  color: #85420e;
+}
+.mp[dir="ltr"] .mp-delivery-arrow {
+  transform: rotate(180deg);
 }
 .mp-scene {
   position: relative;
@@ -689,6 +753,27 @@ html {
   .mp-login {
     display: none;
   }
+  .mp-menu {
+    display: block;
+  }
+  .mp-header {
+    position: relative;
+  }
+  .mp-nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    background: #f8f6f0;
+    padding: 25px;
+    z-index: 10;
+    box-shadow: 0 12px 20px #20324112;
+  }
+  .mp-nav.open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
   .mp-hero {
     gap: 35px;
   }
@@ -713,24 +798,6 @@ html {
   .mp-header {
     height: 82px;
   }
-  .mp-menu {
-    display: block;
-  }
-  .mp-nav {
-    display: none;
-    position: absolute;
-    top: 81px;
-    inset-inline: 0;
-    background: #f8f6f0;
-    padding: 25px;
-    z-index: 10;
-    box-shadow: 0 12px 20px #20324112;
-  }
-  .mp-nav.open {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
   .mp-hero {
     grid-template-columns: 1fr;
     padding-block: 55px 80px;
@@ -738,6 +805,9 @@ html {
   }
   .mp-copy {
     text-align: center;
+  }
+  .mp-delivery-card {
+    margin-inline: auto;
   }
   .mp-eyebrow,
   .mp-actions,
@@ -927,7 +997,7 @@ html {
 .mp-mobile-login {
   display: none;
 }
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .mp-mobile-login {
     display: block;
     border-top: 1px solid #dcded3;

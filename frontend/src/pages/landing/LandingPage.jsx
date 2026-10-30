@@ -12,6 +12,7 @@ import {
   ReceiptText,
   Users,
   BellRing,
+  Bike,
   Menu,
   X,
 } from "lucide-react";
@@ -105,6 +106,14 @@ export default function LandingPage() {
           className={open ? "mp-nav open" : "mp-nav"}
           aria-label={c("التنقل الرئيسي", "Main navigation")}
         >
+          <Link
+            className="mp-delivery-nav"
+            to="/restaurants"
+            onClick={() => setOpen(false)}
+          >
+            <Bike size={17} aria-hidden="true" />
+            {c("مطاعم التوصيل", "Delivery restaurants")}
+          </Link>
           {links.map(([id, text]) => (
             <a key={id} href={"#" + id} onClick={() => setOpen(false)}>
               {text}
@@ -186,6 +195,17 @@ export default function LandingPage() {
               </span>
             ))}
           </div>
+          <Link className="mp-delivery-card" to="/restaurants">
+            <span className="mp-delivery-icon" aria-hidden="true">
+              <Bike size={25} />
+            </span>
+            <span className="mp-delivery-copy">
+              <small>{c("بدك تطلب لبيتك؟", "Ordering from home?")}</small>
+              <strong>{c("تصفّح مطاعم التوصيل", "Explore delivery restaurants")}</strong>
+              <span>{c("اختار مطعمك، شوف المنيو واطلب من مكانك.", "Choose a restaurant, browse its menu and order from home.")}</span>
+            </span>
+            <ArrowLeft className="mp-delivery-arrow" size={20} aria-hidden="true" />
+          </Link>
         </div>
         <div className="mp-scene">
           <div className="mp-orbit" />
@@ -509,6 +529,7 @@ export default function LandingPage() {
             "Smarter operations. Better hospitality.",
           )}
         </span>
+        <Link to="/restaurants">{c("مطاعم التوصيل", "Delivery restaurants")}</Link>
         <small>© {new Date().getFullYear()} menuPilot</small>
         <a href="#content">{c("للأعلى ↑", "Back to top ↑")}</a>
       </footer>
