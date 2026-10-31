@@ -58,3 +58,17 @@ it('does not keep failed answers, so a retry after fixing the cause runs', funct
 it('lets the browser send and read the idempotency headers', function () {
     $this->call('OPTIONS', '/api/kitchen/orders')->assertNoContent()->assertHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Session-Token, Idempotency-Key');
 });
+
+
+it('rejects reuse of an idempotency key with a different payload', function () {
+    [$kitchen, $order] = kitchenWithOrder($this);
+    $path = "/api/kitchen/orders/{$order->id}/status";
+    $headers = authAs($kitchen) + ['Idempotency-Key' => 'op-0004-aaaaaaaa'];
+
+    $this->patchJson($path, ['status' => 'preparing'], $headers)->assertOk();
+    $conflict = $this->patchJson($path, ['status' => 'ready'], $headers)->assertStatus(409);
+
+    expect($conflict->json('code'))->toBe('IDEMPOTENCY_KEY_REUSED')
+        ->and(DB::table('orders')->find($order->id)->status)->toBe('preparing')
+        ->and(DB::table('idempotency_records')->count())->toBe(1);
+});

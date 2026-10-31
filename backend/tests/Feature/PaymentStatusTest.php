@@ -322,3 +322,29 @@ it('holds a second order with PAYMENT_PENDING until the first payment is verifie
     $orders = $this->getJson("/api/public/sessions/{$session['id']}/orders", customer($session))->json('data');
     expect($orders)->toHaveCount(2);
 });
+
+it('does not record a second cashier payment after the session balance reaches zero', function () {
+    $owner = psOwner();
+    $cashier = psStaff($owner['id'], 'cashier');
+    $table = psTable($owner['id']);
+    $item = psItem($owner['id'], 30);
+    $session = psSession($this, $table);
+    $orderId = DB::table('orders')->insertGetId([
+        'dining_session_id' => $session['id'], 'user_id' => $owner['id'], 'order_number' => 1,
+        'status' => 'served', 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('order_items')->insert([
+        'order_id' => $orderId, 'menu_item_id' => $item, 'quantity' => 1, 'unit_price' => 30,
+        'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $url = "/api/sessions/{$session['id']}/payment";
+    $this->postJson($url, ['method' => 'cash', 'close' => false], psAuth($cashier))->assertCreated();
+    expect(DB::table('payments')->where('dining_session_id', $session['id'])->count())->toBe(1);
+
+    $this->postJson($url, ['method' => 'cash', 'close' => false], psAuth($cashier))
+        ->assertStatus(409)
+        ->assertJsonPath('message', 'لا يوجد رصيد مستحق على هذه الجلسة.');
+
+    expect(DB::table('payments')->where('dining_session_id', $session['id'])->count())->toBe(1);
+});

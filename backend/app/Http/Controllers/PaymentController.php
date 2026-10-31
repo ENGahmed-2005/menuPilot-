@@ -86,6 +86,29 @@ class PaymentController extends Controller
         $proofPath = $request->hasFile('proof') ? $request->file('proof')->store('payment-proofs', 'public') : null;
 
         $result = DB::transaction(function () use ($v, $sessionId, $session, $proofPath) {
+            // Serialize customer payment submissions for this dining session.
+            // The earlier check is only a fast path; it cannot prevent two
+            // concurrent requests from both passing before either inserts a payment.
+            $lockedSession = DB::table('dining_sessions')
+                ->where('id', $sessionId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedSession || $lockedSession->closed_at) {
+                return ['conflict' => 'SESSION_CLOSED'];
+            }
+
+            // Re-check after acquiring the session lock. All requests through
+            // this flow now observe the previous transaction's committed payment.
+            $alreadyPending = DB::table('payments')
+                ->where('dining_session_id', $sessionId)
+                ->where('status', PaymentStatus::Pending->value)
+                ->exists();
+
+            if ($alreadyPending) {
+                return ['conflict' => 'PAYMENT_PENDING'];
+            }
+
             $orderId = OrderWorkflow::createOrder((int) $sessionId, (int) $session->restaurant_user_id, 'payment_pending');
             $validItems = 0;
             foreach ($v['items'] as $n => $item) {
@@ -106,6 +129,23 @@ class PaymentController extends Controller
 
             return ['order' => DB::table('orders')->find($orderId), 'payment' => DB::table('payments')->find($paymentId)];
         });
+
+        if (isset($result['conflict'])) {
+            // A concurrent request may have written the proof before this
+            // transaction acquired the lock. Do not leave an orphaned upload.
+            if ($proofPath) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($proofPath);
+            }
+
+            if ($result['conflict'] === 'SESSION_CLOSED') {
+                return response()->json(['message' => 'جلسة الطعام مغلقة.'], 409);
+            }
+
+            return response()->json([
+                'message' => 'دفعتك السابقة بانتظار تأكيد الكاشير. سلتك محفوظة، ويمكنك إرسال الطلب الجديد فور التأكيد.',
+                'code' => 'PAYMENT_PENDING',
+            ], 409);
+        }
 
         return $this->out($result, 201);
     }
