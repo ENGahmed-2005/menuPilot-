@@ -1,560 +1,621 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowDown,
   ArrowLeft,
-  ArrowUpRight,
+  ArrowRight,
+  ArrowUpLeft,
+  Banknote,
   ChefHat,
+  ClipboardList,
   Menu,
+  QrCode,
   Receipt,
-  Smartphone,
-  Store,
-  Users,
-  Wifi,
-  WifiOff,
+  Table2,
+  UsersRound,
   X,
 } from "lucide-react";
-import LanguageSwitch from "../../components/ui/LanguageSwitch";
-import { SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS } from "../../config/subscriptions";
-import { demoGuestTable } from "../../api/demo";
-import { useAuth } from "../../context/AuthContext";
-import { dir, lang, t } from "../../i18n";
-import { alternatives, capabilities, faqItems, storyStages, team } from "./components-v2/copy-v2";
-import "./landing-v2.css";
+import { dir, lang, setLang } from "../../i18n";
+import { landingTeam } from "./landing-team-data.js";
+import "./landing-page.css";
 
-const navigation = [
-  ["#roles", "الأدوار"],
-  ["#features", "المنصة"],
-  ["#pricing", "الباقات"],
-  ["#demo", "جرّب"],
-  ["#faq", "الأسئلة"],
-];
+const copy = {
+  ar: {
+    skip: "تخطَّ إلى المحتوى",
+    navLabel: "التنقل الرئيسي",
+    nav: [
+      { href: "#workflow", label: "رحلة الطلب" },
+      { href: "#tools", label: "إدارة المطعم" },
+      { href: "#coordination", label: "تنسيق العمل" },
+      { href: "#team", label: "أعضاء الفريق" },
+    ],
+    start: "ابدأ الآن",
+    switchLanguage: "Switch to English",
+    closeMenu: "إغلاق القائمة",
+    openMenu: "فتح القائمة",
+    eyebrow: "تشغيل المطعم، بوضوح أكبر",
+    headline: "كل تفاصيل الخدمة،",
+    headlineAccent: "في مسار واحد.",
+    intro: "MenuPilot يجمع القائمة الرقمية والطلبات والطاولات والمطبخ وإدارة الفريق في مساحة واحدة.",
+    explore: "اكتشف طريقة العمل",
+    visualLabel: "رسم يوضح مسار العمل من قائمة QR إلى فريق المطبخ",
+    visualKicker: "من أول تفاعل إلى متابعة الطلب",
+    stages: [
+      { name: "قائمة QR", note: "الضيف يطّلع ويطلب" },
+      { name: "الطاولة", note: "الطلب مرتبط بمكانه" },
+      { name: "الطلب", note: "التفاصيل تصل للفريق" },
+      { name: "المطبخ", note: "متابعة حالة التحضير" },
+    ],
+    visualFooter: "مسار واضح للضيف والفريق",
+    capabilitiesLabel: "منصة واحدة لإدارة",
+    capabilities: ["القائمة عبر QR", "الطاولات والطلبات", "متابعة المطبخ", "فريق المطعم", "الفواتير والمدفوعات"],
+    journey: {
+      eyebrow: "رحلة الطلب",
+      title: "من رمز QR إلى الفاتورة.",
+      description: "استعرض كيف ترتبط خطوات الخدمة اليومية، من القائمة حتى متابعة الحساب.",
+      selectStage: "اختر مرحلة لاستعراضها",
+      stages: [
+        { title: "قائمة QR", detail: "يمسح الضيف الرمز لفتح القائمة الرقمية والاطّلاع عليها." },
+        { title: "الطاولة", detail: "يبقى الطلب مرتبطًا بالطاولة التي بدأ منها." },
+        { title: "الطلب", detail: "تصل تفاصيل الطلب إلى فريق المطعم لمتابعتها." },
+        { title: "الفريق والمطبخ", detail: "يتابع فريق الخدمة والمطبخ حالة الطلب أثناء العمل." },
+        { title: "الفاتورة", detail: "تُراجع الفاتورة وتُتابع المدفوعات عند إتمام الخدمة." },
+      ],
+    },
+    toolsEyebrow: "مساحة واحدة لعمل المطعم",
+    toolsTitle: "الأدوات اليومية، متصلة.",
+    tools: [
+      { title: "قائمة رقمية عبر QR", text: "اعرض القائمة للضيف، وحدّث الأصناف والأسعار من مساحة المطعم.", label: "للضيف" },
+      { title: "الطاولات والطلبات", text: "تابع جلسات الطاولات والطلبات المرتبطة بها خلال الخدمة.", label: "الصالة" },
+      { title: "متابعة الطلبات", text: "راجع تفاصيل الطلب وحالته بين فريق الخدمة والمطبخ.", label: "المطبخ" },
+      { title: "إدارة الموظفين", text: "نظّم حسابات الموظفين وأدوارهم وصلاحياتهم.", label: "الفريق" },
+      { title: "الفواتير والمدفوعات", text: "تابع الفواتير والمدفوعات عند إتمام الخدمة.", label: "الحسابات" },
+    ],
+    coordination: {
+      eyebrow: "تنسيق أوضح في وقت الخدمة",
+      title: "كل دور يعرف ما وصل إليه الطلب.",
+      description: "تظهر تفاصيل الطلب وحالته للفريق المعني؛ من استقباله في الصالة، إلى متابعته في المطبخ، ثم مراجعة الفاتورة.",
+      roles: [
+        { title: "فريق الخدمة", note: "استقبال الطلب", icon: "service" },
+        { title: "المطبخ", note: "متابعة التحضير", icon: "kitchen" },
+        { title: "الكاشير", note: "الفاتورة والمدفوعات", icon: "billing" },
+      ],
+      visualLabel: "رسم مجرد يربط فريق الخدمة والمطبخ والكاشير حول مسار الطلب",
+    },
+    closeEyebrow: "ابدأ من هنا",
+    closeTitle: "اجمع تشغيل مطعمك في مكان واحد.",
+    closeText: "أنشئ مساحة مطعمك وابدأ بتنظيم العمل اليومي مع MenuPilot.",
+    wordmarkLabel: "MenuPilot",
+    footerLabel: "إدارة المطعم، من مكان واحد.",
+    login: "تسجيل الدخول",
+    copyright: "جميع الحقوق محفوظة.",
+  },
+  en: {
+    skip: "Skip to content",
+    navLabel: "Main navigation",
+    nav: [
+      { href: "#workflow", label: "Order journey" },
+      { href: "#tools", label: "Restaurant tools" },
+      { href: "#coordination", label: "Team workflow" },
+      { href: "#team", label: "Meet the team" },
+    ],
+    start: "Get started",
+    switchLanguage: "التبديل إلى العربية",
+    closeMenu: "Close menu",
+    openMenu: "Open menu",
+    eyebrow: "Restaurant operations, made clearer",
+    headline: "Every part of service,",
+    headlineAccent: "in one flow.",
+    intro: "MenuPilot brings your digital menu, orders, tables, kitchen, and team operations into one workspace.",
+    explore: "Explore the workflow",
+    visualLabel: "Illustration of the workflow from a QR menu to the kitchen team",
+    visualKicker: "From the first interaction to order follow-through",
+    stages: [
+      { name: "QR menu", note: "Guest browses and orders" },
+      { name: "Table", note: "Order stays in context" },
+      { name: "Order", note: "Details reach the team" },
+      { name: "Kitchen", note: "Preparation is followed" },
+    ],
+    visualFooter: "A clear flow for guests and staff",
+    capabilitiesLabel: "One workspace for",
+    capabilities: ["QR menu", "Tables and orders", "Kitchen follow-up", "Restaurant staff", "Bills and payments"],
+    journey: {
+      eyebrow: "The order journey",
+      title: "From QR code to bill.",
+      description: "Explore how the everyday steps of service connect, from the menu to the final bill.",
+      selectStage: "Choose a stage to explore",
+      stages: [
+        { title: "QR menu", detail: "A guest scans the code to open and browse the digital menu." },
+        { title: "Table", detail: "The order stays connected to the table where it began." },
+        { title: "Order", detail: "Order details reach the restaurant team for follow-up." },
+        { title: "Team and kitchen", detail: "Service and kitchen staff follow the order status during service." },
+        { title: "Bill", detail: "The bill is reviewed and payments are followed as service wraps up." },
+      ],
+    },
+    toolsEyebrow: "One workspace for restaurant operations",
+    toolsTitle: "Everyday tools, connected.",
+    tools: [
+      { title: "Digital menu by QR", text: "Share your menu with guests and update items and prices in your restaurant workspace.", label: "GUESTS" },
+      { title: "Tables and orders", text: "Follow table sessions and their orders throughout service.", label: "FLOOR" },
+      { title: "Order follow-up", text: "Review order details and status across service and kitchen teams.", label: "KITCHEN" },
+      { title: "Staff management", text: "Organize staff accounts, roles, and permissions.", label: "TEAM" },
+      { title: "Bills and payments", text: "Keep track of bills and payments as service wraps up.", label: "BILLING" },
+    ],
+    coordination: {
+      eyebrow: "Clearer coordination during service",
+      title: "Every role can follow the order.",
+      description: "Order details and status are available to the relevant team: from receiving it on the floor, to following it in the kitchen, to reviewing the bill.",
+      roles: [
+        { title: "Service team", note: "Receive the order", icon: "service" },
+        { title: "Kitchen", note: "Follow preparation", icon: "kitchen" },
+        { title: "Cashier", note: "Bill and payments", icon: "billing" },
+      ],
+      visualLabel: "Abstract illustration connecting service, kitchen, and cashier around an order flow",
+    },
+    closeEyebrow: "A good place to start",
+    closeTitle: "Bring restaurant operations together.",
+    closeText: "Set up your restaurant workspace and organize the daily flow with MenuPilot.",
+    wordmarkLabel: "MenuPilot",
+    footerLabel: "Restaurant operations, in one place.",
+    login: "Log in",
+    copyright: "All rights reserved.",
+  },
+};
 
-const roleIcons = [Smartphone, ChefHat, Users, Receipt, Store];
-const roleImages = ["menu", "kitchen", "attendance", "cashier", "dashboard"];
-const roleText = [
-  "يمسح رمز الطاولة، يفتح المنيو في المتصفح، ويطلب ويتابع طلبه لحظة بلحظة، بلا تطبيق.",
-  "طلبات مرتبة في شاشة واضحة؛ جديدة، قيد التحضير، وجاهزة للتقديم.",
-  "يتابع الطاولات والجلسات والطلبات في مساحته المخصصة.",
-  "يرى الطاولات المشغولة والفواتير والمدفوعات، ويغلق الجلسات.",
-  "يدير المبيعات والمنيو والطاولات والفريق والتقارير من لوحة واحدة.",
-];
+const stageIcons = [QrCode, Table2, ClipboardList, ChefHat, Receipt];
+const toolIcons = [QrCode, Table2, ClipboardList, UsersRound, Banknote];
+const capabilityIcons = [QrCode, Table2, ClipboardList, UsersRound, Receipt];
+const coordinationIcons = { service: Table2, kitchen: ChefHat, billing: Receipt };
 
-function image(name) {
-  return `/landing/${lang}-${name}.webp`;
+function BrandWordmark({ label }) {
+  return (
+    <span className="mp-editorial-wordmark" aria-label={label}>
+      <span className="mp-editorial-wordmark-mark" aria-hidden="true">M</span>
+      <span>Menu<span className="mp-editorial-wordmark-accent">Pilot</span></span>
+    </span>
+  );
 }
 
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(query.matches);
-    update();
-    query.addEventListener?.("change", update);
-    return () => query.removeEventListener?.("change", update);
-  }, []);
-
-  return reduced;
+function DirectionalArrow({ className, ...props }) {
+  const Icon = lang === "ar" ? ArrowLeft : ArrowRight;
+  return <Icon className={className} aria-hidden="true" {...props} />;
 }
 
-function Header() {
+function updateMeta(attribute, name, content) {
+  let element = document.head.querySelector(`meta[${attribute}="${name}"]`);
+  const created = !element;
+  if (!element) {
+    element = document.createElement("meta");
+    element.setAttribute(attribute, name);
+    document.head.append(element);
+  }
+  const previous = element.getAttribute("content");
+  element.setAttribute("content", content);
+  return () => {
+    if (created) element.remove();
+    else if (previous === null) element.removeAttribute("content");
+    else element.setAttribute("content", previous);
+  };
+}
+
+function hideMeta(attribute, name) {
+  const element = document.head.querySelector(`meta[${attribute}="${name}"]`);
+  if (!element) return () => {};
+  const content = element.getAttribute("content");
+  const nextSibling = element.nextSibling;
+  element.remove();
+  return () => {
+    if (content !== null) element.setAttribute("content", content);
+    document.head.insertBefore(element, nextSibling?.parentNode === document.head ? nextSibling : null);
+  };
+}
+
+export default function LandingPageV2() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
+  const [activeJourneyStep, setActiveJourneyStep] = useState(0);
+  const [isMobileJourney, setIsMobileJourney] = useState(
+    () => window.matchMedia("(max-width: 700px)").matches,
+  );
+  const journeyTabRefs = useRef([]);
+  const text = copy[lang];
+  const activeStage = text.journey.stages[activeJourneyStep];
+  const journeyProgress = `${(activeJourneyStep / (text.journey.stages.length - 1)) * 100}%`;
 
   useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 36);
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
-  }, []);
+    const previousTitle = document.title;
+    document.title = `${text.eyebrow} | MenuPilot`;
+    const cleanups = [
+      updateMeta("name", "description", text.intro),
+      updateMeta("property", "og:title", `${text.eyebrow} | MenuPilot`),
+      updateMeta("property", "og:description", text.intro),
+      hideMeta("property", "og:image"),
+      hideMeta("name", "twitter:image"),
+    ];
+    return () => {
+      document.title = previousTitle;
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, [text]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
-    const close = (event) => {
+    const closeOnEscape = (event) => {
       if (event.key === "Escape") setMenuOpen(false);
     };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
   }, [menuOpen]);
 
+  useEffect(() => {
+    const sections = text.nav
+      .map(({ href }) => document.querySelector(href))
+      .filter(Boolean);
+    if (!("IntersectionObserver" in window)) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(`#${entry.target.id}`);
+        });
+      },
+      { rootMargin: "-30% 0px -60% 0px" },
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [text.nav]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 700px)");
+    const updateLayout = () => setIsMobileJourney(mediaQuery.matches);
+    mediaQuery.addEventListener("change", updateLayout);
+    return () => mediaQuery.removeEventListener("change", updateLayout);
+  }, []);
+
+  function changeLanguage() {
+    setLang(lang === "ar" ? "en" : "ar");
+  }
+
+  function handleJourneyKeyDown(event, index) {
+    const previousKey = isMobileJourney ? "ArrowUp" : dir === "rtl" ? "ArrowRight" : "ArrowLeft";
+    const nextKey = isMobileJourney ? "ArrowDown" : dir === "rtl" ? "ArrowLeft" : "ArrowRight";
+    let nextIndex = index;
+
+    if (event.key === previousKey) nextIndex = (index - 1 + text.journey.stages.length) % text.journey.stages.length;
+    else if (event.key === nextKey) nextIndex = (index + 1) % text.journey.stages.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = text.journey.stages.length - 1;
+    else return;
+
+    event.preventDefault();
+    setActiveJourneyStep(nextIndex);
+    journeyTabRefs.current[nextIndex]?.focus();
+  }
+
   return (
-    <>
-      <a className="poster-skip" href="#main">{t("تخطَّ إلى المحتوى")}</a>
-      <div className="poster-ribbon">
-        <span>{t("14 يومًا مجانًا · بلا بطاقة ائتمانية")}</span>
-        <LanguageSwitch tone="dark" className="poster-language" />
-      </div>
-      <header className={`poster-header${scrolled ? " is-scrolled" : ""}`}>
-        <div className="poster-header-inner">
-          <Link to="/" className="poster-logo" aria-label={t("menuPilot، الصفحة الرئيسية")}>
-            <img src="/brand/logo.webp" width="158" height="42" alt="menuPilot" />
+    <div className="mp-editorial" lang={lang} dir={dir}>
+      <a className="mp-editorial-skip" href="#main">{text.skip}</a>
+      <header className="mp-editorial-header">
+        <div className="mp-editorial-nav">
+          <Link to="/" className="mp-editorial-logo" aria-label={text.wordmarkLabel}>
+            <BrandWordmark label={text.wordmarkLabel} />
           </Link>
-          <nav className="poster-nav" aria-label={t("التنقل الرئيسي")}>
-            {navigation.map(([href, label]) => <a href={href} key={href}>{t(label)}</a>)}
+          <nav className="mp-editorial-links" aria-label={text.navLabel}>
+            {text.nav.map((item) => (
+              <a
+                href={item.href}
+                key={item.href}
+                className={activeSection === item.href ? "is-active" : ""}
+                aria-current={activeSection === item.href ? "location" : undefined}
+              >
+                {item.label}
+              </a>
+            ))}
           </nav>
-          <div className="poster-actions">
-            <Link to="/login">{t("تسجيل الدخول")}</Link>
-            <Link to="/register" className="poster-header-cta">{t("ابدأ مجانًا")}</Link>
+          <div className="mp-editorial-actions">
+            <button
+              className="mp-editorial-language"
+              type="button"
+              onClick={changeLanguage}
+              aria-label={text.switchLanguage}
+            >
+              <span className={lang === "ar" ? "is-current" : ""}>AR</span>
+              <span aria-hidden="true">/</span>
+              <span className={lang === "en" ? "is-current" : ""}>EN</span>
+            </button>
+            <Link to="/register" className="mp-editorial-nav-cta">
+              {text.start}<DirectionalArrow size={16} />
+            </Link>
           </div>
           <button
-            className="poster-menu-toggle"
+            className="mp-editorial-menu-button"
             type="button"
-            aria-label={menuOpen ? t("إغلاق القائمة") : t("فتح القائمة")}
-            aria-controls="poster-mobile-nav"
+            aria-label={menuOpen ? text.closeMenu : text.openMenu}
             aria-expanded={menuOpen}
+            aria-controls="mp-editorial-mobile-menu"
             onClick={() => setMenuOpen((open) => !open)}
           >
             {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
           </button>
         </div>
         {menuOpen && (
-          <nav id="poster-mobile-nav" className="poster-mobile-nav" aria-label={t("التنقل الرئيسي")}>
-            {navigation.map(([href, label]) => (
-              <a href={href} key={href} onClick={() => setMenuOpen(false)}>{t(label)}</a>
+          <nav className="mp-editorial-mobile-menu" id="mp-editorial-mobile-menu" aria-label={text.navLabel}>
+            {text.nav.map((item) => (
+              <a
+                href={item.href}
+                key={item.href}
+                className={activeSection === item.href ? "is-active" : ""}
+                aria-current={activeSection === item.href ? "location" : undefined}
+                onClick={() => setMenuOpen(false)}
+              >
+                {item.label}
+              </a>
             ))}
-            <Link to="/login" onClick={() => setMenuOpen(false)}>{t("تسجيل الدخول")}</Link>
-            <Link to="/register" className="poster-mobile-cta" onClick={() => setMenuOpen(false)}>{t("ابدأ مجانًا")}</Link>
+            <Link to="/register" onClick={() => setMenuOpen(false)}>{text.start}<DirectionalArrow size={16} /></Link>
           </nav>
         )}
       </header>
-    </>
-  );
-}
 
-function HeroTicket() {
-  const [served, setServed] = useState(false);
-  const reduced = useReducedMotion();
-
-  useEffect(() => {
-    if (reduced) {
-      setServed(true);
-      return undefined;
-    }
-    const timer = window.setTimeout(() => setServed(true), 1000);
-    return () => window.clearTimeout(timer);
-  }, [reduced]);
-
-  return (
-    <article className={`poster-hero-ticket${served ? " is-served" : ""}`} aria-label={t("تذكرة طلب توضيحية")}>
-      <div className="poster-ticket-top"><span>MENUPILOT / 001</span><span>18:42</span></div>
-      <h2><span>#1</span>{t("طاولة 1")}</h2>
-      <p>{t("سارة")}</p>
-      <ul>
-        <li>{t("فلافل")} <b>×2</b></li>
-        <li>{t("شاورما عربي")} <b>×1</b></li>
-      </ul>
-      <span className="poster-ticket-stamp">{served ? t("جاهز") : t("جديدة")}</span>
-    </article>
-  );
-}
-
-function Sticker({ children, className = "" }) {
-  return <span className={`poster-sticker ${className}`}>{children}</span>;
-}
-
-function Hero() {
-  return (
-    <section className="poster-hero" aria-labelledby="poster-title">
-      <div className="poster-container poster-hero-inner">
-        <p className="poster-kicker"><span>MENUPILOT</span> · {t("نظام تشغيل المطاعم، من الطاولة إلى المطبخ… بدون فوضى")}</p>
-        <h1 id="poster-title">
-          <span>{t("كم دقيقة استنّيت؟")}</span>
-          <span className="poster-highlight">{t("ما رح تستنى.")}</span>
-        </h1>
-        <div className="poster-hero-bottom">
-          <p>{t("من أول مسح للمنيو إلى آخر فاتورة: طلباتك ومطبخك وفريقك في مكان واحد.")}</p>
-          <div className="poster-hero-ctas">
-            <Link to="/register" className="poster-button poster-button-navy">{t("ابدأ 14 يومًا مجانًا")}<ArrowUpRight size={18} aria-hidden="true" /></Link>
-            <a href="#demo" className="poster-text-link">{t("جرّب بنفسك")}<ArrowDown size={16} aria-hidden="true" /></a>
-          </div>
-        </div>
-        <HeroTicket />
-        <Sticker className="sticker-commission">{t("بلا عمولة")}</Sticker>
-        <Sticker className="sticker-app">{t("بلا تطبيق")}</Sticker>
-        <span className="poster-hero-number" aria-hidden="true">01</span>
-      </div>
-      <span className="poster-hero-cut" aria-hidden="true" />
-    </section>
-  );
-}
-
-const ticketPainPoints = [
-  ["الطلب ضاع بين الطاولة والمطبخ", "ضاع"],
-  ["الزبون استنّى ومشي", "ضاع"],
-  ["المطبخ على ورقة", "ضاع"],
-  ["النت قطع والشغل وقف", "ضاع"],
-  ["الطلب وصل للمطبخ", "تم"],
-  ["كل حالة واضحة للفريق", "تم"],
-  ["الفاتورة انغلقت", "تم"],
-];
-
-function TicketRail() {
-  const reduced = useReducedMotion();
-  const tickets = [...ticketPainPoints, ...ticketPainPoints];
-  return (
-    <section className="poster-rail" aria-label={t("رحلة الطلب")}>
-      <div className="poster-container">
-        <h2>{t("الفوضى… صارت نظام.")}</h2>
-      </div>
-      <div className="poster-rail-window">
-        <div className={`poster-rail-track${reduced ? " is-static" : ""}`}>
-          {tickets.map(([label, state], index) => (
-            <article className="poster-rail-ticket" key={`${index}-${label}`}>
-              <span>#{String((index % 7) + 1).padStart(2, "0")}</span>
-              <p>{t(label)}</p>
-              <b className={state === "ضاع" ? "stamp-lost" : "stamp-done"}>{t(state)}</b>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Roles() {
-  const [openRole, setOpenRole] = useState(1);
-  return (
-    <section id="roles" className="poster-roles">
-      <div className="poster-container">
-        <div className="poster-section-intro">
-          <span className="poster-index">01 / {t("الأدوار")}</span>
-          <h2>{t("خمسة أدوار.")}<br /><span>{t("وردية واحدة.")}</span></h2>
-        </div>
-        <div className="poster-role-list">
-          {storyStages.map((role, index) => {
-            const Icon = roleIcons[index];
-            const expanded = openRole === index;
-            return (
-              <article className={`poster-role${index % 2 ? " role-dark" : " role-orange"}${expanded ? " is-open" : ""}`} key={role.role}>
-                <button
-                  type="button"
-                  className="poster-role-button"
-                  aria-expanded={expanded}
-                  aria-controls={`poster-role-panel-${index}`}
-                  onClick={() => setOpenRole(index)}
-                >
-                  <span className="poster-role-no">0{index + 1}</span>
-                  <Icon size={22} strokeWidth={2} aria-hidden="true" />
-                  <span className="poster-role-name">{t(role.role)}</span>
-                  <span className="poster-role-plus" aria-hidden="true">{expanded ? "−" : "+"}</span>
-                </button>
-                {expanded && (
-                  <div className="poster-role-panel" id={`poster-role-panel-${index}`}>
-                    <p>{t(roleText[index])}</p>
-                    <div className={`poster-role-image${roleImages[index] === "menu" ? " is-phone" : ""}`}>
-                      <img src={image(roleImages[index])} alt={t(role.alt)} width={roleImages[index] === "menu" ? 560 : 1600} height={roleImages[index] === "menu" ? 1212 : 1000} loading="lazy" decoding="async" />
+      <main id="main">
+        <section className="mp-editorial-hero" aria-labelledby="mp-editorial-title">
+          <div className="mp-editorial-hero-inner">
+            <div className="mp-editorial-copy">
+              <p className="mp-editorial-eyebrow"><span aria-hidden="true" />{text.eyebrow}</p>
+              <h1 id="mp-editorial-title">{text.headline}<span>{text.headlineAccent}</span></h1>
+              <p className="mp-editorial-intro">{text.intro}</p>
+              <div className="mp-editorial-hero-actions">
+                <Link to="/register" className="mp-editorial-primary">{text.start}<DirectionalArrow size={17} /></Link>
+                <a className="mp-editorial-secondary" href="#workflow">{text.explore}<ArrowDown size={16} aria-hidden="true" /></a>
+              </div>
+            </div>
+            <div className="mp-flow-art" role="img" aria-label={text.visualLabel}>
+              <div className="mp-flow-art-top">
+                <span>{text.visualKicker}</span>
+                <span className="mp-flow-index" aria-hidden="true">01 — 04</span>
+              </div>
+              <div className="mp-flow-art-body" aria-hidden="true">
+                <svg className="mp-flow-line" viewBox="0 0 760 220" preserveAspectRatio="none">
+                  <path d="M56 110 C150 110 147 65 250 65 S355 160 455 145 S570 74 704 110" />
+                  <path d="M56 110 C150 110 147 65 250 65 S355 160 455 145 S570 74 704 110" className="mp-flow-line-accent" />
+                </svg>
+                {text.stages.map((stage, index) => {
+                  const Icon = stageIcons[index];
+                  return (
+                    <div className={`mp-flow-node mp-flow-node-${index + 1}`} key={stage.name}>
+                      <span className="mp-flow-node-icon"><Icon size={22} strokeWidth={1.7} /></span>
+                      <span className="mp-flow-node-copy">
+                        <strong>{stage.name}</strong>
+                        <small>{stage.note}</small>
+                      </span>
+                      <span className="mp-flow-node-number">0{index + 1}</span>
                     </div>
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Commission() {
-  return (
-    <section className="poster-commission">
-      <div className="poster-container poster-commission-inner">
-        <p className="poster-index">{t("اشتراك ثابت. نقطة.")}</p>
-        <div className="poster-zero-wrap" aria-label={t("صفر بالمئة عمولة")}>
-          <span className="poster-zero-outline">0%</span>
-          <span className="poster-zero-solid" aria-hidden="true">0%</span>
-        </div>
-        <div className="poster-commission-copy">
-          <h2>{t("عمولة على أي طلب.")}<br /><span>{t("اشتراك ثابت. نقطة.")}</span></h2>
-          <Sticker>{t("بلا عقود · ألغِ متى شئت")}</Sticker>
-        </div>
-        <div className="poster-compare-stickers">
-          {alternatives.map(([title, description], index) => (
-            <p className={`poster-compare-sticker compare-${index + 1}`} key={title}>
-              <b>{t(title)}</b><span>{t(description)}</span>
-            </p>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Offline() {
-  const [offline, setOffline] = useState(true);
-  return (
-    <section className="poster-offline">
-      <div className="poster-container poster-offline-inner">
-        <div className="poster-offline-copy">
-          <p className="poster-index">02 / {t("يكمل والنت مقطوع")}</p>
-          <h2>{t("النت قطع.")}<br /><span>{t("الشغل ما وقف.")}</span></h2>
-          <p>{t("المطبخ والكاشير يكملون شغلهم بآخر بيانات محفوظة، والتغييرات تتزامن لحالها لما يرجع النت.")}</p>
-          <p className="poster-gaza-note">{t("مطاعم غزة بتبدأ من جديد… ونظام ما بيوقف مع النت.")}</p>
-        </div>
-        <div className="poster-offline-console">
-          <button className={`poster-physical-switch${offline ? " is-on" : ""}`} type="button" role="switch" aria-checked={offline} onClick={() => setOffline((value) => !value)}>
-            <span className="poster-switch-track"><i /></span>
-            <span>{t("قطع الإنترنت")}</span>
-          </button>
-          <div className="poster-console-kitchen">
-            <div className="poster-console-title"><ChefHat size={21} aria-hidden="true" /><b>{t("شاشة المطبخ")}</b><span className={offline ? "offline-badge" : "online-badge"}>{offline ? t("غير متصل") : t("متصل")}</span></div>
-            <div className="poster-console-order"><span>#1 · {t("طاولة 1")}</span><b>{t("فلافل")} ×2</b><span>{t("قيد التحضير")}</span></div>
+                  );
+                })}
+                <span className="mp-flow-center">
+                  <span className="mp-flow-core-mark">M</span>
+                </span>
+              </div>
+              <div className="mp-flow-art-bottom">
+                <span className="mp-flow-live-mark" aria-hidden="true" />
+                <span>{text.visualFooter}</span>
+                <span className="mp-flow-brand-mark" aria-hidden="true">M</span>
+              </div>
+            </div>
           </div>
-          <div className="poster-pending-changes"><span>{t("تغييرات بالانتظار")}</span><strong>{offline ? "3" : "0"}</strong>{!offline && <b>{t("تمت المزامنة")}</b>}</div>
-          <p className="poster-offline-note">{t("طلبات جوالات الزبائن الجديدة تنتظر عودة الاتصال.")}</p>
-          <WifiOff className="poster-wifi-icon" aria-hidden="true" />
-          <Wifi className="poster-wifi-on" aria-hidden="true" />
-        </div>
-      </div>
-    </section>
-  );
-}
+          <div className="mp-editorial-index" aria-hidden="true"><span>01</span><i /> MENUPILOT / OPERATIONS</div>
+        </section>
 
-function Features() {
-  const [active, setActive] = useState(-1);
-  const previewImage = active >= 0 ? capabilities[active].image : null;
-  return (
-    <section id="features" className="poster-features">
-      <div className="poster-container poster-features-layout">
-        <div className="poster-features-heading">
-          <p className="poster-index">{t("المنصة")} / 08</p>
-          <h2>{t("قائمة") }<br /><span>{t("الطلب.")}</span></h2>
-          <div className="poster-feature-preview" aria-hidden="true">
-            {previewImage
-              ? <img src={image(previewImage)} alt="" width="560" height="360" loading="lazy" decoding="async" />
-              : <span>menuPilot<br />↗</span>}
+        <section className="mp-capabilities" aria-label={text.capabilitiesLabel}>
+          <div className="mp-editorial-container mp-capabilities-inner">
+            <span className="mp-capabilities-label">{text.capabilitiesLabel}</span>
+            <div className="mp-capabilities-list">
+              {text.capabilities.map((capability, index) => {
+                const Icon = capabilityIcons[index];
+                return (
+                  <span className="mp-capability" key={capability}>
+                    <Icon size={15} strokeWidth={1.6} aria-hidden="true" />
+                    {capability}
+                  </span>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <ol className="poster-feature-list">
-          {capabilities.map((feature, index) => (
-            <li key={feature.marker} className={active === index ? "is-active" : ""}>
-              <button type="button" onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} onClick={() => setActive(index)}>
-                <span className="poster-feature-no">{feature.marker}</span>
-                <span className="poster-feature-title">{t(feature.title)}</span>
-                <span className="poster-feature-dots" aria-hidden="true" />
-                <span className="poster-feature-tag">{t(feature.shortTitle)}</span>
-                <ArrowLeft size={19} aria-hidden="true" />
-              </button>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
+        </section>
 
-function Pricing() {
-  const [annual, setAnnual] = useState(false);
-  const [addons, setAddons] = useState([]);
-  const plans = ["basic", "pro", "delivery_only"];
-  const amount = (value) => annual ? value * 10 : value;
-  const period = annual ? t("سنويًا · ادفع 10 أشهر") : t("شهريًا");
-  const limit = (value, label) => value === Infinity ? t("بلا حدود") : t("حتى {0} {1}", { 0: value, 1: t(label) });
-
-  function toggleAddon(id) {
-    setAddons((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
-  }
-
-  return (
-    <section id="pricing" className="poster-pricing">
-      <div className="poster-container">
-        <div className="poster-pricing-header">
-          <div><p className="poster-index">03 / {t("الباقات")}</p><h2>{t("قسيمة") }<br /><span>{t("وردية أهدأ.")}</span></h2></div>
-          <div className="poster-billing-control" role="group" aria-label={t("مدة الاشتراك")}>
-            <button type="button" aria-pressed={!annual} onClick={() => setAnnual(false)}>{t("شهري")}</button>
-            <button type="button" aria-pressed={annual} onClick={() => setAnnual(true)}>{t("سنوي")}</button>
-          </div>
-        </div>
-        <p className="poster-pricing-trial">{t("14 يومًا مجانًا · بلا بطاقة ائتمانية · بلا عقود")}</p>
-        <div className="poster-vouchers">
-          {plans.map((id) => {
-            const plan = SUBSCRIPTION_PLANS[id];
-            const featured = id === "pro";
-            return (
-              <article className={`poster-voucher${featured ? " voucher-featured" : ""}${id === "delivery_only" ? " voucher-small" : ""}`} key={id}>
-                {featured && <Sticker className="voucher-stamp">{t("الأكثر اختيارًا")}</Sticker>}
-                <div className="poster-voucher-main">
-                  <span className="poster-voucher-label">{plan.name}</span>
-                  <p>{plan.description}</p>
-                  <div className="poster-voucher-limits">
-                    <span>{plan.limits.tables === 0 ? t("بلا صالة") : limit(plan.limits.tables, "طاولات")}</span>
-                    <span>{limit(plan.limits.menuItems, "أصناف")}</span>
-                  </div>
-                  <strong className="poster-price">${amount(plan.price)}<small> / {period}</small></strong>
-                  <Link to={`/register?plan=${id}`} className="poster-button poster-button-outline">{t("ابدأ التجربة")}<ArrowUpRight size={16} aria-hidden="true" /></Link>
+        <section className="mp-editorial-workflow" id="workflow" aria-labelledby="mp-journey-title">
+          <div className="mp-editorial-container">
+            <div className="mp-section-heading">
+              <div>
+                <p className="mp-editorial-eyebrow"><span aria-hidden="true" />{text.journey.eyebrow}</p>
+                <h2 id="mp-journey-title">{text.journey.title}</h2>
+              </div>
+              <p>{text.journey.description}</p>
+            </div>
+            <div
+              className="mp-journey"
+              style={{ "--mp-journey-progress": journeyProgress }}
+            >
+              <div
+                className="mp-journey-stations"
+                role="tablist"
+                aria-label={text.journey.selectStage}
+                aria-orientation={isMobileJourney ? "vertical" : "horizontal"}
+              >
+                <div className="mp-journey-track" aria-hidden="true">
+                  <span className="mp-journey-progress" />
+                  <span className="mp-journey-moving-dot" />
                 </div>
-              </article>
-            );
-          })}
+                {text.journey.stages.map((stage, index) => {
+                  const Icon = stageIcons[index];
+                  const selected = index === activeJourneyStep;
+                  return (
+                    <button
+                      className={`mp-journey-stage${selected ? " is-active" : ""}`}
+                      id={`mp-journey-tab-${index}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      aria-controls="mp-journey-panel"
+                      tabIndex={selected ? 0 : -1}
+                      key={stage.title}
+                      ref={(element) => { journeyTabRefs.current[index] = element; }}
+                      onClick={() => setActiveJourneyStep(index)}
+                      onKeyDown={(event) => handleJourneyKeyDown(event, index)}
+                    >
+                      <span className="mp-journey-stage-icon"><Icon size={20} strokeWidth={1.6} aria-hidden="true" /></span>
+                      <span className="mp-journey-stage-title">{stage.title}</span>
+                      <span className="mp-journey-stage-number" aria-hidden="true">0{index + 1}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div
+                className="mp-journey-panel"
+                id="mp-journey-panel"
+                role="tabpanel"
+                aria-labelledby={`mp-journey-tab-${activeJourneyStep}`}
+                tabIndex={0}
+                aria-live="polite"
+              >
+                <span className="mp-journey-panel-number" aria-hidden="true">0{activeJourneyStep + 1}</span>
+                <div>
+                  <h3>{activeStage.title}</h3>
+                  <p>{activeStage.detail}</p>
+                </div>
+                <span className="mp-journey-panel-icon" aria-hidden="true">
+                  {(() => {
+                    const Icon = stageIcons[activeJourneyStep];
+                    return <Icon size={22} strokeWidth={1.6} />;
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mp-editorial-tools" id="tools" aria-labelledby="mp-tools-title">
+          <div className="mp-editorial-container">
+            <div className="mp-tools-heading">
+              <p className="mp-editorial-eyebrow"><span aria-hidden="true" />{text.toolsEyebrow}</p>
+              <h2 id="mp-tools-title">{text.toolsTitle}</h2>
+            </div>
+            <div className="mp-tools-list">
+              {text.tools.map((tool, index) => {
+                const Icon = toolIcons[index];
+                return (
+                  <div className={`mp-tool-wrap${index === 0 ? " is-featured" : ""}`} key={tool.title}>
+                    <article className="mp-tool-item">
+                      <span className="mp-tool-index">0{index + 1}</span>
+                      <span className="mp-tool-icon"><Icon size={21} strokeWidth={1.6} aria-hidden="true" /></span>
+                      <span className="mp-tool-label">{tool.label}</span>
+                      <h3>{tool.title}</h3>
+                      <p>{tool.text}</p>
+                    </article>
+                    {index === 0 && (
+                      <div className="mp-featured-visual" aria-hidden="true">
+                        <div className="mp-featured-qr">
+                          <QrCode size={82} strokeWidth={1.15} />
+                          <span>QR</span>
+                        </div>
+                        <span className="mp-featured-orbit mp-featured-orbit-one" />
+                        <span className="mp-featured-orbit mp-featured-orbit-two" />
+                        <span className="mp-featured-caption">{lang === "ar" ? "قائمتك، أقرب لضيوفك" : "Your menu, closer to guests"}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="mp-editorial-coordination" id="coordination" aria-labelledby="mp-coordination-title">
+          <div className="mp-editorial-container mp-coordination-layout">
+            <div className="mp-coordination-copy">
+              <p className="mp-editorial-eyebrow"><span aria-hidden="true" />{text.coordination.eyebrow}</p>
+              <h2 id="mp-coordination-title">{text.coordination.title}</h2>
+              <p>{text.coordination.description}</p>
+            </div>
+            <div className="mp-coordination-visual" role="img" aria-label={text.coordination.visualLabel}>
+              <svg className="mp-coordination-connectors" viewBox="0 0 640 360" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M132 84 C230 84 230 180 320 180 S410 84 508 84" />
+                <path d="M132 276 C230 276 230 180 320 180 S410 276 508 276" />
+              </svg>
+              <div className="mp-coordination-node mp-coordination-node-one">
+                {(() => { const Icon = coordinationIcons[text.coordination.roles[0].icon]; return <Icon size={21} strokeWidth={1.6} aria-hidden="true" />; })()}
+                <span><strong>{text.coordination.roles[0].title}</strong><small>{text.coordination.roles[0].note}</small></span>
+              </div>
+              <div className="mp-coordination-node mp-coordination-node-two">
+                {(() => { const Icon = coordinationIcons[text.coordination.roles[1].icon]; return <Icon size={21} strokeWidth={1.6} aria-hidden="true" />; })()}
+                <span><strong>{text.coordination.roles[1].title}</strong><small>{text.coordination.roles[1].note}</small></span>
+              </div>
+              <div className="mp-coordination-node mp-coordination-node-three">
+                {(() => { const Icon = coordinationIcons[text.coordination.roles[2].icon]; return <Icon size={21} strokeWidth={1.6} aria-hidden="true" />; })()}
+                <span><strong>{text.coordination.roles[2].title}</strong><small>{text.coordination.roles[2].note}</small></span>
+              </div>
+              <div className="mp-coordination-hub">
+                <span className="mp-coordination-hub-mark"><ClipboardList size={23} strokeWidth={1.5} aria-hidden="true" /></span>
+                <strong>{lang === "ar" ? "الطلب" : "The order"}</strong>
+                <small>{lang === "ar" ? "مسار متصل" : "One connected flow"}</small>
+              </div>
+              <span className="mp-coordination-signal mp-coordination-signal-one" aria-hidden="true" />
+              <span className="mp-coordination-signal mp-coordination-signal-two" aria-hidden="true" />
+            </div>
+          </div>
+        </section>
+
+        <section className="mp-editorial-team" id="team" aria-labelledby="mp-team-title">
+          <div className="mp-editorial-container">
+            <header className="mp-team-heading">
+              <div>
+                <p className="mp-editorial-eyebrow"><span aria-hidden="true" />{landingTeam.eyebrow}</p>
+                <h2 id="mp-team-title">{landingTeam.title}</h2>
+              </div>
+              <p>{landingTeam.description}</p>
+            </header>
+            <ol className="mp-team-list">
+              {landingTeam.members.map((member, index) => (
+                <li className={`mp-team-card${member.head ? " is-lead" : ""}`} key={member.name}>
+                  <span className="mp-team-card-index" aria-hidden="true">0{index + 1}</span>
+                  <span className="mp-team-monogram" aria-hidden="true">{member.initials}</span>
+                  <span className="mp-team-member-copy">
+                    <strong>{member.name}</strong>
+                    <small>{member.role}</small>
+                  </span>
+                  <span className="mp-team-station">{member.station}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="mp-editorial-close" aria-labelledby="mp-close-title">
+          <div className="mp-editorial-container mp-editorial-close-inner">
+            <div>
+              <p className="mp-editorial-eyebrow"><span aria-hidden="true" />{text.closeEyebrow}</p>
+              <h2 id="mp-close-title">{text.closeTitle}</h2>
+              <p>{text.closeText}</p>
+            </div>
+            <Link to="/register" className="mp-editorial-primary">
+              {text.start}<ArrowUpLeft className="mp-editorial-directional" size={17} aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
+      </main>
+
+      <footer className="mp-editorial-footer">
+        <div className="mp-editorial-container mp-editorial-footer-inner">
+          <div className="mp-editorial-footer-brand">
+            <Link to="/" aria-label={text.wordmarkLabel}><BrandWordmark label={text.wordmarkLabel} /></Link>
+            <span>{text.footerLabel}</span>
+          </div>
+          <nav aria-label={text.navLabel}>
+            {text.nav.map((item) => <a href={item.href} key={item.href}>{item.label}</a>)}
+            <Link to="/login">{text.login}</Link>
+          </nav>
+          <p>© {new Date().getFullYear()} MenuPilot · {text.copyright}</p>
         </div>
-        <div className="poster-addons">
-          <p>{t("إضافات اختيارية")}</p>
-          {["delivery", "brand_plus"].map((id) => {
-            const addon = SUBSCRIPTION_ADDONS[id];
-            const selected = addons.includes(id);
-            return (
-              <button type="button" className={`poster-addon${selected ? " is-selected" : ""}`} aria-pressed={selected} onClick={() => toggleAddon(id)} key={id}>
-                <span>{selected ? "−" : "+"}{t(addon.name)}</span>
-                <b>${amount(addon.price)} <small>/ {period}</small></b>
-              </button>
-            );
-          })}
-        </div>
-        <p className="poster-price-statement">
-          {t("{0} دولار بالشهر = {1} سنت باليوم. أقل من ثمن طلب واحد ضاع.", {
-            0: SUBSCRIPTION_PLANS.basic.price,
-            1: Math.round(SUBSCRIPTION_PLANS.basic.price / 30 * 100),
-          })}
-        </p>
-      </div>
-    </section>
-  );
-}
-
-const demoRoles = [
-  { id: "owner", icon: Store, label: "المالك", description: "لوحة التحكم والتقارير والمبيعات.", path: "/owner/dashboard" },
-  { id: "kitchen", icon: ChefHat, label: "المطبخ", description: "طلبات حية وحالات التحضير.", path: "/kitchen" },
-  { id: "cashier", icon: Receipt, label: "الكاشير", description: "طاولات وفواتير وإغلاق الجلسات.", path: "/cashier/tables" },
-  { id: "guest", icon: Smartphone, label: "الزبون", description: "منيو الطاولة والطلب والمتابعة.", path: null },
-];
-
-function TryDemo() {
-  const { startDemo } = useAuth();
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
-  const guestTable = useRef(null);
-
-  useEffect(() => {
-    const idle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 1500));
-    const cancel = window.cancelIdleCallback || window.clearTimeout;
-    const id = idle(() => {
-      guestTable.current = demoGuestTable().then((data) => data?.table_code ?? null).catch(() => null);
-    });
-    return () => cancel(id);
-  }, []);
-
-  async function openRole(role) {
-    setBusy(role.id);
-    setError("");
-    try {
-      if (role.id === "guest") {
-        const code = (await guestTable.current) || (await demoGuestTable())?.table_code;
-        if (!code) throw new Error(t("تعذّر فتح طاولة المطعم التجريبي."));
-        navigate(`/t/${code}`);
-      } else {
-        await startDemo(role.id);
-        navigate(role.path);
-      }
-    } catch (err) {
-      setError(err?.message || t("تعذّر فتح المطعم التجريبي. حاول مرة أخرى."));
-    } finally {
-      setBusy("");
-    }
-  }
-
-  return (
-    <section id="demo" className="poster-demo">
-      <div className="poster-container">
-        <div className="poster-demo-header"><p className="poster-index">04 / {t("مطعم تجريبي حي")}</p><h2>{t("النظام شغّال اليوم.")}<br /><span>{t("جرّبه قبل ما تدفع.")}</span></h2></div>
-        <div className="poster-demo-buttons">
-          {demoRoles.map((role, index) => {
-            const Icon = role.icon;
-            return (
-              <button type="button" disabled={Boolean(busy)} onClick={() => openRole(role)} key={role.id}>
-                <span className="poster-demo-index">0{index + 1}</span><Icon size={25} aria-hidden="true" />
-                <strong>{busy === role.id ? t("جارٍ فتح المطعم…") : t(role.label)}</strong>
-                <small>{t(role.description)}</small><ArrowUpRight size={20} aria-hidden="true" />
-              </button>
-            );
-          })}
-        </div>
-        {error && <p className="poster-demo-error" role="alert">{error}</p>}
-      </div>
-    </section>
-  );
-}
-
-function FAQ() {
-  return (
-    <section id="faq" className="poster-faq">
-      <div className="poster-container poster-faq-inner">
-        <div><p className="poster-index">{t("قبل أن تبدأ")}</p><h2>{t("أسئلة") }<br /><span>{t("مباشرة.")}</span></h2></div>
-        <div className="poster-faq-list">
-          {faqItems.map(([question, answer], index) => (
-            <details key={question}>
-              <summary><span>0{index + 1}</span><b>{t(question)}</b><i aria-hidden="true">+</i></summary>
-              <p>{t(answer)}</p>
-            </details>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Team() {
-  const initials = (name) => name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("");
-  return (
-    <section className="poster-team">
-      <div className="poster-container">
-        <p className="poster-index">{t("الفريق")}</p>
-        <div className="poster-team-heading"><h2>{t("خمسة مطوّرين.")}<br /><span>{t("بنينا كل شيء بإيدينا.")}</span></h2><p>{t("تشغيل أذكى. ضيافة أفضل.")}</p></div>
-        <div className="poster-name-tags">
-          {team.map(([name, role], index) => (
-            <article className={`poster-name-tag tag-${index + 1}`} key={name}>
-              <span>{initials(name)}</span><div><h3>{t(name)}</h3><p>{t(role)}</p></div>
-            </article>
-          ))}
-        </div>
-        <div className="poster-proof-numbers"><span><b>5</b>{t("أدوار")}</span><span><b>+110</b>{t("نقطة API")}</span><span><b>+170</b>{t("اختبار آلي")}</span></div>
-      </div>
-    </section>
-  );
-}
-
-function Final() {
-  return (
-    <section className="poster-final">
-      <div className="poster-container">
-        <p className="poster-index">00:00 · {t("أُغلق المطعم، والنظام يعمل")}</p>
-        <h2>{t("المرة الجاية اللي بترفع فيها إيدك…")}<br /><span>{t("ما رح تضطر تستنى.")}</span></h2>
-        <Link to="/register" className="poster-button poster-button-navy">{t("ابدأ 14 يومًا مجانًا")}<ArrowUpRight size={20} aria-hidden="true" /></Link>
-      </div>
-    </section>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="poster-footer">
-      <div className="poster-container poster-footer-inner">
-        <Link to="/" aria-label={t("menuPilot، الصفحة الرئيسية")}><img src="/brand/logo-on-dark.webp" width="158" height="42" alt="menuPilot" loading="lazy" /></Link>
-        <p>{t("تشغيل أذكى. ضيافة أفضل.")}</p>
-        <span>© {new Date().getFullYear()} menuPilot</span>
-        <a href="#main">{t("للأعلى")} ↑</a>
-      </div>
-    </footer>
-  );
-}
-
-export default function LandingPageV2() {
-  return (
-    <main id="main" className="landing-poster" lang={lang} dir={dir}>
-      <Header />
-      <Hero />
-      <TicketRail />
-      <Roles />
-      <Commission />
-      <Offline />
-      <Features />
-      <Pricing />
-      <TryDemo />
-      <FAQ />
-      <Team />
-      <Final />
-      <Footer />
-    </main>
+      </footer>
+    </div>
   );
 }
