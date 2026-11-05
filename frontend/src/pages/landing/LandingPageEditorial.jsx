@@ -8,13 +8,12 @@ import {
   ChefHat,
   CircleHelp,
   FileBarChart,
-  LockKeyhole,
   Menu,
   QrCode,
   Receipt,
   Smartphone,
   Store,
-  WifiOff,
+  UsersRound,
   X,
 } from "lucide-react";
 import LanguageSwitch from "../../components/ui/LanguageSwitch";
@@ -22,6 +21,7 @@ import { demoGuestTable } from "../../api/demo";
 import { useAuth } from "../../context/AuthContext";
 import { ADDON_ORDER, MAIN_PLANS, SUBSCRIPTION_ADDONS, SUBSCRIPTION_PLANS } from "../../config/subscriptions";
 import { dir, lang, t } from "../../i18n";
+import { landingTeam } from "./landing-team-data.js";
 import "./landing-editorial.css";
 
 const NAVIGATION = [
@@ -29,6 +29,8 @@ const NAVIGATION = [
   ["#platform", "المنصة"],
   ["#demo", "جرّب بنفسك"],
   ["#pricing", "الأسعار"],
+  ["#team", "الفريق"],
+  ["#faq", "الأسئلة الشائعة"],
 ];
 
 const JOURNEY = [
@@ -38,34 +40,25 @@ const JOURNEY = [
     heading: "يمسح الضيف رمز الطاولة.",
     copy: "يفتح المنيو في المتصفح مباشرةً، من دون الحاجة إلى تنزيل تطبيق.",
     image: "menu",
-    alt: "منيو menuPilot الرقمي على الهاتف",
+    alt: "منيو menuPilot على الهاتف",
     icon: Smartphone,
   },
   {
     number: "02",
     role: "إرسال الطلب",
     heading: "يختار ويرسل طلبه.",
-    copy: "ينتقل الطلب من المنيو إلى فريق المطعم، وتبقى حالته قابلة للمتابعة.",
-    image: "tracking",
-    alt: "واجهة متابعة حالة الطلب على الهاتف",
+    copy: "تصل تفاصيل الطلب إلى فريق المطعم، ويتابع المطبخ حالته أثناء التحضير.",
+    image: "kitchen",
+    alt: "شاشة الطلبات في مطبخ menuPilot",
     icon: QrCode,
   },
   {
     number: "03",
-    role: "المطبخ",
-    heading: "يظهر الطلب لدى المطبخ.",
-    copy: "تصل الطلبات إلى شاشة المطبخ، وتتحدث حالتها مع تقدّم التحضير.",
-    image: "kitchen",
-    alt: "واجهة الطلبات الحية في شاشة المطبخ",
-    icon: ChefHat,
-  },
-  {
-    number: "04",
     role: "الفاتورة",
-    heading: "تُتابَع الجلسة حتى الحساب.",
-    copy: "يتابع الكاشير الفواتير والمدفوعات، ثم يغلق الجلسة عند اكتمالها.",
+    heading: "تابع الجلسة حتى الفاتورة.",
+    copy: "راجع الفاتورة والمدفوعات، وأغلق جلسة الطاولة من شاشة الكاشير.",
     image: "cashier",
-    alt: "واجهة الكاشير والفواتير",
+    alt: "شاشة الكاشير والفواتير في menuPilot",
     icon: Receipt,
   },
 ];
@@ -75,18 +68,18 @@ const PLATFORM = [
     number: "01",
     category: "المنيو والطلبات",
     heading: "منيو مطعمك، وطلبٌ أسهل.",
-    copy: "خصّص الشعار والألوان والخلفية والخط، واعرض المنيو عبر QR للطاولات أو رابط المطعم للاستلام والتوصيل، بلا عمولة على الطلبات.",
+    copy: "اعرض المنيو عبر QR للطاولات أو رابط للاستلام والتوصيل. يتوفر تخصيص الشعار والألوان والخلفية والخط بحسب الخطة والإضافات.",
     image: "online",
-    alt: "واجهة المنيو والطلبات الخارجية على الهاتف",
+    alt: "منيو وطلبات المطعم عبر الإنترنت",
     icon: QrCode,
   },
   {
     number: "02",
     category: "الطلبات والمطبخ",
     heading: "كل طلب أمام فريق التحضير.",
-    copy: "استقبل الطلبات على شاشة المطبخ، وحدّث مراحلها، أو اعرضها في وضع شاشة الحائط. ويمكن للمطبخ متابعة العمل بآخر البيانات المحفوظة عند انقطاع الإنترنت.",
+    copy: "استقبل الطلبات على شاشة المطبخ، وتابع حالتها ومراحل تحضيرها خلال الخدمة.",
     image: "kitchen",
-    alt: "شاشة المطبخ تعرض الطلبات",
+    alt: "واجهة شاشة المطبخ والطلبات",
     icon: ChefHat,
   },
   {
@@ -95,33 +88,35 @@ const PLATFORM = [
     heading: "الجلسة والحساب في مسار واحد.",
     copy: "تابع الطاولات والجلسات والطلبات، وأدر الفواتير والمدفوعات وإغلاق الجلسات من شاشة الكاشير.",
     image: "cashier",
-    alt: "إدارة الطاولات والفواتير والمدفوعات",
+    alt: "واجهة الطاولات والفواتير",
     icon: Receipt,
   },
   {
     number: "04",
     category: "إدارة المطعم",
     heading: "صورة أوضح لصاحب المطعم.",
-    copy: "راجع تقارير المبيعات والمالية، وأدر المنيو والطاولات والفريق وصلاحياته من لوحة واحدة.",
+    copy: "راجع التقارير وسجل الطلبات، وأدر المنيو والطاولات والفريق من لوحة واحدة. بعض الأدوات تعتمد على الخطة.",
     image: "dashboard",
-    alt: "لوحة إدارة وتقارير المطعم",
+    alt: "لوحة إدارة المطعم والتقارير",
     icon: FileBarChart,
+  },
+  {
+    number: "05",
+    category: "الفريق والصلاحيات",
+    heading: "فريقك، حاضر في الصورة.",
+    copy: "نظّم حسابات الموظفين وأدوارهم وصلاحياتهم، وتابع سجلات الحضور والغياب.",
+    image: "attendance",
+    alt: "واجهة الفريق والحضور والصلاحيات",
+    icon: UsersRound,
   },
 ];
 
-const ROLES = [
-  { id: "owner", title: "صاحب المطعم", copy: "لوحة الإدارة وتقارير المبيعات والمالية وإدارة الفريق.", icon: Store, image: "dashboard", alt: "لوحة إدارة المطعم وتقاريره" },
-  { id: "kitchen", title: "فريق المطبخ", copy: "الطلبات الواردة ومراحل التحضير على شاشة المطبخ.", icon: ChefHat, image: "kitchen", alt: "شاشة المطبخ والطلبات الواردة" },
-  { id: "cashier", title: "الكاشير", copy: "الطاولات والفواتير والمدفوعات وإغلاق الجلسات.", icon: Receipt, image: "cashier", alt: "واجهة الكاشير والفواتير" },
-];
-
 const FAQS = [
-  ["هل يحتاج الزبون إلى تنزيل تطبيق؟", "لا. يمسح الزبون رمز QR للطاولة ويفتح المنيو في المتصفح، ثم يطلب ويتابع حالة طلبه."],
-  ["هل توجد عمولة على الطلبات؟", "لا توجد عمولة على الطلبات؛ الاشتراك شهري ثابت."],
-  ["هل أحتاج إلى أجهزة إضافية؟", "لا. يعمل menuPilot على الأجهزة التي تستخدمها بالفعل، ويمكن تثبيته كتطبيق PWA."],
-  ["ماذا يحدث إذا انقطع الإنترنت؟", "يستطيع المطبخ والكاشير متابعة العمل باستخدام آخر البيانات المحفوظة."],
-  ["كيف تُحمى جلسات الطاولات؟", "لكل جلسة طاولة مفتاح سري، ولا يُقبل الطلب إلا من هاتف قريب من المطعم."],
-  ["هل أستطيع إلغاء الاشتراك؟", "نعم، يمكنك إلغاء الاشتراك في أي وقت."],
+  ["هل يحتاج الضيف إلى تنزيل تطبيق؟", "لا. يفتح الضيف المنيو مباشرةً من متصفح هاتفه عبر رمز QR للطاولة."],
+  ["ماذا تشمل التجربة المجانية؟", "تستمر التجربة 14 يومًا وتشمل جميع الميزات، ولا تحتاج إلى بطاقة ائتمانية."],
+  ["هل توجد خطة لمطعم بلا صالة؟", "نعم. خطة التوصيل فقط مخصصة لطلبات الاستلام والتوصيل، من دون إدارة الطاولات."],
+  ["ما الفرق بين الخطتين الأساسية والاحترافية؟", "تضيف الاحترافية التقارير وسجل الطلبات والهوية المرئية للمنيو، وتزيل حدود الطاولات والأصناف."],
+  ["هل يدعم MenuPilot العربية والإنجليزية؟", "نعم. تتوفر واجهة MenuPilot بالعربية والإنجليزية."],
 ];
 
 function imagePath(name) {
@@ -143,7 +138,7 @@ function Header() {
     <header className={`ed-header${scrolled ? " is-scrolled" : ""}`}>
       <div className="ed-header-inner">
         <Link className="ed-logo" to="/" aria-label={t("menuPilot، الصفحة الرئيسية")}>
-          <img src="/brand/logo-stacked.webp" width="114" height="48" alt="menuPilot" />
+          <img src="/brand/logo.webp" width="154" height="32" alt="menuPilot" />
         </Link>
         <nav className="ed-nav" aria-label={t("التنقل الرئيسي")}>
           {NAVIGATION.map(([href, label]) => <a href={href} key={href}>{t(label)}</a>)}
@@ -182,38 +177,42 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="ed-hero">
+    <section className="ed-hero" aria-labelledby="ed-hero-title">
       <div className="ed-hero-copy">
-        <p className="ed-kicker"><span>MENUPILOT / 01</span>{t("تشغيل المطعم، بصورة أوضح")}</p>
-        <h1>{t("كل طلب")},<br /><span>{t("في مكانه.")}</span></h1>
+        <p className="ed-kicker"><span>MENUPILOT / OPERATIONS</span>{t("إدارة المطعم، من أول طلب إلى آخر تفصيلة")}</p>
+        <h1 id="ed-hero-title">{t("مطعمك،") }<br /><span>{t("في مسار أوضح.")}</span></h1>
         <div className="ed-hero-lower">
-          <p>{t("منيو الطاولات، الطلبات، المطبخ، والفواتير — مترابطة في منصة واحدة لفريق المطعم.")}</p>
+          <p>{t("القائمة الرقمية والطلبات والطاولات والمطبخ والفواتير والفريق؛ تفاصيل يومك في مساحة واحدة، ليبقى فريقك أقرب لضيوفك.")}</p>
           <div className="ed-hero-actions">
-            <Link to="/register" className="ed-button ed-button-orange">{t("ابدأ تجربتك المجانية")}<ArrowUpLeft size={17} aria-hidden="true" /></Link>
-            <a href="#demo" className="ed-button ed-button-link">{t("جرّب المنصة")}<ArrowDownLeft size={16} aria-hidden="true" /></a>
+            <Link to="/register" className="ed-button ed-button-orange">{t("ابدأ تجربة 14 يومًا مجانًا")}<ArrowUpLeft size={17} aria-hidden="true" /></Link>
+            <a href="#demo" className="ed-button ed-button-link">{t("ادخل المطعم التجريبي")}<ArrowDownLeft size={16} aria-hidden="true" /></a>
+          </div>
+          <div className="ed-hero-assurance">
+            <span><Check size={14} aria-hidden="true" />{t("بلا بطاقة ائتمانية")}</span>
+            <span><QrCode size={14} aria-hidden="true" />{t("قائمة QR بلا تطبيق")}</span>
           </div>
         </div>
       </div>
-      <div className="ed-hero-art" aria-label={t("لقطات حقيقية من menuPilot")}>
-        <div className="ed-art-index"><span>PRODUCT / MENUPILOT</span><span>01—04</span></div>
+      <div className="ed-hero-art" role="group" aria-label={t("لقطات من واجهات MenuPilot")}>
+        <div className="ed-art-index"><span>{t("منصة menuPilot")}</span><span>01—05 / PRODUCT</span></div>
         <div className="ed-art-dashboard">
-          <div className="ed-art-browser"><span /><span /><span /><i>menupilot.app / dashboard</i></div>
-          <img src={imagePath("dashboard")} alt={t("لوحة إدارة المطعم")} width="1600" height="1000" fetchPriority="high" />
-          <span className="ed-art-caption">{t("الإدارة · لوحة المطعم")}</span>
+          <div className="ed-art-browser"><span /><span /><span /><i>menupilot.app / {t("لوحة المطعم")}</i></div>
+          <img src={imagePath("dashboard")} alt={t("لقطة من لوحة إدارة MenuPilot")} width="1600" height="1000" fetchPriority="high" />
+          <span className="ed-art-caption"><Store size={13} aria-hidden="true" />{t("لوحة إدارة المطعم")}</span>
         </div>
         <div className="ed-art-phone">
           <div className="ed-phone-speaker" />
-          <img src={imagePath("menu")} alt={t("منيو المطعم على الهاتف")} width="560" height="1212" fetchPriority="high" />
-          <span className="ed-phone-label">01 / MENU</span>
+          <img src={imagePath("menu")} alt={t("لقطة من منيو MenuPilot على الهاتف")} width="560" height="1212" fetchPriority="high" />
+          <span className="ed-phone-label">01 / {t("قائمة QR")}</span>
         </div>
         <div className="ed-art-kitchen">
-          <span className="ed-art-kitchen-label">02 / KITCHEN</span>
-          <img src={imagePath("kitchen")} alt={t("واجهة شاشة المطبخ")} width="1600" height="1000" fetchPriority="high" />
+          <span className="ed-art-kitchen-label">02 / {t("المطبخ")}</span>
+          <img src={imagePath("kitchen")} alt={t("لقطة من شاشة المطبخ في MenuPilot")} width="1600" height="1000" fetchPriority="high" />
         </div>
-        <span className="ed-art-axis" aria-hidden="true">01&nbsp; — &nbsp;02&nbsp; — &nbsp;03</span>
+        <span className="ed-art-axis"><span className="ed-live-dot" />{t("لقطات من واجهات المنتج")}</span>
       </div>
       <div className="ed-hero-foot">
-        <span>{t("نظام واحد. من أول مسح إلى آخر فاتورة.")}</span>
+        <span>{t("منيو الضيف · الطلبات · المطبخ · إدارة المطعم")}</span>
         <a href="#journey" aria-label={t("انتقل إلى رحلة الطلب")}><ArrowDownLeft size={17} aria-hidden="true" /></a>
       </div>
     </section>
@@ -223,10 +222,11 @@ function Hero() {
 function ValueStrip() {
   return (
     <section className="ed-value-strip" aria-label={t("قيمة menuPilot")}>
-      <span>{t("من أول مسح، تبدأ الرحلة")}</span>
+      <span>{t("ما يحتاجه فريق مطعمك، في مساحة واحدة")}</span>
       <span><QrCode size={15} aria-hidden="true" />{t("منيو رقمي وطلبات QR")}</span>
       <span><ChefHat size={15} aria-hidden="true" />{t("متابعة مباشرة للمطبخ")}</span>
       <span><Receipt size={15} aria-hidden="true" />{t("طاولات وفواتير مترابطة")}</span>
+      <span><UsersRound size={15} aria-hidden="true" />{t("فريق المطعم وصلاحياته")}</span>
     </section>
   );
 }
@@ -274,13 +274,13 @@ function Journey() {
         <div className="ed-journey-visual">
           <div className="ed-journey-screen">
             {JOURNEY.map((step, index) => (
-              <div key={step.number} className={`ed-journey-frame${active === index ? " is-active" : ""}${step.image === "menu" || step.image === "tracking" ? " is-portrait" : ""}`}>
+              <div key={step.number} className={`ed-journey-frame${active === index ? " is-active" : ""}${step.image === "menu" ? " is-portrait" : ""}`} role="img" aria-label={t(step.role)}>
                 <div className="ed-screen-top"><span /><span /><span /><i>menuPilot / {t(step.role)}</i></div>
                 <img
                   src={imagePath(step.image)}
                   alt={t(step.alt)}
-                  width={step.image === "menu" || step.image === "tracking" ? 560 : 1600}
-                  height={step.image === "menu" || step.image === "tracking" ? 1212 : 1000}
+                  width={step.image === "menu" ? "560" : "1600"}
+                  height={step.image === "menu" ? "1212" : "1000"}
                   loading="lazy"
                 />
                 <span className="ed-screen-caption">{step.number} / {t(step.role)}</span>
@@ -320,8 +320,8 @@ function Platform() {
                 <img
                   src={imagePath(item.image)}
                   alt={t(item.alt)}
-                  width={isPortrait ? 560 : 1600}
-                  height={isPortrait ? 1212 : 1000}
+                  width={isPortrait ? "560" : "1600"}
+                  height={isPortrait ? "1212" : "1000"}
                   loading="lazy"
                 />
                 <span className="ed-image-mark">MENUPILOT — {item.number}</span>
@@ -329,60 +329,6 @@ function Platform() {
             </article>
           );
         })}
-      </div>
-      <div className="ed-platform-note">
-        <span><WifiOff size={16} aria-hidden="true" />{t("المطبخ والكاشير يعملان بآخر البيانات المحفوظة عند انقطاع الإنترنت.")}</span>
-        <span><LockKeyhole size={16} aria-hidden="true" />{t("مفتاح خاص لكل جلسة طاولة، والطلب من هاتف قريب من المطعم.")}</span>
-      </div>
-    </section>
-  );
-}
-
-function Roles() {
-  const [activeRole, setActiveRole] = useState(ROLES[0]);
-
-  return (
-    <section className="ed-roles">
-      <div className="ed-roles-heading">
-        <p className="ed-kicker"><span>ONE TEAM / CLEAR ROLES</span>{t("لكل شخص، مساحة عمله")}</p>
-        <h2>{t("فريق يعرف")}&nbsp;<span>{t("خطوته التالية.")}</span></h2>
-      </div>
-      <div className="ed-role-stage">
-        <div className="ed-role-tabs" role="group" aria-label={t("اختر مساحة العمل")}>
-          {ROLES.map((role) => {
-            const Icon = role.icon;
-            return (
-              <button
-                type="button"
-                className="ed-role-tab"
-                key={role.id}
-                aria-pressed={activeRole.id === role.id}
-                onClick={() => setActiveRole(role)}
-              >
-                <Icon size={16} aria-hidden="true" />
-                {t(role.title)}
-              </button>
-            );
-          })}
-        </div>
-        <article className="ed-role-preview" aria-live="polite">
-          <div className="ed-role-preview-image">
-            <img
-              key={activeRole.id}
-              src={imagePath(activeRole.image)}
-              alt={t(activeRole.alt)}
-              width="1600"
-              height="1000"
-              loading="lazy"
-            />
-            <span className="ed-image-mark">MENUPILOT — {t(activeRole.title)}</span>
-          </div>
-          <div className="ed-role-preview-copy">
-            <span className="ed-role-preview-index">{t("مساحة العمل")} / 0{ROLES.findIndex((role) => role.id === activeRole.id) + 1}</span>
-            <h3>{t(activeRole.title)}</h3>
-            <p>{t(activeRole.copy)}</p>
-          </div>
-        </article>
       </div>
     </section>
   );
@@ -437,8 +383,8 @@ function Demo() {
               key={selectedRole.id}
               src={imagePath(selectedRole.image)}
               alt={t(selectedRole.alt)}
-              width={selectedRole.image === "menu" ? 560 : 1600}
-              height={selectedRole.image === "menu" ? 1212 : 1000}
+              width={selectedRole.image === "menu" ? "560" : "1600"}
+              height={selectedRole.image === "menu" ? "1212" : "1000"}
               loading="lazy"
             />
           </div>
@@ -495,8 +441,8 @@ function Pricing() {
     <section id="pricing" className="ed-pricing">
       <div className="ed-pricing-heading">
         <p className="ed-kicker ed-kicker-dark"><span>SUBSCRIPTION / USD</span>{t("خطط الاشتراك")}</p>
-        <h2>{t("بلا عمولة.")}<br /><span>{t("بسعر شهري واضح.")}</span></h2>
-        <p>{t("اختر ما يناسب طريقة عمل مطعمك. كل خطة باشتراك شهري ثابت.")}</p>
+        <h2>{t("خطط واضحة.")}<br /><span>{t("لتشغيل مطعمك.")}</span></h2>
+        <p>{t("الأسعار الشهرية بالدولار. التفاصيل والحدود المعروضة مبنية على خطط MenuPilot الحالية.")}</p>
         <div className="ed-billing" role="group" aria-label={t("مدة الاشتراك")}>
           <button type="button" aria-pressed={!annual} onClick={() => setAnnual(false)}>{t("شهري")}</button>
           <button type="button" aria-pressed={annual} onClick={() => setAnnual(true)}>{t("سنوي")}<span>{t("ادفع 10 أشهر")}</span></button>
@@ -548,7 +494,7 @@ function Pricing() {
           })}
         </div>
       </div>
-      <p className="ed-pricing-assurance"><Check size={15} aria-hidden="true" />{t("تجربة مجانية 14 يومًا، دون بطاقة ائتمانية، والإلغاء في أي وقت.")}</p>
+      <p className="ed-pricing-assurance"><Check size={15} aria-hidden="true" />{t("تجربة مجانية لمدة 14 يومًا بكل الميزات، دون بطاقة ائتمانية.")}</p>
     </section>
   );
 }
@@ -573,6 +519,33 @@ function FAQ() {
   );
 }
 
+function Team() {
+  return (
+    <section id="team" className="ed-team" aria-labelledby="ed-team-title">
+      <div className="ed-team-heading">
+        <div>
+          <p className="ed-kicker ed-kicker-dark"><span>THE PEOPLE BEHIND IT</span>{t("الفريق")}</p>
+          <h2 id="ed-team-title">{landingTeam.title}</h2>
+        </div>
+        <p>{landingTeam.description}</p>
+      </div>
+      <ol className="ed-team-list">
+        {landingTeam.members.map((member, index) => (
+          <li className={`ed-team-card${member.head ? " is-lead" : ""}`} key={member.name}>
+            <span className="ed-team-index" aria-hidden="true">0{index + 1}</span>
+            <span className="ed-team-monogram" aria-hidden="true">{member.initials}</span>
+            <span className="ed-team-copy">
+              <strong>{member.name}</strong>
+              <small>{member.role}</small>
+            </span>
+            <span className="ed-team-station">{member.station}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function Footer() {
   return (
     <footer className="ed-footer">
@@ -584,6 +557,7 @@ function Footer() {
         <a href="#journey">{t("رحلة الطلب")}</a>
         <a href="#platform">{t("المنصة")}</a>
         <a href="#pricing">{t("الأسعار")}</a>
+        <a href="#team">{t("الفريق")}</a>
         <a href="#faq">{t("الأسئلة الشائعة")}</a>
         <Link to="/login">{t("تسجيل الدخول")}</Link>
       </nav>
@@ -593,6 +567,19 @@ function Footer() {
 }
 
 export default function LandingPageEditorial() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    const description = document.querySelector('meta[name="description"]');
+    const previousDescription = description?.content;
+    document.title = `${t("إدارة المطعم، من أول طلب إلى آخر تفصيلة")} | MenuPilot`;
+    if (description) description.content = t("القائمة الرقمية والطلبات والطاولات والمطبخ والفواتير والفريق؛ إدارة مطعمك في منصة واحدة.");
+
+    return () => {
+      document.title = previousTitle;
+      if (description && previousDescription !== undefined) description.content = previousDescription;
+    };
+  }, []);
+
   return (
     <main className="landing-editorial" lang={lang} dir={dir}>
       <Header />
@@ -600,9 +587,9 @@ export default function LandingPageEditorial() {
       <ValueStrip />
       <Journey />
       <Platform />
-      <Roles />
       <Demo />
       <Pricing />
+      <Team />
       <FAQ />
       <section className="ed-final">
         <p className="ed-kicker"><span>YOUR RESTAURANT / NEXT SERVICE</span>{t("ابدأ حين تكون مستعدًا")}</p>
