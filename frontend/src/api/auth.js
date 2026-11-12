@@ -151,7 +151,8 @@ export async function completeGoogleRegistration({ restaurantName, restaurantTyp
 /** {user} when signed in right away, or {verifyEmail: true} when the e-mail must be confirmed first. */
 export async function register(payload) {
   const body = {
-    restaurant_name: payload.restaurantName, email: payload.email, password: payload.password,
+    restaurant_name: payload.restaurantName, restaurant_type: payload.restaurantType,
+    email: payload.email, password: payload.password,
     password_confirmation: payload.passwordConfirmation, plan: payload.plan,
   };
   if (USE_MOCKS) {
