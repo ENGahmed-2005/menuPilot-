@@ -35,6 +35,7 @@ class AuthController extends Controller
 
         $v = Validator::make(array_merge($r->all(), ['email' => $email]), [
             'restaurant_name' => 'required|string|max:255',
+            'restaurant_type' => 'required|in:restaurant,cafe,fast-food,other',
             'email' => ['required', 'email', function ($attribute, $value, $fail) {
                 if (User::whereRaw('LOWER(email) = ?', [Str::lower($value)])->exists()) {
                     $fail('This email address is already in use.');
@@ -50,6 +51,7 @@ class AuthController extends Controller
         // in through the auth service (after verifying the e-mail when it asks).
         $u = DB::transaction(function () use ($v, $email) {
             $u = $this->createRestaurant($v['restaurant_name'], $email, $v['password']);
+            $u->forceFill(['restaurant_type' => $v['restaurant_type']])->save();
             CredentialAccount::sync($u->id, $u->password);
 
             return $u->fresh();
