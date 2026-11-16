@@ -16,7 +16,7 @@ RUN composer dump-autoload --optimize \
     && php artisan view:clear
 # Safe production defaults; values set in the Render dashboard override them.
 #  - APP_DEBUG=false: never show stack traces / config to visitors
-#  - PHP_CLI_SERVER_WORKERS: `artisan serve` handles several requests at once
+#  - PHP_CLI_SERVER_WORKERS: `artisan serve --no-reload` handles concurrent requests
 #    (a single worker froze the app while one live screen was open)
 ENV APP_ENV=production \
     APP_DEBUG=false \
@@ -26,4 +26,4 @@ ENV APP_ENV=production \
     CACHE_STORE=file \
     PHP_CLI_SERVER_WORKERS=6
 EXPOSE 10000
-CMD ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=AdminSeeder --force && php artisan optimize:clear && php artisan serve --host=0.0.0.0 --port=$PORT"]
+CMD ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=AdminSeeder --force && php artisan optimize:clear && exec php artisan serve --no-reload --host=0.0.0.0 --port=$PORT"]
