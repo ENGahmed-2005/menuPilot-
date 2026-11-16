@@ -1,0 +1,2819 @@
+{
+  "info": {
+    "name": "MenuPilot — Flutter Mobile",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Source-checked requests for customer, staff and delivery apps. Import an environment. Cookies are required for real accounts; no JSON login token. Business writes are skipped unless allow_writes=true. This is a catalogue, not a run-all scenario: acceptance/rejection, pickup/delivery, sign-out and different roles are alternatives. Read API.md and select one workflow on staging."
+  },
+  "item": [
+    {
+      "name": "01 Auth",
+      "item": [
+        {
+          "name": "Auth capabilities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/auth-config",
+            "description": "Auth: public",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Sign in — cookie, not a JSON token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/auth/sign-in/email",
+            "description": "Keep Postman cookie jar enabled. If twoFactorRedirect is true, verify TOTP before /account/me.\n\nAuth: public",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"rememberMe\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Verify TOTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/auth/two-factor/verify-totp",
+            "description": "Auth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{otp}}\",\n  \"trustDevice\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Verify backup code — alternative to TOTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/auth/two-factor/verify-backup-code",
+            "description": "Auth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{backup_code}}\",\n  \"trustDevice\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get auth session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/auth/get-session",
+            "description": "Auth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Me — permissions and subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/account/me",
+            "description": "Middleware: api, api.auth\nSource: App\\Http\\Controllers\\AuthController@me\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Permission catalogue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/permissions",
+            "description": "Middleware: api, api.auth\nSource: App\\Http\\Controllers\\PermissionController@catalog\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List devices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/auth/list-sessions",
+            "description": "Auth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Revoke one device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/auth/revoke-device",
+            "description": "Auth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{device_session_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Request password-reset email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/auth/request-password-reset",
+            "description": "Auth: public",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"redirectTo\": \"/reset-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Sign out — run at end",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/auth/sign-out",
+            "description": "Auth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 Customer delivery",
+      "item": [
+        {
+          "name": "Directory — includes not-ready delivery restaurants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/restaurants",
+            "description": "id is the card key. slug can be null. open controls ordering; use delivery_status/menu_available. An empty response is valid.\n\nMiddleware: api, throttle:60,1\nSource: App\\Http\\Controllers\\OutsideOrderController@restaurants\n\nAuth: public",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const d = Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;",
+                  "  if (d.find?.(r => r.open && r.slug)?.slug !== undefined && d.find?.(r => r.open && r.slug)?.slug !== null) pm.environment.set('restaurant_slug', String(d.find?.(r => r.open && r.slug)?.slug));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Restaurant menu",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/restaurants/{{restaurant_slug}}",
+            "description": "Middleware: api\nSource: App\\Http\\Controllers\\OutsideOrderController@restaurant\n\nAuth: public",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const d = Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;",
+                  "  if (d.items?.find(i => i.is_available)?.id !== undefined && d.items?.find(i => i.is_available)?.id !== null) pm.environment.set('menu_item_id', String(d.items?.find(i => i.is_available)?.id));",
+                  "  if (d.zones?.[0]?.id !== undefined && d.zones?.[0]?.id !== null) pm.environment.set('zone_id', String(d.zones?.[0]?.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create delivery — review zone minimum first",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/restaurants/{{restaurant_slug}}/orders",
+            "description": "Set a real test zone and available item. Server prices win. quantity=2 may not meet every zone minimum. Do not automatically retry after timeout.\n\nMiddleware: api, throttle:10,1\nSource: App\\Http\\Controllers\\OutsideOrderController@place\n\nAuth: public",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"delivery\",\n  \"name\": \"زبون اختبار\",\n  \"phone\": \"{{customer_phone}}\",\n  \"address\": \"عنوان اختبار — لا ترسل لمطعم حقيقي\",\n  \"zone_id\": {{zone_id}},\n  \"notes\": \"طلب تكامل تجريبي\",\n  \"payment_method\": \"cash\",\n  \"items\": [\n    {\n      \"menuItemId\": {{menu_item_id}},\n      \"quantity\": 2,\n      \"note\": \"بدون بصل\",\n      \"options\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const d = Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;",
+                  "  if (d.id !== undefined && d.id !== null) pm.environment.set('order_id', String(d.id));",
+                  "  if (d.token !== undefined && d.token !== null) pm.environment.set('order_token', String(d.token));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create delivery with bank-transfer proof — alternative flow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/restaurants/{{restaurant_slug}}/orders",
+            "description": "proof_data_url must be a real test PNG/JPEG/WebP data URL, decoded size <=5MB. No automatic payment verification.\n\nMiddleware: api, throttle:10,1\nSource: App\\Http\\Controllers\\OutsideOrderController@place\n\nAuth: public",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"delivery\",\n  \"name\": \"زبون اختبار\",\n  \"phone\": \"{{customer_phone}}\",\n  \"address\": \"عنوان اختبار — لا ترسل لمطعم حقيقي\",\n  \"zone_id\": {{zone_id}},\n  \"notes\": \"طلب تكامل تجريبي\",\n  \"payment_method\": \"transfer\",\n  \"items\": [\n    {\n      \"menuItemId\": {{menu_item_id}},\n      \"quantity\": 2,\n      \"note\": \"بدون بصل\",\n      \"options\": []\n    }\n  ],\n  \"proof\": \"{{proof_data_url}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const d = Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;",
+                  "  if (d.id !== undefined && d.id !== null) pm.environment.set('order_id', String(d.id));",
+                  "  if (d.token !== undefined && d.token !== null) pm.environment.set('order_token', String(d.token));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create pickup — alternative flow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/restaurants/{{restaurant_slug}}/orders",
+            "description": "Middleware: api, throttle:10,1\nSource: App\\Http\\Controllers\\OutsideOrderController@place\n\nAuth: public",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"pickup\",\n  \"name\": \"زبون اختبار\",\n  \"phone\": \"{{customer_phone}}\",\n  \"notes\": \"طلب تكامل تجريبي\",\n  \"payment_method\": \"cash\",\n  \"items\": [\n    {\n      \"menuItemId\": {{menu_item_id}},\n      \"quantity\": 2,\n      \"note\": \"بدون بصل\",\n      \"options\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const d = Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;",
+                  "  if (d.id !== undefined && d.id !== null) pm.environment.set('order_id', String(d.id));",
+                  "  if (d.token !== undefined && d.token !== null) pm.environment.set('order_token', String(d.token));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Track order with secret header",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Order-Token",
+                "value": "{{order_token}}"
+              }
+            ],
+            "url": "{{base_url}}/public/outside-orders/{{order_id}}",
+            "description": "Middleware: api, throttle:60,1\nSource: App\\Http\\Controllers\\OutsideOrderController@track\n\nAuth: order_token",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 Operations",
+      "item": [
+        {
+          "name": "Outside orders — active",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders?status=active",
+            "description": "Drivers always receive assigned ready delivery orders, regardless of this filter. General done view is only the past two days. Limit 200, no cursor.\n\nMiddleware: api, api.auth, permission:view_orders|deliver_orders|dispatch_deliveries\nSource: App\\Http\\Controllers\\OutsideOrderController@index\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Outside orders — awaiting",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders?status=awaiting",
+            "description": "Drivers always receive assigned ready delivery orders, regardless of this filter. General done view is only the past two days. Limit 200, no cursor.\n\nMiddleware: api, api.auth, permission:view_orders|deliver_orders|dispatch_deliveries\nSource: App\\Http\\Controllers\\OutsideOrderController@index\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Outside orders — done",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders?status=done",
+            "description": "Drivers always receive assigned ready delivery orders, regardless of this filter. General done view is only the past two days. Limit 200, no cursor.\n\nMiddleware: api, api.auth, permission:view_orders|deliver_orders|dispatch_deliveries\nSource: App\\Http\\Controllers\\OutsideOrderController@index\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Outside orders — delivery",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders?status=delivery",
+            "description": "Drivers always receive assigned ready delivery orders, regardless of this filter. General done view is only the past two days. Limit 200, no cursor.\n\nMiddleware: api, api.auth, permission:view_orders|deliver_orders|dispatch_deliveries\nSource: App\\Http\\Controllers\\OutsideOrderController@index\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Accept outside order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders/{{order_id}}/accept",
+            "description": "Middleware: api, api.auth, permission:manage_orders|view_payments, subscription\nSource: App\\Http\\Controllers\\OutsideOrderController@accept\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prep_minutes\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reject — alternative to acceptance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders/{{order_id}}/reject",
+            "description": "Middleware: api, api.auth, permission:manage_orders|view_payments, subscription\nSource: App\\Http\\Controllers\\OutsideOrderController@reject\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"المطعم لا يستطيع تجهيز الطلب التجريبي\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Verify bank transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders/{{order_id}}/verify-payment",
+            "description": "Only for a transfer order after checking the real payment. Not used in the cash happy path.\n\nMiddleware: api, api.auth, permission:manage_orders|view_payments, subscription\nSource: App\\Http\\Controllers\\OutsideOrderController@verifyPayment\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Owner orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/owner/orders",
+            "description": "Middleware: api, api.auth, permission:view_orders\nSource: App\\Http\\Controllers\\OrderController@owner\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "One owner order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/owner/orders/{{order_id}}",
+            "description": "Middleware: api, api.auth, permission:view_orders\nSource: App\\Http\\Controllers\\OrderController@show\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 Kitchen",
+      "item": [
+        {
+          "name": "Kitchen queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/kitchen/orders",
+            "description": "Middleware: api, api.auth, permission:manage_orders, feature:kitchen\nSource: App\\Http\\Controllers\\OrderController@kitchen\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Kitchen → preparing",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/kitchen/orders/{{order_id}}/status",
+            "description": "Middleware: api, api.auth, permission:manage_orders, feature:kitchen\nSource: App\\Http\\Controllers\\OrderController@status\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"preparing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Kitchen → ready",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/kitchen/orders/{{order_id}}/status",
+            "description": "Middleware: api, api.auth, permission:manage_orders, feature:kitchen\nSource: App\\Http\\Controllers\\OrderController@status\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ready\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 Delivery staff",
+      "item": [
+        {
+          "name": "Ready delivery board / assigned to me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders?status=delivery",
+            "description": "Middleware: api, api.auth, permission:view_orders|deliver_orders|dispatch_deliveries\nSource: App\\Http\\Controllers\\OutsideOrderController@index\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Drivers and workload",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders/drivers",
+            "description": "Middleware: api, api.auth, permission:dispatch_deliveries|manage_orders|view_payments\nSource: App\\Http\\Controllers\\OutsideOrderController@drivers\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const d = Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;",
+                  "  if (d[0]?.id !== undefined && d[0]?.id !== null) pm.environment.set('driver_id', String(d[0]?.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Assign driver — dispatcher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders/{{order_id}}/assign",
+            "description": "id comes from drivers, not the staff table. Kitchen must be ready.\n\nMiddleware: api, api.auth, permission:dispatch_deliveries|manage_orders|view_payments, subscription\nSource: App\\Http\\Controllers\\OutsideOrderController@assign\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"driver_id\": {{driver_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Out for delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders/{{order_id}}/dispatch",
+            "description": "Middleware: api, api.auth, permission:manage_orders|view_payments|deliver_orders|dispatch_deliveries, subscription\nSource: App\\Http\\Controllers\\OutsideOrderController@dispatch\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Delivered and collected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/outside-orders/{{order_id}}/complete",
+            "description": "Confirm delivery and cash collection before calling. Transfer payments must already be verified.\n\nMiddleware: api, api.auth, permission:manage_orders|view_payments|deliver_orders|dispatch_deliveries, subscription\nSource: App\\Http\\Controllers\\OutsideOrderController@complete\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 Tables and waiter",
+      "item": [
+        {
+          "name": "Tables",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/tables",
+            "description": "Middleware: api, api.auth, permission:view_tables\nSource: App\\Http\\Controllers\\TableController@index\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const d = Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;",
+                  "  if (d[0]?.id !== undefined && d[0]?.id !== null) pm.environment.set('table_id', String(d[0]?.id));",
+                  "  if (d[0]?.table_code !== undefined && d[0]?.table_code !== null) pm.environment.set('table_code', String(d[0]?.table_code));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Active sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/sessions",
+            "description": "Middleware: api, api.auth, permission:view_tables|view_orders\nSource: App\\Http\\Controllers\\SessionController@active\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Table status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/tables/{{table_id}}/status",
+            "description": "Middleware: api, api.auth, permission:view_tables\nSource: App\\Http\\Controllers\\TableController@status\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Resolve assistance request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/assistance-requests/{{assistance_id}}/resolve",
+            "description": "Middleware: api, api.auth, permission:handle_assistance\nSource: App\\Http\\Controllers\\SessionController@resolveAssistance\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Resolve assistance for session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/sessions/{{session_id}}/assistance/resolve",
+            "description": "Middleware: api, api.auth, permission:handle_assistance\nSource: App\\Http\\Controllers\\SessionController@resolveSessionAssistance\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Cancel order item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/order-items/{{order_item_id}}/cancel",
+            "description": "Middleware: api, api.auth, permission:cancel_orders\nSource: App\\Http\\Controllers\\OrderController@cancel\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"طلب الزبون إلغاء الصنف\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reassign cancelled item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/order-items/{{order_item_id}}/reassign",
+            "description": "Middleware: api, api.auth, permission:reassign_orders\nSource: App\\Http\\Controllers\\OrderController@reassign\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_session_id\": {{target_session_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 Cashier",
+      "item": [
+        {
+          "name": "Session bill",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/sessions/{{session_id}}/bill",
+            "description": "Middleware: api, api.auth, permission:view_payments|view_tables\nSource: App\\Http\\Controllers\\BillingController@bill\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Record cash payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/sessions/{{session_id}}/payment",
+            "description": "Middleware: api, api.auth, permission:record_payment, throttle:30,1\nSource: App\\Http\\Controllers\\BillingController@pay\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"cash\",\n  \"close\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([201]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Adjust bill item",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/sessions/{{session_id}}/bill-items/{{bill_item_id}}",
+            "description": "Middleware: api, api.auth, permission:adjust_bill, throttle:30,1\nSource: App\\Http\\Controllers\\BillingController@adjust\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_price\": 15,\n  \"reason\": \"تصحيح سعر تجريبي\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Close session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/sessions/{{session_id}}/close",
+            "description": "Middleware: api, api.auth, permission:close_session, throttle:20,1\nSource: App\\Http\\Controllers\\BillingController@close\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Pending payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/payments/pending",
+            "description": "Middleware: api, api.auth, permission:view_payments\nSource: App\\Http\\Controllers\\PaymentController@pending\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Verify payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/payments/{{payment_id}}/verify",
+            "description": "Middleware: api, api.auth, permission:verify_payments, throttle:30,1\nSource: App\\Http\\Controllers\\PaymentController@verify\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reject payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/payments/{{payment_id}}/reject",
+            "description": "Middleware: api, api.auth, permission:verify_payments, throttle:30,1\nSource: App\\Http\\Controllers\\PaymentController@reject\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"إثبات غير واضح\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08 Menu and settings",
+      "item": [
+        {
+          "name": "Menu items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/menu-items",
+            "description": "Middleware: api, api.auth, permission:manage_menu\nSource: App\\Http\\Controllers\\MenuController@index\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Disable menu item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/menu-items/{{menu_item_id}}",
+            "description": "Middleware: api, api.auth, permission:manage_menu, subscription\nSource: App\\Http\\Controllers\\MenuController@update\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_available\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Enable menu item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/menu-items/{{menu_item_id}}",
+            "description": "Middleware: api, api.auth, permission:manage_menu, subscription\nSource: App\\Http\\Controllers\\MenuController@update\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_available\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Online ordering settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/online-ordering/settings",
+            "description": "Middleware: api, api.auth, permission:manage_settings\nSource: App\\Http\\Controllers\\OutsideOrderController@settings\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Enable delivery / set test zones",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/online-ordering/settings",
+            "description": "zones replaces the whole list and changes zone IDs. Use only a dedicated test restaurant. Re-read the public menu afterwards.\n\nMiddleware: api, api.auth, permission:manage_settings\nSource: App\\Http\\Controllers\\OutsideOrderController@updateSettings\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true,\n  \"paused\": false,\n  \"pickup_enabled\": true,\n  \"delivery_enabled\": true,\n  \"prep_minutes\": 20,\n  \"zones\": [\n    {\n      \"name\": \"منطقة اختبار\",\n      \"fee\": 5,\n      \"min_order\": 0,\n      \"active\": true\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Pause incoming orders",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/online-ordering/settings",
+            "description": "Middleware: api, api.auth, permission:manage_settings\nSource: App\\Http\\Controllers\\OutsideOrderController@updateSettings\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paused\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Resume incoming orders",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/online-ordering/settings",
+            "description": "Middleware: api, api.auth, permission:manage_settings\nSource: App\\Http\\Controllers\\OutsideOrderController@updateSettings\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paused\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Staff list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/staff",
+            "description": "Middleware: api, api.auth, permission:manage_staff\nSource: App\\Http\\Controllers\\StaffController@index\n\nAuth: Postman cookie jar; real session. Read API.md.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "09 QR guest — optional",
+      "item": [
+        {
+          "name": "Public table menu",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/tables/{{table_code}}/menu",
+            "description": "Middleware: api\nSource: App\\Http\\Controllers\\MenuController@publicMenu\n\nAuth: public",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Open table session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/tables/{{table_code}}/sessions",
+            "description": "Real restaurants enforce location. Use actual test-restaurant coordinates, not these illustrative coordinates.\n\nMiddleware: api, subscription:table, feature:dine_in,table\nSource: App\\Http\\Controllers\\SessionController@open\n\nAuth: public",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"زبون اختبار\",\n  \"phone\": \"{{customer_phone}}\",\n  \"latitude\": 31.5,\n  \"longitude\": 34.46\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const d = Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;",
+                  "  if (d.id !== undefined && d.id !== null) pm.environment.set('session_id', String(d.id));",
+                  "  if (d.access_token !== undefined && d.access_token !== null) pm.environment.set('session_token', String(d.access_token));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Session details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{session_token}}"
+              }
+            ],
+            "url": "{{base_url}}/public/sessions/{{session_id}}",
+            "description": "Middleware: api, session.token\nSource: App\\Http\\Controllers\\SessionController@show\n\nAuth: session_token",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Send table order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/sessions/{{session_id}}/orders",
+            "description": "Middleware: api, session.token, throttle:30,1, subscription:session\nSource: App\\Http\\Controllers\\OrderController@submit\n\nAuth: session_token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"menuItemId\": {{menu_item_id}},\n      \"quantity\": 2,\n      \"note\": \"بدون بصل\",\n      \"options\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Guest session orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{session_token}}"
+              }
+            ],
+            "url": "{{base_url}}/public/sessions/{{session_id}}/orders",
+            "description": "Middleware: api, session.token\nSource: App\\Http\\Controllers\\OrderController@session\n\nAuth: session_token",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Call waiter",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/sessions/{{session_id}}/assistance-requests",
+            "description": "Middleware: api, session.token, throttle:10,1\nSource: App\\Http\\Controllers\\SessionController@assistance\n\nAuth: session_token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Request bill",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{session_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/public/sessions/{{session_id}}/bill-request",
+            "description": "Middleware: api, session.token, throttle:10,1\nSource: App\\Http\\Controllers\\BillingController@request\n\nAuth: session_token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('allow_writes') !== 'true') {",
+                  "  console.warn('Skipped: set allow_writes=true only for an approved test restaurant/environment.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Guest bill",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{session_token}}"
+              }
+            ],
+            "url": "{{base_url}}/public/sessions/{{session_id}}/bill",
+            "description": "Middleware: api, session.token\nSource: App\\Http\\Controllers\\BillingController@customerBill\n\nAuth: session_token",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Successful response', function () { pm.expect(pm.response.code).to.be.oneOf([200]); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}

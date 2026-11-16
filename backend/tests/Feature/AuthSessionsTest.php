@@ -119,7 +119,7 @@ it('sends an app cached from before to the new sign-in', function () {
 
 it('registers a restaurant without a token and with a credential account', function () {
     $res = $this->postJson('/api/account/register', [
-        'restaurant_name' => 'Zaytoona', 'email' => '  Owner@Zaytoona.TEST ',
+        'restaurant_name' => 'Zaytoona', 'restaurant_type' => 'restaurant', 'email' => '  Owner@Zaytoona.TEST ',
         'password' => 'Secret#123', 'password_confirmation' => 'Secret#123',
     ])->assertCreated()->assertJsonMissingPath('data.token');
 

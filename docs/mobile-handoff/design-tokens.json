@@ -1,0 +1,16 @@
+{
+  "name": "menuPilot Mobile",
+  "direction": "rtl",
+  "colors": {"navy": "#1F2D3D", "copper": "#B8793E", "paper": "#FAF7F0", "surface": "#FFFFFF", "text": "#1F2D3D", "muted": "#666B70", "success": "#24664D", "danger": "#A33D35", "line": "#E5E0D8"},
+  "fontFamily": "Tajawal",
+  "fontFallback": "system-ui",
+  "type": {"display": 32, "title": 24, "subtitle": 20, "body": 16, "label": 14, "caption": 12},
+  "spacing": [4, 8, 12, 16, 24, 32, 48],
+  "radius": {"control": 12, "card": 20, "sheet": 28},
+  "minTapTarget": 48,
+  "screenMargin": 16,
+  "safeArea": true,
+  "breakpoints": {"compact": 360, "phone": 390, "tablet": 768},
+  "motionMs": {"fast": 120, "normal": 200},
+  "reducedMotion": true
+}

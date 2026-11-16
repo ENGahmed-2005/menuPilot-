@@ -1,0 +1,1889 @@
+[
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/account/forgot-password",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@forgotPassword",
+    "middleware": [
+      "api",
+      "throttle:5,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/account/login",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@login",
+    "middleware": [
+      "api"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/account/logout",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@logout",
+    "middleware": [
+      "api",
+      "api.auth"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/account/me",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@me",
+    "middleware": [
+      "api",
+      "api.auth"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/account/register",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@register",
+    "middleware": [
+      "api",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/account/register/google",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@registerGoogle",
+    "middleware": [
+      "api",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/account/reset-password",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@resetPassword",
+    "middleware": [
+      "api",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/accounting/settings",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountingController@settings",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:export_reports|export_invoices|export_payments|export_sales|manage_accounting_settings"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT",
+    "uri": "api/accounting/settings",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountingController@updateSettings",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_accounting_settings"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/admin/audit-logs",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuditLogController@admin",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/admin/owners/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@updateOwner",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/admin/owners/{id}/status",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@ownerStatus",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/admin/password-requests",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PasswordRequestController@index",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/admin/password-requests/{id}/dismiss",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PasswordRequestController@dismiss",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/admin/password-requests/{id}/link",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PasswordRequestController@link",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/admin/reports",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@reports",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/admin/restaurants",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@restaurants",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/admin/restaurants",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@storeRestaurant",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/admin/restaurants/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@updateOwner",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/admin/restaurants/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@destroyRestaurant",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/admin/restaurants/{id}/features",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@features",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT",
+    "uri": "api/admin/restaurants/{id}/features",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@updateFeatures",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/admin/restaurants/{id}/plan",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@plan",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/admin/restaurants/{id}/subscription/cancel",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@cancelSubscription",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/admin/restaurants/{id}/trial/extend",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AdminController@extendTrial",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/admin/subscription-payments",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SubscriptionPaymentController@adminIndex",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/admin/subscription-payments/{id}/reject",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SubscriptionPaymentController@reject",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/admin/subscription-payments/{id}/verify",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SubscriptionPaymentController@verify",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:admin",
+      "permission:manage_admin"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/assistance-requests/{id}/resolve",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@resolveAssistance",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:handle_assistance"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/forgot-password",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@forgotPassword",
+    "middleware": [
+      "api",
+      "throttle:5,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/login",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@login",
+    "middleware": [
+      "api"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/logout",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@logout",
+    "middleware": [
+      "api",
+      "api.auth"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/auth/me",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@me",
+    "middleware": [
+      "api",
+      "api.auth"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/register",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@register",
+    "middleware": [
+      "api",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/register/google",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@registerGoogle",
+    "middleware": [
+      "api",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/auth/reset-password",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuthController@resetPassword",
+    "middleware": [
+      "api",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|POST|HEAD",
+    "uri": "api/broadcasting/auth",
+    "name": null,
+    "action": "Illuminate\\Broadcasting\\BroadcastController@authenticate",
+    "middleware": [
+      "api",
+      "api.auth"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/demo/guest",
+    "name": null,
+    "action": "App\\Http\\Controllers\\DemoController@guest",
+    "middleware": [
+      "api",
+      "throttle:30,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/demo/session",
+    "name": null,
+    "action": "App\\Http\\Controllers\\DemoController@start",
+    "middleware": [
+      "api",
+      "throttle:30,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/kitchen/orders",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@kitchen",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_orders",
+      "feature:kitchen"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/kitchen/orders/{id}/status",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@status",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_orders",
+      "feature:kitchen"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/me/branding",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BrandingController@show",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_branding"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/me/branding",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BrandingController@update",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_branding"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/me/branding/reset",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BrandingController@reset",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_branding"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/me/plan",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountController@plan",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/me/restaurant",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountController@show",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_restaurant"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/me/restaurant",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountController@updateRestaurant",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_restaurant"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/me/theme",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountController@theme",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_branding"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/media/{uuid}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\MediaController@show",
+    "middleware": [
+      "api"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/menu-categories",
+    "name": null,
+    "action": "App\\Http\\Controllers\\MenuCategoryController@index",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_menu"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/menu-categories",
+    "name": "menu-categories.store",
+    "action": "App\\Http\\Controllers\\MenuCategoryController@store",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_menu",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT|PATCH",
+    "uri": "api/menu-categories/{menu_category}",
+    "name": "menu-categories.update",
+    "action": "App\\Http\\Controllers\\MenuCategoryController@update",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_menu",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/menu-categories/{menu_category}",
+    "name": "menu-categories.destroy",
+    "action": "App\\Http\\Controllers\\MenuCategoryController@destroy",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_menu",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/menu-items",
+    "name": null,
+    "action": "App\\Http\\Controllers\\MenuController@index",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_menu"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/menu-items",
+    "name": "menu-items.store",
+    "action": "App\\Http\\Controllers\\MenuController@store",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_menu",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT|PATCH",
+    "uri": "api/menu-items/{menu_item}",
+    "name": "menu-items.update",
+    "action": "App\\Http\\Controllers\\MenuController@update",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_menu",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/menu-items/{menu_item}",
+    "name": "menu-items.destroy",
+    "action": "App\\Http\\Controllers\\MenuController@destroy",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_menu",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/menu/{table_token}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\MenuController@publicMenu",
+    "middleware": [
+      "api"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/online-ordering/settings",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@settings",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_settings"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT",
+    "uri": "api/online-ordering/settings",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@updateSettings",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_settings"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/order-items/{id}/cancel",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@cancel",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:cancel_orders"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/order-items/{id}/reassign",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@reassign",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:reassign_orders"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/orders/{id}/cancel",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@cancelOrder",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:cancel_orders"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/orders/{id}/status",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@status",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_orders"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/outside-orders",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@index",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_orders|deliver_orders|dispatch_deliveries"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/outside-orders/drivers",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@drivers",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:dispatch_deliveries|manage_orders|view_payments"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/outside-orders/{id}/accept",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@accept",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_orders|view_payments",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/outside-orders/{id}/assign",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@assign",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:dispatch_deliveries|manage_orders|view_payments",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/outside-orders/{id}/complete",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@complete",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_orders|view_payments|deliver_orders|dispatch_deliveries",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/outside-orders/{id}/dispatch",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@dispatch",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_orders|view_payments|deliver_orders|dispatch_deliveries",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/outside-orders/{id}/reject",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@reject",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_orders|view_payments",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/outside-orders/{id}/status",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@overrideStatus",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_orders",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/outside-orders/{id}/verify-payment",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@verifyPayment",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_orders|view_payments",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/audit-logs",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AuditLogController@owner",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_staff"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/finance/attendance",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@attendance",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT",
+    "uri": "api/owner/finance/attendance",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@markAttendance",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/finance/employees",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@employees",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/owner/finance/employees",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@storeEmployee",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/owner/finance/employees/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@updateEmployee",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/owner/finance/employees/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@destroyEmployee",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/finance/expenses",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@expenses",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/owner/finance/expenses",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@storeExpense",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/owner/finance/expenses/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@updateExpense",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/owner/finance/expenses/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@destroyExpense",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports",
+      "subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/finance/payroll",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@payroll",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/finance/summary",
+    "name": null,
+    "action": "App\\Http\\Controllers\\FinanceController@summary",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner,manager",
+      "permission:manage_finance",
+      "feature:reports"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/orders",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@owner",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_orders"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/orders/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@show",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_orders"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/owner/reports/sales-trend",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OwnerReportsController@salesTrend",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:view_reports",
+      "feature:reports"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/payments/pending",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PaymentController@pending",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_payments"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/payments/{id}/reconcile",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BillingController@reconcile",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:verify_payments",
+      "throttle:30,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/payments/{id}/reject",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PaymentController@reject",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:verify_payments",
+      "throttle:30,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/payments/{id}/verify",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PaymentController@verify",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:verify_payments",
+      "throttle:30,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/permissions",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PermissionController@catalog",
+    "middleware": [
+      "api",
+      "api.auth"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/outside-orders/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@track",
+    "middleware": [
+      "api",
+      "throttle:60,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/restaurants",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@restaurants",
+    "middleware": [
+      "api",
+      "throttle:60,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/restaurants/{slug}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@restaurant",
+    "middleware": [
+      "api"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/public/restaurants/{slug}/orders",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OutsideOrderController@place",
+    "middleware": [
+      "api",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/sessions/{id}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@show",
+    "middleware": [
+      "api",
+      "session.token"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/public/sessions/{id}/assistance-requests",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@assistance",
+    "middleware": [
+      "api",
+      "session.token",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/sessions/{id}/bill",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BillingController@customerBill",
+    "middleware": [
+      "api",
+      "session.token"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/public/sessions/{id}/bill-request",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BillingController@request",
+    "middleware": [
+      "api",
+      "session.token",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/public/sessions/{id}/customer",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@updateCustomer",
+    "middleware": [
+      "api",
+      "session.token"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/public/sessions/{id}/leave",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@leave",
+    "middleware": [
+      "api",
+      "session.token",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/sessions/{id}/orders",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@session",
+    "middleware": [
+      "api",
+      "session.token"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/public/sessions/{id}/orders",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@submit",
+    "middleware": [
+      "api",
+      "session.token",
+      "throttle:30,1",
+      "subscription:session"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/sessions/{id}/orders/stream",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@stream",
+    "middleware": [
+      "api",
+      "session.token"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/public/sessions/{id}/payment",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PaymentController@submit",
+    "middleware": [
+      "api",
+      "session.token",
+      "throttle:20,1",
+      "subscription:session"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/sessions/{id}/payment-options",
+    "name": null,
+    "action": "App\\Http\\Controllers\\PaymentController@options",
+    "middleware": [
+      "api",
+      "session.token"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/public/tables/{code}/menu",
+    "name": null,
+    "action": "App\\Http\\Controllers\\MenuController@publicMenu",
+    "middleware": [
+      "api"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/public/tables/{code}/sessions",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@open",
+    "middleware": [
+      "api",
+      "subscription:table",
+      "feature:dine_in,table"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/reports/export/daily",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountingController@export",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:export_sales|export_reports",
+      "throttle:20,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/reports/export/invoices",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountingController@export",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:export_invoices|export_reports",
+      "throttle:20,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/reports/export/payments",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountingController@export",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:export_payments|export_reports",
+      "throttle:20,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/reports/export/products",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountingController@export",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:export_sales|export_reports",
+      "throttle:20,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/reports/export/sales",
+    "name": null,
+    "action": "App\\Http\\Controllers\\AccountingController@export",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:export_sales|export_invoices|export_reports",
+      "throttle:20,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/sessions",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@active",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_tables|view_orders"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/sessions/stream",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@stream",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_tables|view_orders"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/sessions/{id}/assistance/resolve",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@resolveSessionAssistance",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:handle_assistance"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/sessions/{id}/bill",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BillingController@bill",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_payments|view_tables"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/sessions/{id}/call-waiter",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SessionController@assistance",
+    "middleware": [
+      "api",
+      "session.token",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/sessions/{id}/close",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BillingController@close",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:close_session",
+      "throttle:20,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/sessions/{id}/orders",
+    "name": null,
+    "action": "App\\Http\\Controllers\\OrderController@submit",
+    "middleware": [
+      "api",
+      "session.token",
+      "throttle:30,1",
+      "subscription:session"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/sessions/{id}/payment",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BillingController@pay",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:record_payment",
+      "throttle:30,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/sessions/{id}/request-bill",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BillingController@request",
+    "middleware": [
+      "api",
+      "session.token",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/sessions/{sessionId}/bill-items/{item}",
+    "name": null,
+    "action": "App\\Http\\Controllers\\BillingController@adjust",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:adjust_bill",
+      "throttle:30,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/staff",
+    "name": null,
+    "action": "App\\Http\\Controllers\\StaffController@store",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_staff",
+      "subscription",
+      "feature:staff"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/staff",
+    "name": "staff.index",
+    "action": "App\\Http\\Controllers\\StaffController@index",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_staff"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/staff/{id}/status",
+    "name": null,
+    "action": "App\\Http\\Controllers\\StaffController@status",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_staff"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT|PATCH",
+    "uri": "api/staff/{staff}",
+    "name": "staff.update",
+    "action": "App\\Http\\Controllers\\StaffController@update",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_staff"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/staff/{staff}",
+    "name": "staff.destroy",
+    "action": "App\\Http\\Controllers\\StaffController@destroy",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_staff"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/subscription",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SubscriptionPaymentController@show",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_subscription"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/subscription/payments",
+    "name": null,
+    "action": "App\\Http\\Controllers\\SubscriptionPaymentController@store",
+    "middleware": [
+      "api",
+      "api.auth",
+      "role:owner",
+      "permission:manage_subscription",
+      "throttle:10,1"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "POST",
+    "uri": "api/tables",
+    "name": "tables.store",
+    "action": "App\\Http\\Controllers\\TableController@store",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_tables",
+      "subscription",
+      "feature:dine_in"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/tables",
+    "name": null,
+    "action": "App\\Http\\Controllers\\TableController@index",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_tables"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/tables/{id}/qr",
+    "name": null,
+    "action": "App\\Http\\Controllers\\TableController@qr",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_tables",
+      "subscription",
+      "feature:dine_in"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PATCH",
+    "uri": "api/tables/{id}/status",
+    "name": null,
+    "action": "App\\Http\\Controllers\\TableController@updateStatus",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_tables",
+      "subscription",
+      "feature:dine_in"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "GET|HEAD",
+    "uri": "api/tables/{id}/status",
+    "name": null,
+    "action": "App\\Http\\Controllers\\TableController@status",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:view_tables"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "PUT|PATCH",
+    "uri": "api/tables/{table}",
+    "name": "tables.update",
+    "action": "App\\Http\\Controllers\\TableController@update",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_tables",
+      "subscription",
+      "feature:dine_in"
+    ],
+    "path": null
+  },
+  {
+    "domain": null,
+    "method": "DELETE",
+    "uri": "api/tables/{table}",
+    "name": "tables.destroy",
+    "action": "App\\Http\\Controllers\\TableController@destroy",
+    "middleware": [
+      "api",
+      "api.auth",
+      "permission:manage_tables",
+      "subscription",
+      "feature:dine_in"
+    ],
+    "path": null
+  }
+]

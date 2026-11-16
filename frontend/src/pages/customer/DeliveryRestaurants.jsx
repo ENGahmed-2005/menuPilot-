@@ -10,7 +10,10 @@ import { t, dir } from "../../i18n";
 
 function RestaurantCard({ restaurant }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const fee = Math.min(...restaurant.zones.map((zone) => Number(zone.fee)));
+  const fee = restaurant.zones.length ? Math.min(...restaurant.zones.map((zone) => Number(zone.fee))) : null;
+  const pending = restaurant.delivery_status === "setup_required";
+  const unavailable = restaurant.delivery_status === "unavailable";
+  const canViewMenu = restaurant.menu_available !== false && Boolean(restaurant.slug);
   return (
     <article className="flex h-full flex-col rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-start justify-between gap-3">
@@ -20,26 +23,26 @@ function RestaurantCard({ restaurant }) {
             : <Store size={28} className="text-copper-ink" aria-hidden="true" />}
         </div>
         <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${restaurant.open ? "bg-herb/10 text-herb" : "bg-black/5 text-muted"}`}>
-          {restaurant.open ? t("يستقبل الطلبات الآن") : restaurant.paused ? t("مشغول حاليًا") : t("مغلق الآن")}
+          {restaurant.open ? t("يستقبل الطلبات الآن") : pending ? t("التوصيل قريبًا") : unavailable ? t("التوصيل غير متاح حاليًا") : restaurant.paused ? t("مشغول حاليًا") : t("مغلق الآن")}
         </span>
       </div>
       <h2 className="mt-4 break-words text-xl font-black">{restaurant.name}</h2>
       {restaurant.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">{restaurant.description}</p>}
       {restaurant.address && <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-muted"><MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />{restaurant.address}</p>}
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm font-bold">
-        <span className="flex items-center gap-1.5"><Bike size={17} className="text-copper-ink" aria-hidden="true" />{t("التوصيل من {0}", { 0: money(fee) })}</span>
-        <span className="flex items-center gap-1.5"><Clock3 size={16} className="text-muted" aria-hidden="true" />{t("التحضير ≈ {0} د", { 0: restaurant.prep_minutes })}</span>
+        <span className="flex items-center gap-1.5"><Bike size={17} className="text-copper-ink" aria-hidden="true" />{fee === null ? t("مناطق التوصيل قيد التجهيز") : t("التوصيل من {0}", { 0: money(fee) })}</span>
+        {restaurant.prep_minutes != null && <span className="flex items-center gap-1.5"><Clock3 size={16} className="text-muted" aria-hidden="true" />{t("التحضير ≈ {0} د", { 0: restaurant.prep_minutes })}</span>}
       </div>
-      <p className="mt-4 text-xs font-bold text-muted">{t("مناطق التوصيل")}</p>
+      {restaurant.zones.length > 0 && <p className="mt-4 text-xs font-bold text-muted">{t("مناطق التوصيل")}</p>}
       <div className="mb-5 mt-2 flex flex-wrap gap-1.5">
         {restaurant.zones.map((zone) => <span key={zone.id} className="rounded-lg bg-paper-2 px-2.5 py-1 text-xs font-bold">{zone.name}</span>)}
       </div>
       {!restaurant.open && restaurant.hours && <p className="mb-3 text-xs text-muted">{t("ساعات الطلب {0}–{1}", { 0: restaurant.hours.opens_at, 1: restaurant.hours.closes_at })}</p>}
-      <Link to={`/r/${encodeURIComponent(restaurant.slug)}?type=delivery`} aria-label={t("منيو {0} والتوصيل", { 0: restaurant.name })}
+      {canViewMenu ? <Link to={`/r/${encodeURIComponent(restaurant.slug)}?type=delivery`} aria-label={t("منيو {0} والتوصيل", { 0: restaurant.name })}
         className={`mt-auto flex min-h-12 items-center justify-between gap-2 rounded-2xl px-4 text-sm font-black transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-copper ${restaurant.open ? "bg-navy text-paper hover:bg-navy/90" : "bg-paper-2 text-ink hover:bg-black/10"}`}>
         {restaurant.open ? t("اطلب توصيل") : t("تصفح المنيو")}
         <ArrowLeft size={18} className="ltr:rotate-180" aria-hidden="true" />
-      </Link>
+      </Link> : <button type="button" disabled className="mt-auto min-h-12 rounded-2xl bg-paper-2 px-4 text-sm font-bold text-muted">{t("الطلب غير متاح حاليًا")}</button>}
     </article>
   );
 }
@@ -108,12 +111,12 @@ export default function DeliveryRestaurants() {
             <button type="button" onClick={() => setAttempt((value) => value + 1)} className="mt-5 min-h-11 rounded-xl bg-navy px-5 text-sm font-bold text-paper">{t("حاول مرة أخرى")}</button>
           </div>
         ) : visible.length ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{visible.map((restaurant) => <RestaurantCard key={restaurant.slug} restaurant={restaurant} />)}</div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{visible.map((restaurant) => <RestaurantCard key={restaurant.id ?? restaurant.slug} restaurant={restaurant} />)}</div>
         ) : (
           <div className="rounded-3xl border border-line bg-white px-6 py-12 text-center">
             <Store className="mx-auto text-muted" size={32} aria-hidden="true" />
             <h3 className="mt-4 font-black">{restaurants.length ? t("لا توجد مطاعم مطابقة لبحثك") : t("لا توجد مطاعم توصيل حاليًا")}</h3>
-            <p className="mt-2 text-sm text-muted">{restaurants.length ? t("جرّب اسم مطعم أو منطقة أخرى، أو اعرض جميع المطاعم.") : t("ستظهر هنا المطاعم عند تفعيل خدمة التوصيل ومناطقها.")}</p>
+            <p className="mt-2 text-sm text-muted">{restaurants.length ? t("جرّب اسم مطعم أو منطقة أخرى، أو اعرض جميع المطاعم.") : t("ستظهر هنا المطاعم التي لديها ميزة التوصيل.")}</p>
             {restaurants.length > 0 && <button type="button" onClick={() => { setQuery(""); setOpenOnly(false); }} className="mt-5 min-h-11 rounded-xl bg-navy px-5 text-sm font-bold text-paper">{t("عرض جميع المطاعم")}</button>}
           </div>
         )}

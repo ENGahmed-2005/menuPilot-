@@ -37,26 +37,63 @@ it('lists delivery restaurants publicly with active zones and no account secrets
         ->assertJsonPath('data.0.zones.0.min_order', 30);
 
     expect(array_keys($response->json('data.0')))->toBe([
-        'slug', 'name', 'description', 'address', 'logo_url', 'open', 'paused', 'hours', 'prep_minutes', 'zones',
+        'id', 'slug', 'name', 'description', 'address', 'logo_url', 'open', 'paused', 'hours', 'prep_minutes', 'zones', 'delivery_status', 'menu_available',
     ]);
 });
 
-it('omits restaurants that cannot offer delivery', function (string $condition) {
+it('omits inactive demo and unentitled restaurants', function (string $condition) {
     $restaurant = directoryRestaurant();
     match ($condition) {
-        'disabled' => DB::table('online_ordering_settings')->where('user_id', $restaurant['id'])->update(['enabled' => false]),
-        'pickup only' => DB::table('online_ordering_settings')->where('user_id', $restaurant['id'])->update(['delivery_enabled' => false]),
         'inactive' => DB::table('users')->where('id', $restaurant['id'])->update(['is_active' => false]),
         'demo' => DB::table('users')->where('id', $restaurant['id'])->update(['is_demo' => true]),
         'no entitlement' => DB::table('users')->where('id', $restaurant['id'])->update(['addons' => '[]']),
         'revoked' => DB::table('users')->where('id', $restaurant['id'])->update(['feature_overrides' => json_encode(['revoke' => ['online_orders']])]),
-        'expired' => DB::table('users')->where('id', $restaurant['id'])->update(['subscription_ends_at' => now()->subDays(10)]),
-        'cancelled' => DB::table('users')->where('id', $restaurant['id'])->update(['subscription_cancelled_at' => now()->subDay()]),
-        'no active zones' => DB::table('delivery_zones')->where('user_id', $restaurant['id'])->update(['active' => false]),
     };
 
     $this->getJson('/api/public/restaurants')->assertOk()->assertExactJson(['data' => []]);
-})->with(['disabled', 'pickup only', 'inactive', 'demo', 'no entitlement', 'revoked', 'expired', 'cancelled', 'no active zones']);
+})->with(['inactive', 'demo', 'no entitlement', 'revoked']);
+
+it('keeps entitled restaurants visible while delivery is not ready and rejects delivery orders', function (string $condition, string $status, int $responseStatus) {
+    $restaurant = directoryRestaurant();
+    $item = makeItem($restaurant['id']);
+    match ($condition) {
+        'disabled' => DB::table('online_ordering_settings')->where('user_id', $restaurant['id'])->update(['enabled' => false]),
+        'pickup only' => DB::table('online_ordering_settings')->where('user_id', $restaurant['id'])->update(['delivery_enabled' => false]),
+        'no active zones' => DB::table('delivery_zones')->where('user_id', $restaurant['id'])->update(['active' => false]),
+        'expired' => DB::table('users')->where('id', $restaurant['id'])->update(['subscription_ends_at' => now()->subDays(10)]),
+        'cancelled' => DB::table('users')->where('id', $restaurant['id'])->update(['subscription_cancelled_at' => now()->subDay()]),
+    };
+
+    $this->getJson('/api/public/restaurants')->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $restaurant['id'])
+        ->assertJsonPath('data.0.open', false)->assertJsonPath('data.0.delivery_status', $status)
+        ->assertJsonPath('data.0.menu_available', $condition !== 'disabled');
+    $this->postJson("/api/public/restaurants/{$restaurant['slug']}/orders", [
+        'type' => 'delivery', 'name' => 'Sara', 'phone' => '0599123456', 'address' => 'Test street',
+        'zone_id' => $restaurant['zone'], 'payment_method' => 'cash',
+        'items' => [['menuItemId' => $item, 'quantity' => 2]],
+    ])->assertStatus($responseStatus);
+    $this->assertDatabaseCount('orders', 0);
+})->with([
+    ['disabled', 'setup_required', 409], ['pickup only', 'setup_required', 422],
+    ['no active zones', 'setup_required', 422], ['expired', 'unavailable', 409], ['cancelled', 'unavailable', 409],
+]);
+
+it('lists delivery entitlements before settings exist without creating settings on a public read', function (string $source) {
+    $owner = makeOwner();
+    DB::table('users')->where('id', $owner['id'])->update(match ($source) {
+        'addon' => ['addons' => json_encode(['delivery'])],
+        'plan' => ['plan' => 'delivery_only'],
+        'grant' => ['feature_overrides' => json_encode(['grant' => ['online_orders']])],
+    });
+    makeOwner('No delivery');
+
+    $this->getJson('/api/public/restaurants')->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $owner['id'])->assertJsonPath('data.0.slug', null)
+        ->assertJsonPath('data.0.open', false)->assertJsonPath('data.0.menu_available', false)
+        ->assertJsonPath('data.0.delivery_status', 'setup_required')->assertJsonPath('data.0.zones', []);
+    $this->assertDatabaseCount('online_ordering_settings', 0);
+})->with(['addon', 'plan', 'grant']);
 
 it('keeps paused and closed restaurants visible after open restaurants', function () {
     $this->travelTo(now()->setTime(12, 0));

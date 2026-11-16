@@ -125,32 +125,43 @@ class OutsideOrderController extends Controller
 
     // ── public ─────────────────────────────────────────────────────────────
 
-    /** Public directory of restaurants configured to deliver to an active zone. */
+    /** Delivery entitlement controls discovery; operational readiness controls ordering. */
     public function restaurants(): JsonResponse
     {
-        $settings = DB::table('online_ordering_settings')->where('enabled', true)->where('delivery_enabled', true)->get()->keyBy('user_id');
         $owners = User::where('role', 'owner')->where('is_active', true)->where('is_demo', false)
-            ->whereIn('id', $settings->keys())->with('restaurantSetting:user_id,logo_url')
-            ->orderBy('restaurant_name')->get()->filter(fn (User $owner) => $this->planAllows($owner));
+            ->with('restaurantSetting:user_id,logo_url')->orderBy('restaurant_name')->get()
+            ->filter(fn (User $owner) => in_array('online_orders', $owner->entitlements(), true));
+        $settings = DB::table('online_ordering_settings')->whereIn('user_id', $owners->modelKeys())->get()->keyBy('user_id');
         $zones = DB::table('delivery_zones')->whereIn('user_id', $owners->modelKeys())->where('active', true)
             ->orderBy('name')->get(['user_id', 'id', 'name', 'fee', 'min_order'])->groupBy('user_id');
 
-        $restaurants = $owners->filter(fn (User $owner) => $zones->has($owner->id))->map(function (User $owner) use ($settings, $zones): array {
-            $s = $settings[$owner->id];
+        $restaurants = $owners->map(function (User $owner) use ($settings, $zones): array {
+            $s = $settings->get($owner->id);
+            $deliveryZones = $zones->get($owner->id, collect());
+            $status = match (true) {
+                ! $this->planAllows($owner) => 'unavailable',
+                ! $s || ! $s->enabled || ! $s->delivery_enabled || $deliveryZones->isEmpty() => 'setup_required',
+                (bool) $s->paused => 'paused',
+                ! $this->isOpenNow($s) => 'closed',
+                default => 'available',
+            };
 
             return [
-                'slug' => $s->slug,
+                'id' => $owner->id,
+                'slug' => $s?->slug,
                 'name' => $owner->restaurant_name,
                 'description' => $owner->restaurant_description,
                 'address' => $owner->restaurant_address,
                 'logo_url' => $owner->restaurantSetting?->logo_url,
-                'open' => $this->isOpenNow($s),
-                'paused' => (bool) $s->paused,
-                'hours' => $s->opens_at && $s->closes_at ? ['opens_at' => $s->opens_at, 'closes_at' => $s->closes_at] : null,
-                'prep_minutes' => (int) $s->prep_minutes,
-                'zones' => $zones[$owner->id]->map(fn (object $zone): array => [
+                'open' => $status === 'available',
+                'paused' => (bool) ($s?->paused ?? false),
+                'hours' => $s?->opens_at && $s?->closes_at ? ['opens_at' => $s->opens_at, 'closes_at' => $s->closes_at] : null,
+                'prep_minutes' => $s ? (int) $s->prep_minutes : null,
+                'zones' => $deliveryZones->map(fn (object $zone): array => [
                     'id' => (int) $zone->id, 'name' => $zone->name, 'fee' => (float) $zone->fee, 'min_order' => (float) $zone->min_order,
                 ])->values(),
+                'delivery_status' => $status,
+                'menu_available' => (bool) ($s?->enabled ?? false),
             ];
         })->sortByDesc('open')->values();
 
