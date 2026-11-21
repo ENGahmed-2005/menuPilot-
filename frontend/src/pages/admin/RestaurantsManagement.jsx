@@ -8,9 +8,9 @@
    API (role:admin + manage_admin) and written to the audit log.
    ========================================================================== */
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Copy, Pencil, Plus, RefreshCw, Search, ShieldCheck, Trash2, XCircle } from "lucide-react";
+import { Building2, Pencil, RefreshCw, Search, ShieldCheck, Trash2, XCircle } from "lucide-react";
 import {
-  createRestaurant, deleteRestaurant, getAllRestaurants, getRestaurantFeatures, overrideRestaurantPlan, setOwnerActive, setRestaurantFeatures, updateRestaurant,
+  deleteRestaurant, getAllRestaurants, getRestaurantFeatures, overrideRestaurantPlan, setOwnerActive, setRestaurantFeatures, updateRestaurant,
 } from "../../api/admin";
 import AdminPageShell from "../../components/layout/AdminPageShell";
 import Modal from "../../components/ui/Modal";
@@ -26,7 +26,6 @@ import { t, locale } from "../../i18n";
 
 const PLANS = [["trial", t("تجربة مجانية")], ["basic", "Basic"], ["pro", "Pro"], ["delivery_only", t("التوصيل فقط")]];
 const PLAN_LABEL = Object.fromEntries(PLANS);
-const EMPTY = { name: "", email: "", restaurant_name: "", restaurant_phone: "", plan: "trial" };
 const dateLabel = (iso) => (iso ? new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) : "—");
 
 export default function RestaurantsManagement() {
@@ -38,7 +37,6 @@ export default function RestaurantsManagement() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);
   const [form, setForm] = useState(null); // { mode: "create"|"edit", id?, values, saving, error }
-  const [created, setCreated] = useState(null); // { email, password }
   const [deleting, setDeleting] = useState(null); // { row, email, saving, error }
   const [features, setFeatures] = useState(null); // { row, sheet, enabled, saving, error }
 
@@ -97,15 +95,9 @@ export default function RestaurantsManagement() {
     event.preventDefault();
     setForm((f) => ({ ...f, saving: true, error: null }));
     try {
-      if (form.mode === "create") {
-        const result = await createRestaurant(form.values);
-        setRows((list) => [result.restaurant, ...list]);
-        setCreated({ email: result.restaurant.email, password: result.generated_password });
-      } else {
         const { name, email, restaurant_name, restaurant_phone } = form.values;
         patchRow(form.id, await updateRestaurant(form.id, { name, email, restaurant_name, restaurant_phone }));
         toast.success(t("حُفظت بيانات المطعم."));
-      }
       setForm(null);
     } catch (e) {
       setForm((f) => ({ ...f, saving: false, error: e }));
@@ -134,23 +126,15 @@ export default function RestaurantsManagement() {
         <div>
           <p className="admin-overline"><Building2 size={14} aria-hidden="true" /> {t("إدارة المنصة")}</p>
           <h1>{t("المطاعم")}</h1>
-          <p>{t("أضف مطعمًا، عدّل بياناته أو باقته، عطّله مؤقتًا، أو احذفه نهائيًا.")}</p>
+          <p>{t("عدّل بيانات المطعم أو باقته، عطّله مؤقتًا، أو احذفه نهائيًا.")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={load} loading={loading}><RefreshCw size={15} aria-hidden="true" /> {t("تحديث")}</Button>
-          <Button onClick={() => setForm({ mode: "create", values: { ...EMPTY }, saving: false, error: null })}><Plus size={16} aria-hidden="true" /> {t("إضافة مطعم")}</Button>
         </div>
       </section>
 
       {error && <Alert tone="danger" className="mb-4" action={<Button size="sm" variant="secondary" onClick={load}>{t("إعادة المحاولة")}</Button>}>{errorText(error, t("تعذّر تحميل المطاعم."))}</Alert>}
 
-      {created && (
-        <Alert tone="success" className="mb-4" title={t("أُنشئ المطعم. احفظ بيانات الدخول الآن، لن تظهر كلمة المرور مرة أخرى.")}
-          onDismiss={() => setCreated(null)}
-          action={created.password && <Button size="sm" variant="secondary" onClick={() => navigator.clipboard?.writeText(`${created.email}\n${created.password}`).then(() => toast.success(t("نُسخت بيانات الدخول.")))}><Copy size={14} aria-hidden="true" /> {t("نسخ")}</Button>}>
-          <span dir="ltr" className="font-mono">{created.email}{created.password ? ` · ${created.password}` : ""}</span>
-        </Alert>
-      )}
 
       <section className="admin-table-card">
         <div className="admin-toolbar">
@@ -208,17 +192,9 @@ export default function RestaurantsManagement() {
               <Input label={t("الهاتف")} type="tel" maxLength={50} {...field("restaurant_phone")} />
             </div>
             <Input label={t("البريد الإلكتروني (لتسجيل الدخول)")} type="email" required dir="ltr" {...field("email")} />
-            {form.mode === "create" && (
-              <label className="flex flex-col gap-1.5 text-sm font-bold text-ink">
-                {t("الباقة")}
-                <select {...field("plan")} className="h-11 rounded-[var(--radius-control)] border border-line bg-surface px-3 text-sm">
-                  {PLANS.map(([value, label]) => <option key={value} value={value}>{label}{value === "trial" ? t(" (14 يومًا)") : ""}</option>)}
-                </select>
-              </label>
-            )}
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="secondary" onClick={() => setForm(null)} disabled={form.saving}>{t("تراجع")}</Button>
-              <Button type="submit" loading={form.saving}>{form.mode === "create" ? t("إنشاء المطعم") : t("حفظ")}</Button>
+              <Button type="submit" loading={form.saving}>{t("حفظ")}</Button>
             </div>
           </form>
         )}

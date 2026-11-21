@@ -113,20 +113,11 @@ it('keeps table status and order actions inside the owner restaurant and away fr
 | Admin: restaurants
 */
 
-it('lets the admin create, edit, re-plan and delete a restaurant', function () {
+it('lets the admin edit, re-plan and delete an existing restaurant', function () {
     $admin = adminUser();
 
-    $created = $this->postJson('/api/admin/restaurants', [
-        'name' => 'Lina', 'email' => 'lina@resto.test', 'restaurant_name' => 'Lina Grill', 'plan' => 'trial',
-    ], authAs($admin))->assertCreated()->json('data');
-    $id = $created['restaurant']['id'];
-    expect($created['generated_password'])->toBeString()
-        ->and($created['restaurant']['role'])->toBe('owner')
-        ->and($created['restaurant']['trial_ends_at'])->not->toBeNull();
-
-    // The new owner can sign in with the generated password (auth service: credential account, already verified).
-    expect(Hash::check($created['generated_password'], DB::table('auth_accounts')->where(['provider_id' => 'credential', 'account_id' => (string) $id])->value('password')))->toBeTrue()
-        ->and($created['restaurant']['email_verified'])->toBeTrue();
+    $this->postJson('/api/admin/restaurants', [], authAs($admin))->assertGone();
+    $id = makeOwner('Lina')['id'];
 
     $this->patchJson("/api/admin/restaurants/{$id}", ['name' => 'Lina H', 'email' => 'lina@resto.test', 'restaurant_name' => 'Lina Grill & Co'], authAs($admin))
         ->assertOk()->assertJsonPath('data.restaurant_name', 'Lina Grill & Co');
@@ -141,7 +132,7 @@ it('lets the admin create, edit, re-plan and delete a restaurant', function () {
         ->and(DB::table('restaurant_tables')->where('user_id', $id)->exists())->toBeFalse()
         ->and(DB::table('staff')->where('user_id', $id)->exists())->toBeFalse()
         ->and(DB::table('users')->where('role', 'cashier')->exists())->toBeFalse()
-        ->and(DB::table('audit_logs')->whereIn('action', ['admin.restaurant_created', 'admin.restaurant_deleted'])->count())->toBe(2);
+        ->and(DB::table('audit_logs')->whereIn('action', ['admin.restaurant_deleted'])->count())->toBe(1);
 });
 
 it('refuses to delete a restaurant with an open table session', function () {

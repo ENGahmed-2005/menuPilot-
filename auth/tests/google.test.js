@@ -116,48 +116,20 @@ describe("Google sign-in", () => {
     assert.equal((await db.selectFrom("google_registrations").selectAll().execute()).length, 0);
   });
 
-  it("completes through Laravel concurrently and starts one trial", { skip: !process.env.LARAVEL_TEST_URLS }, async () => {
-    const b = browser();
-    await googleSignIn(b, { sub: "concurrent-google", email: "concurrent@gmail.test" });
-    const info = await b.call("/api/auth/google-registration");
-    const cookie = [...b.jar].map(([k, v]) => `${k}=${v}`).join("; ");
+  it("keeps public onboarding closed for concurrent Google callbacks", { skip: !process.env.LARAVEL_TEST_URLS }, async () => {
+    const browserInstance = browser();
+    const email = "onboarding-google@gmail.test";
+    await googleSignIn(browserInstance, { sub: "onboarding-google", email });
+    const cookie = [...browserInstance.jar].map(([key, value]) => key + "=" + value).join("; ");
     const urls = process.env.LARAVEL_TEST_URLS.split(",");
-    // Separate PHP servers share the test DB, so requests actually overlap.
-    const complete = (url) => realFetch(`${url}/api/account/register/google`, {
-      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", Cookie: cookie, "X-Google-Registration": info.json.csrf },
-      body: JSON.stringify({ restaurant_name: "Concurrent Olive", restaurant_type: "cafe", role: "admin", email: "forged@example.test" }),
-    });
-    const responses = await Promise.all(urls.map(complete));
-    for (const response of responses) assert.equal(response.status, 200, await response.text());
-    const users = await db.selectFrom("users").selectAll().where("email", "=", "concurrent@gmail.test").execute();
-    assert.equal(users.length, 1);
-    assert.equal(users[0].role, "owner");
-    assert.equal(users[0].restaurant_type, "cafe");
-    const trial = users[0].trial_started_at.getTime();
-    assert.equal((await complete(urls[0])).status, 200);
-    assert.equal((await db.selectFrom("users").select("trial_started_at").where("id", "=", users[0].id).executeTakeFirst()).trial_started_at.getTime(), trial);
-    assert.equal((await db.selectFrom("auth_accounts").selectAll().where("account_id", "=", "concurrent-google").execute()).length, 1);
-    assert.equal((await db.selectFrom("audit_logs").select("id").where("restaurant_id", "=", users[0].id).where("action", "=", "subscription.trial_started").execute()).length, 1);
-    assert.equal((await b.call("/api/auth/google-registration/session", { method: "POST", body: {} })).status, 200);
-    assert.equal((await b.call("/api/auth/get-session")).json.user.id, String(users[0].id));
-  });
-
-  it("deduplicates parallel OAuth attempts for the same identity", { skip: !process.env.LARAVEL_TEST_URLS }, async () => {
-    const browsers = [browser(), browser()];
-    for (const b of browsers) await googleSignIn(b, { sub: "two-attempts", email: "two@gmail.test" });
-    const urls = process.env.LARAVEL_TEST_URLS.split(",");
-    const requests = await Promise.all(browsers.map(async (b, i) => {
-      const info = await b.call("/api/auth/google-registration");
-      return realFetch(`${urls[i % urls.length]}/api/account/register/google`, {
-        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", Cookie: [...b.jar].map(([k, v]) => `${k}=${v}`).join("; "), "X-Google-Registration": info.json.csrf },
-        body: JSON.stringify({ restaurant_name: "Olive", restaurant_type: "restaurant" }),
-      });
-    }));
-    assert.deepEqual(requests.map((r) => r.status).sort(), [200, 409]);
-    assert.equal((await db.selectFrom("users").select("id").where("email", "=", "two@gmail.test").execute()).length, 1);
-    assert.equal((await db.selectFrom("auth_accounts").select("id").where("account_id", "=", "two-attempts").execute()).length, 1);
-    const retry = await googleSignIn(browser(), { sub: "two-attempts", email: "two@gmail.test" });
-    assert.equal(retry.location, "/login?google=1");
+    const responses = await Promise.all(urls.map(url => realFetch(url + "/api/account/register/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json", Cookie: cookie },
+      body: JSON.stringify({ restaurant_name: "Olive", restaurant_type: "cafe" }),
+    })));
+    for (const response of responses) assert.equal(response.status, 410);
+    assert.equal((await db.selectFrom("users").select("id").where("email", "=", email).execute()).length, 0);
+    assert.equal((await db.selectFrom("auth_accounts").select("id").where("account_id", "=", "onboarding-google").execute()).length, 0);
   });
 
   it("refuses a disabled staff member, and accounts with two-step verification", async () => {

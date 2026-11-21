@@ -34,7 +34,7 @@ class PasswordRequestController extends Controller
             return response()->json(['message' => 'Request not found'], 404);
         }
         $token = Str::random(64);
-        DB::table('password_reset_tokens')->updateOrInsert(['email' => $req->email], ['token' => hash('sha256', $token), 'created_at' => now()]);
+        DB::table('password_reset_tokens')->updateOrInsert(['email' => $req->email], ['token' => hash('sha256', $token), 'created_at' => now(), 'owner_invitation' => false]);
         DB::table('password_reset_requests')->where('id', $id)->update(['status' => 'sent', 'handled_by' => $r->user()->id, 'handled_at' => now(), 'updated_at' => now()]);
         Audit::log($r, 'password_reset.link_created', 'user', (int) $req->user_id, ['request_id' => (int) $id], (int) $req->user_id);
 

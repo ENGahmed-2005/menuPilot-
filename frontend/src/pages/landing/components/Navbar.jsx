@@ -98,10 +98,10 @@ export default function Navbar({ onNavigate }) {
                 {t("تسجيل الدخول")}
               </button>
               <button
-                onClick={() => go("/register")}
+                onClick={() => go("/join")}
                 className="rounded-full bg-[#EEA122] px-5 py-2.5 text-sm font-black text-[#172331] transition-all duration-200 hover:bg-[#E67E22] active:scale-95"
               >
-                {t("جرّب مجانًا 14 يومًا")}
+                {t("قدّم طلب انضمام")}
               </button>
             </div>
 
@@ -136,7 +136,7 @@ export default function Navbar({ onNavigate }) {
               <div className="mt-4 flex flex-col gap-2 border-t border-[#F3EFE5]/8 pt-4">
                 <LanguageSwitch tone="dark" />
                 <button onClick={() => go("/login")} className="rounded-xl border border-[#F3EFE5]/12 px-4 py-3 text-sm font-semibold text-[#F3EFE5]/80 transition hover:bg-[#F3EFE5]/5">{t("تسجيل الدخول")}</button>
-                <button onClick={() => go("/register")} className="rounded-xl bg-[#EEA122] px-4 py-3 text-sm font-black text-[#172331] transition hover:bg-[#E67E22]">{t("جرّب مجانًا 14 يومًا")}</button>
+                <button onClick={() => go("/join")} className="rounded-xl bg-[#EEA122] px-4 py-3 text-sm font-black text-[#172331] transition hover:bg-[#E67E22]">{t("قدّم طلب انضمام")}</button>
               </div>
             </div>
           )}

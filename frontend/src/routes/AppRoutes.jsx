@@ -7,6 +7,8 @@ import { PageLoader } from "../components/loading/LoadingScreen";
 import SubscriptionGuard from "../components/subscription/SubscriptionGuard";
 import Landing from "../pages/landing/LandingPage";
 import Login from "../pages/auth/Login";
+const RestaurantOnboarding = lazy(() => import("../pages/admin/RestaurantOnboarding"));
+const JoinInformation = lazy(() => import("../pages/auth/JoinInformation"));
 const Register = lazy(() => import("../pages/auth/Register"));
 const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
@@ -59,6 +61,10 @@ export default function AppRoutes() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/join" element={<Register />} />
+      <Route path="/join/received" element={<JoinInformation mode="received" />} />
+      <Route path="/join/how-it-works" element={<JoinInformation mode="guide" />} />
+      <Route path="/founding-partners" element={<JoinInformation mode="partners" />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/menu" element={<RestaurantMenu />} />
@@ -138,6 +144,12 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute allow={["admin"]} />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/reports" element={<AdminReports />} />
+        {["applications", "contracts", "founding-partners"].flatMap(section => [
+          <Route key={section} path={"/admin/" + section} element={<RestaurantOnboarding key={section} section={section} />} />,
+          <Route key={section + "-details"} path={"/admin/" + section + "/:id"} element={<RestaurantOnboarding key={section + "-details"} section={section} />} />,
+        ])}
+        <Route path="/admin/contract-templates" element={<RestaurantOnboarding key="templates" section="contract-templates" />} />
+        <Route path="/admin/founding-partner-settings" element={<RestaurantOnboarding key="settings" section="founding-partner-settings" />} />
         <Route path="/admin/restaurants" element={<RestaurantsManagement />} />
         <Route path="/admin/owners" element={<OwnersManagement />} />
         <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />

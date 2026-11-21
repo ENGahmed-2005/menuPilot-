@@ -104,6 +104,10 @@ class SubscriptionAccess
             return self::CANCELLED;
         }
         if (in_array($o->plan, config('subscriptions.paid_plans'), true)) {
+            if ($o->trial_ends_at && $o->subscription_started_at && $now->lt($o->trial_ends_at) && $now->lt($o->subscription_started_at)) {
+                return self::TRIAL;
+            }
+
             return (! $o->subscription_ends_at || $now->lt($o->subscription_ends_at)) ? self::ACTIVE : self::EXPIRED;
         }
 
@@ -135,7 +139,7 @@ class SubscriptionAccess
     {
         $o = $this->owner;
 
-        return in_array($o?->plan, config('subscriptions.paid_plans'), true) ? $o?->subscription_ends_at : $o?->trial_ends_at;
+        return ! $this->isTrial() && in_array($o?->plan, config('subscriptions.paid_plans'), true) ? $o?->subscription_ends_at : $o?->trial_ends_at;
     }
 
     public function graceEndsAt(): ?Carbon
@@ -288,16 +292,21 @@ class SubscriptionAccess
     }
 
     /** Start the free trial on a brand-new owner (dates decided here, never by the client). */
-    public static function startTrial(User $owner): void
+    public static function startTrial(User $owner, ?int $days = null, ?Carbon $contractEnd = null): void
     {
         $now = now();
+        $days ??= (int) config('subscriptions.trial.days');
+        $end = $now->copy()->addDays($days);
+        if ($contractEnd && $contractEnd->lt($end)) {
+            $end = $contractEnd;
+        }
         $owner->forceFill([
             'plan' => 'trial',
             'trial_started_at' => $now,
-            'trial_ends_at' => $now->copy()->addDays((int) config('subscriptions.trial.days')),
+            'trial_ends_at' => $end,
             'subscription_status' => self::TRIAL,
             'subscription_notices' => ['trial_started' => $now->toIso8601String()],
         ])->save();
-        self::event('trial_started', $owner->id, ['trial_ends_at' => (string) $owner->trial_ends_at, 'days' => (int) config('subscriptions.trial.days')]);
+        self::event('trial_started', $owner->id, ['trial_ends_at' => (string) $owner->trial_ends_at, 'days' => $days]);
     }
 }

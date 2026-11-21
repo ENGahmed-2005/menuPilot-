@@ -10,13 +10,6 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 /** Two plans + add-ons (docs/SUBSCRIPTIONS.md). */
-function addonTrialOwner($test): array
-{
-    $res = $test->postJson('/api/auth/register', ['restaurant_name' => 'مطعم الإضافات', 'email' => 'addon'.uniqid().'@x.test', 'password' => 'Trial#Pass123', 'password_confirmation' => 'Trial#Pass123'])->assertCreated();
-
-    return ['token' => authSession($res->json('data.user.id')), 'id' => $res->json('data.user.id')];
-}
-
 function addonAdmin(): array
 {
     $t = 'adm-'.Str::random(20);
@@ -43,7 +36,7 @@ function addonReport($test, array $owner, array $body)
 }
 
 it('lists the plans and the add-ons with server prices', function () {
-    $data = $this->getJson('/api/subscription', authAs(addonTrialOwner($this)))->assertOk()->json('data');
+    $data = $this->getJson('/api/subscription', authAs(makeTrialOwner()))->assertOk()->json('data');
 
     expect(collect($data['plans'])->pluck('price', 'id')->all())->toBe(['basic' => 15, 'pro' => 29, 'delivery_only' => 15])
         ->and(collect($data['plans'])->pluck('dine_in', 'id')->all())->toBe(['basic' => true, 'pro' => true, 'delivery_only' => false])
@@ -53,7 +46,7 @@ it('lists the plans and the add-ons with server prices', function () {
 });
 
 it('prices plan + add-ons on the server, and lists them on the invoice and in WhatsApp', function () {
-    $owner = addonTrialOwner($this);
+    $owner = makeTrialOwner();
     $p = addonReport($this, $owner, ['plan' => 'basic', 'addons' => ['delivery'], 'months' => 3, 'amount' => 1])->assertCreated()->json('data');
 
     expect((float) $p['amount'])->toBe(90.0) // (15 + 15) × 3, client amount ignored
@@ -64,14 +57,14 @@ it('prices plan + add-ons on the server, and lists them on the invoice and in Wh
 });
 
 it('applies the annual discount to the add-ons too', function () {
-    $p = addonReport($this, addonTrialOwner($this), ['plan' => 'pro', 'addons' => ['brand_plus', 'delivery'], 'months' => 12])->assertCreated()->json('data');
+    $p = addonReport($this, makeTrialOwner(), ['plan' => 'pro', 'addons' => ['brand_plus', 'delivery'], 'months' => 12])->assertCreated()->json('data');
 
     expect((float) $p['amount'])->toBe(490.0) // (29 + 15 + 5) × 10
         ->and($p['addons'])->toBe(['delivery', 'brand_plus']); // catalogue order
 });
 
 it('refuses an add-on the plan cannot take, and unknown add-ons', function () {
-    $owner = addonTrialOwner($this);
+    $owner = makeTrialOwner();
     addonReport($this, $owner, ['plan' => 'basic', 'addons' => ['brand_plus']])
         ->assertStatus(422)->assertJsonPath('code', 'ADDON_NOT_AVAILABLE');
     addonReport($this, $owner, ['plan' => 'pro', 'addons' => ['jetpack']])->assertStatus(422);
@@ -81,13 +74,13 @@ it('refuses an add-on the plan cannot take, and unknown add-ons', function () {
 });
 
 it('maps the retired Premium plan to Pro with both add-ons at the same price', function () {
-    $p = addonReport($this, addonTrialOwner($this), ['plan' => 'premium', 'months' => 1])->assertCreated()->json('data');
+    $p = addonReport($this, makeTrialOwner(), ['plan' => 'premium', 'months' => 1])->assertCreated()->json('data');
 
     expect($p['plan'])->toBe('pro')->and($p['addons'])->toBe(['delivery', 'brand_plus'])->and((float) $p['amount'])->toBe(49.0);
 });
 
 it('activates the paid add-ons on verify, for the owner and the staff', function () {
-    $owner = addonTrialOwner($this);
+    $owner = makeTrialOwner();
     $cashier = makeStaff($owner['id'], 'cashier');
     $this->travel(20)->days(); // trial over
     $p = addonReport($this, $owner, ['plan' => 'basic', 'addons' => ['delivery']])->assertCreated()->json('data');
@@ -138,7 +131,7 @@ it('gates each feature by plan and add-on, and ignores an add-on the plan cannot
 });
 
 it('gives a trial every feature, and an expired plan no paid extras', function () {
-    $owner = addonTrialOwner($this);
+    $owner = makeTrialOwner();
     $features = $this->getJson('/api/auth/me', authAs($owner))->json('data.subscription.features');
     expect($features)->toContain('online_orders', 'branding', 'custom-theme', 'remove-branding');
 
@@ -161,9 +154,7 @@ it('lets the admin set add-ons, keeps compatible ones on a plan change, and refu
     expect(User::find($owner['id'])->addons)->toBe([]);
     expect(DB::table('audit_logs')->where('action', 'admin.plan_changed')->count())->toBe(2);
 
-    $created = $this->postJson('/api/admin/restaurants', ['name' => 'N', 'email' => 'new'.uniqid().'@x.test', 'restaurant_name' => 'New', 'plan' => 'premium'], authAs($admin))
-        ->assertCreated()->json('data.restaurant');
-    expect(User::find($created['id']))->plan->toBe('pro')->addons->toBe(['delivery', 'brand_plus']);
+    $this->postJson('/api/admin/restaurants', ['plan' => 'premium'], authAs($admin))->assertGone();
 });
 
 it('migrates Premium restaurants to Pro + both add-ons without changing their dates or total', function () {
@@ -192,13 +183,13 @@ it('migrates Premium restaurants to Pro + both add-ons without changing their da
 // ── Delivery only: a restaurant without tables takes online ordering alone ──
 
 it('sells delivery alone at 15 and never charges the included delivery add-on again', function () {
-    $owner = addonTrialOwner($this);
+    $owner = makeTrialOwner();
     $p = addonReport($this, $owner, ['plan' => 'delivery_only', 'addons' => ['delivery'], 'months' => 3])->assertCreated()->json('data');
 
     expect((float) $p['amount'])->toBe(45.0) // 15 × 3, the add-on is already included
         ->and($p['addons'])->toBe([])
         ->and($p['plan_label'])->toBe('التوصيل فقط');
-    addonReport($this, addonTrialOwner($this), ['plan' => 'delivery_only', 'addons' => ['brand_plus']])
+    addonReport($this, makeTrialOwner(), ['plan' => 'delivery_only', 'addons' => ['brand_plus']])
         ->assertStatus(422)->assertJsonPath('code', 'ADDON_NOT_AVAILABLE');
 });
 
@@ -224,7 +215,7 @@ it('blocks tables and table sessions on delivery only, but not on Basic or durin
         ->assertForbidden()->assertJsonPath('code', 'FEATURE_NOT_AVAILABLE');
 
     $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs(addonPaidOwner('basic')))->assertCreated();
-    $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs(addonTrialOwner($this)))->assertCreated();
+    $this->postJson('/api/tables', ['label' => 'T1', 'seats' => 2], authAs(makeTrialOwner()))->assertCreated();
     expect($this->getJson('/api/auth/me', authAs(addonPaidOwner('basic')))->json('data.subscription.dine_in'))->toBeTrue();
 });
 

@@ -62,7 +62,7 @@ export default function CTASection({ onNavigate }) {
             {t("خلّي فريقك يركز على الضيف، وخلي menuPilot يتولى التشغيل.")}
           </h2>
           <button
-            onClick={() => onNavigate("/register")}
+            onClick={() => onNavigate("/join")}
             className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#172331] transition hover:-translate-y-0.5 hover:bg-[#E67E22]"
           >
             {t("ابدأ الآن")}

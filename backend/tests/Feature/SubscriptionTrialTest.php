@@ -9,16 +9,6 @@ use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
-function registerOwner($test, array $extra = []): array
-{
-    $res = $test->postJson('/api/auth/register', array_merge([
-        'restaurant_name' => 'مطعم التجربة', 'email' => 'trial'.uniqid().'@x.test',
-        'password' => 'Trial#Pass123', 'password_confirmation' => 'Trial#Pass123',
-    ], $extra))->assertCreated();
-
-    return ['token' => authSession($res->json('data.user.id')), 'id' => $res->json('data.user.id'), 'user' => $res->json('data.user')];
-}
-
 function trialAdmin(): array
 {
     $token = 'adm-'.uniqid();
@@ -27,11 +17,10 @@ function trialAdmin(): array
     return ['token' => $token];
 }
 
-it('registers an owner with a 14-day trial decided by the server, in one transaction', function () {
+it('starts a 14-day trial by default in one transaction', function () {
     $this->freezeTime();
     Event::fake([SubscriptionLifecycleEvent::class]);
-    // Client-sent dates / status / plan are ignored.
-    $owner = registerOwner($this, ['plan' => 'premium', 'trial_ends_at' => '2099-01-01', 'subscription_status' => 'ACTIVE']);
+    $owner = makeTrialOwner();
 
     $u = User::find($owner['id']);
     expect($u->plan)->toBe('trial')
@@ -44,18 +33,18 @@ it('registers an owner with a 14-day trial decided by the server, in one transac
     expect(DB::table('audit_logs')->where('action', 'subscription.trial_started')->where('restaurant_id', $owner['id'])->exists())->toBeTrue();
 });
 
-it('rolls the registration back if the trial cannot be created', function () {
+it('rolls the owner and trial back when the trial event fails', function () {
     Event::listen(SubscriptionLifecycleEvent::class, fn () => throw new RuntimeException('boom'));
 
     $this->withoutExceptionHandling();
-    expect(fn () => registerOwner($this))->toThrow(RuntimeException::class);
+    expect(fn () => makeTrialOwner())->toThrow(RuntimeException::class);
     expect(User::where('role', 'owner')->count())->toBe(0);
 });
 
 it('counts down 14 → 7 → 3 → last day from the server and fires each milestone once', function () {
     $this->freezeTime();
     Event::fake([SubscriptionLifecycleEvent::class]);
-    $owner = registerOwner($this);
+    $owner = makeTrialOwner();
     $me = fn () => $this->getJson('/api/auth/me', authAs($owner))->json('data.subscription');
 
     expect($me()['phase'])->toBe('normal');
@@ -74,7 +63,7 @@ it('counts down 14 → 7 → 3 → last day from the server and fires each miles
 
 it('expires after 14 days, allows a grace period, then restricts operations but keeps data', function () {
     $this->freezeTime();
-    $owner = registerOwner($this);
+    $owner = makeTrialOwner();
     $table = makeTable($owner['id'], 'T1');
     $item = makeItem($owner['id'], 10);
     DB::table('users')->where('id', $owner['id'])->update(['latitude' => 31.5, 'longitude' => 34.46, 'payment_timing' => 'after']); // this test orders directly
@@ -116,7 +105,7 @@ it('expires after 14 days, allows a grace period, then restricts operations but 
 
 it('does not let the owner activate a plan or change trial/status by themselves', function () {
     $this->freezeTime();
-    $owner = registerOwner($this);
+    $owner = makeTrialOwner();
     $this->travel(20)->days();
 
     $res = $this->patchJson('/api/me/plan', ['plan' => 'pro', 'addons' => ['delivery']], authAs($owner))->assertStatus(202)->assertJsonPath('meta.status', 'pending_payment');
@@ -133,7 +122,7 @@ it('does not let the owner activate a plan or change trial/status by themselves'
 
 it('restores full access when the admin activates the paid plan (after payment)', function () {
     $this->freezeTime();
-    $owner = registerOwner($this);
+    $owner = makeTrialOwner();
     $admin = trialAdmin();
     $this->travel(20)->days();
     $this->patchJson('/api/me/plan', ['plan' => 'pro'], authAs($owner))->assertStatus(202);
@@ -154,7 +143,7 @@ it('restores full access when the admin activates the paid plan (after payment)'
 
 it('lets the admin extend a trial (audited) and staff follow their restaurant\'s state', function () {
     $this->freezeTime();
-    $owner = registerOwner($this);
+    $owner = makeTrialOwner();
     $cashier = makeStaff($owner['id'], 'cashier');
     $admin = trialAdmin();
     $this->travel(18)->days();
@@ -169,9 +158,9 @@ it('lets the admin extend a trial (audited) and staff follow their restaurant\'s
 
 it('keeps each restaurant\'s subscription independent', function () {
     $this->freezeTime();
-    $expired = registerOwner($this);
+    $expired = makeTrialOwner();
     $this->travel(20)->days();
-    $fresh = registerOwner($this);
+    $fresh = makeTrialOwner();
 
     $this->postJson('/api/tables', ['label' => 'A', 'seats' => 2], authAs($expired))->assertForbidden();
     $this->postJson('/api/tables', ['label' => 'B', 'seats' => 2], authAs($fresh))->assertCreated();

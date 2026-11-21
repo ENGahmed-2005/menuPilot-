@@ -4,6 +4,8 @@
 | Shared helpers for feature tests (loaded from tests/Pest.php).
 */
 
+use App\Models\User;
+use App\Support\SubscriptionAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -118,4 +120,15 @@ function openSession($test, object $table, string $name = 'Sara'): array
 function customer(array $session): array
 {
     return ['X-Session-Token' => $session['access_token'] ?? '', 'Accept' => 'application/json'];
+}
+
+function makeTrialOwner(string $name = 'Trial owner'): array
+{
+    return DB::transaction(function () use ($name) {
+        $identity = makeOwner($name);
+        $owner = User::findOrFail($identity['id']);
+        SubscriptionAccess::startTrial($owner);
+
+        return $identity + ['user' => $owner->toArray() + ['subscription' => SubscriptionAccess::for($owner)->toArray()]];
+    });
 }

@@ -71,7 +71,7 @@ export default function Hero({ onNavigate }) {
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <button
-              onClick={() => onNavigate("/register")}
+              onClick={() => onNavigate("/join")}
               className="group pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#EEA122] px-7 py-4 font-black text-[#172331] shadow-lg shadow-[#EEA122]/20 transition hover:-translate-y-0.5 hover:bg-[#E67E22] hover:shadow-xl hover:shadow-[#EEA122]/25"
             >
               {t("ابدأ مع menuPilot")}
@@ -86,7 +86,7 @@ export default function Hero({ onNavigate }) {
             <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("طلبات QR")}</span>
             <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("إدارة المطبخ")}</span>
             <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("فواتير ومدفوعات")}</span>
-            <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("تجربة مجانية 14 يومًا")}</span>
+            <span className="flex items-center gap-2"><Check size={16} className="text-[#EEA122]" /> {t("تتوفر التجربة وفق شروط عقدك")}</span>
           </div>
         </Reveal>
 

@@ -6,13 +6,6 @@ use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
-function trialOwner($test): array
-{
-    $res = $test->postJson('/api/auth/register', ['restaurant_name' => 'مطعم الدفع', 'email' => 'pay'.uniqid().'@x.test', 'password' => 'Trial#Pass123', 'password_confirmation' => 'Trial#Pass123'])->assertCreated();
-
-    return ['token' => authSession($res->json('data.user.id')), 'id' => $res->json('data.user.id')];
-}
-
 function platformAdmin(): array
 {
     $t = 'adm-'.uniqid();
@@ -23,7 +16,7 @@ function platformAdmin(): array
 
 it('shows bank transfer instructions with server prices and the WhatsApp contact', function () {
     config(['subscriptions.bank.account_number' => '123456', 'subscriptions.bank.iban' => 'PS00PALS000000000000123456']);
-    $owner = trialOwner($this);
+    $owner = makeTrialOwner();
 
     $data = $this->getJson('/api/subscription', authAs($owner))->assertOk()->json('data');
     expect($data['bank']['name'])->toBe('بنك فلسطين')
@@ -35,7 +28,7 @@ it('shows bank transfer instructions with server prices and the WhatsApp contact
 });
 
 it('records a reported transfer as pending, prices it server-side and prepares the WhatsApp invoice', function () {
-    $owner = trialOwner($this);
+    $owner = makeTrialOwner();
     $res = $this->postJson('/api/subscription/payments', [
         'plan' => 'pro', 'months' => 3, 'amount' => 1, // client amount is ignored
         'payer_name' => 'أحمد الكحلوت', 'transfer_reference' => 'BOP-778899', 'transfer_date' => now()->toDateString(),
@@ -62,7 +55,7 @@ it('records a reported transfer as pending, prices it server-side and prepares t
 
 it('lets an expired (restricted) restaurant pay, and the admin verification restores full access for the paid months', function () {
     $this->freezeTime();
-    $owner = trialOwner($this);
+    $owner = makeTrialOwner();
     $admin = platformAdmin();
     $this->travel(20)->days();
     $this->postJson('/api/tables', ['label' => 'X', 'seats' => 2], authAs($owner))->assertForbidden();
@@ -86,7 +79,7 @@ it('lets an expired (restricted) restaurant pay, and the admin verification rest
 });
 
 it('rejects a payment with a reason and lets the owner report again', function () {
-    $owner = trialOwner($this);
+    $owner = makeTrialOwner();
     $admin = platformAdmin();
     $p = $this->postJson('/api/subscription/payments', ['plan' => 'pro', 'payer_name' => 'A', 'transfer_date' => now()->toDateString()], authAs($owner))->json('data');
 
@@ -97,8 +90,8 @@ it('rejects a payment with a reason and lets the owner report again', function (
 });
 
 it('keeps payments private and admin-only where required', function () {
-    $a = trialOwner($this);
-    $b = trialOwner($this);
+    $a = makeTrialOwner();
+    $b = makeTrialOwner();
     $cashier = makeStaff($a['id'], 'cashier');
     $p = $this->postJson('/api/subscription/payments', ['plan' => 'pro', 'payer_name' => 'A', 'transfer_date' => now()->toDateString()], authAs($a))->json('data');
 
@@ -111,7 +104,7 @@ it('keeps payments private and admin-only where required', function () {
 });
 
 it('prices a 12-month payment at 10 months (2 free)', function () {
-    $owner = trialOwner($this);
+    $owner = makeTrialOwner();
     $p = $this->postJson('/api/subscription/payments', ['plan' => 'pro', 'months' => 12, 'payer_name' => 'A', 'transfer_date' => now()->toDateString()], authAs($owner))->assertCreated()->json('data');
     expect((float) $p['amount'])->toBe(290.0)->and($p['months'])->toBe(12);
 });

@@ -38,6 +38,14 @@ return [
             'report' => false,
         ],
 
+        'contracts' => [
+            'driver' => 'local',
+            'root' => env('CONTRACT_STORAGE_PATH', storage_path('app/contracts')),
+            'serve' => false,
+            'visibility' => 'private',
+            'throw' => true,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
