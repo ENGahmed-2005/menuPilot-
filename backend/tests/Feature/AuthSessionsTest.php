@@ -117,16 +117,9 @@ it('sends an app cached from before to the new sign-in', function () {
         ->assertStatus(410)->assertJsonPath('code', 'USE_NEW_LOGIN');
 });
 
-it('registers a restaurant without a token and with a credential account', function () {
-    $res = $this->postJson('/api/account/register', [
-        'restaurant_name' => 'Zaytoona', 'restaurant_type' => 'restaurant', 'email' => '  Owner@Zaytoona.TEST ',
-        'password' => 'Secret#123', 'password_confirmation' => 'Secret#123',
-    ])->assertCreated()->assertJsonMissingPath('data.token');
-
-    $id = $res->json('data.user.id');
-    expect($res->json('data.user.email'))->toBe('owner@zaytoona.test');
-    $account = DB::table('auth_accounts')->where(['provider_id' => 'credential', 'account_id' => (string) $id])->first();
-    expect($account)->not->toBeNull()->and(Hash::check('Secret#123', $account->password))->toBeTrue();
+it('returns the application requirement to cached registration clients', function () {
+    $this->postJson('/api/account/register', [])->assertGone()->assertJsonPath('code', 'APPLICATION_REQUIRED');
+    $this->assertDatabaseCount('auth_accounts', 0);
 });
 
 it('resets a password through the admin link and signs every device out', function () {

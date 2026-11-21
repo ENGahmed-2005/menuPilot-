@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Support\Audit;
 use App\Support\MediaStore;
+use App\Support\RestaurantOnboarding;
 use App\Support\SubscriptionAccess;
 use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
@@ -108,6 +109,7 @@ class SubscriptionPaymentController extends Controller
             'bank_configured' => (bool) (config('subscriptions.bank.account_number') || config('subscriptions.bank.iban')),
             'reference_code' => self::referenceCode($owner->id),
             'whatsapp' => config('subscriptions.whatsapp'),
+            'contract_billing' => RestaurantOnboarding::contractForBilling($owner->id),
             'payments' => $payments->map(fn ($p) => $this->present($p)),
         ]]);
     }
@@ -116,6 +118,9 @@ class SubscriptionPaymentController extends Controller
     public function store(Request $request)
     {
         $owner = $request->user();
+        if (RestaurantOnboarding::contractForBilling($owner->id)) {
+            return response()->json(['message' => 'Contact MenuPilot to pay or amend your contract.', 'code' => 'CONTRACT_BILLING'], 409);
+        }
         $v = $request->validate([
             'plan' => ['required', Rule::in(SubscriptionPlans::acceptedPlans())],
             'addons' => ['sometimes', 'array', 'max:10'],

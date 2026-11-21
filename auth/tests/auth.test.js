@@ -90,7 +90,7 @@ describe("password sign-in", () => {
     assert.equal((await sessionsOf(owner.id)).length, 0);
   });
 
-  it("has no self sign-up: restaurants register through Laravel", async () => {
+  it("requires the onboarding application flow instead of self sign-up", async () => {
     const res = await browser().call("/api/auth/sign-up/email", { method: "POST", body: { email: "new@menupilot.test", password: PASSWORD, name: "X" } });
     assert.ok([400, 403, 404].includes(res.status));
     assert.equal(await db.selectFrom("users").select("id").where("email", "=", "new@menupilot.test").executeTakeFirst(), undefined);

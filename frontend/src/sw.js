@@ -31,7 +31,7 @@ registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html"), { deny
 
 // Live streams (SSE), sign-in and account calls go straight to the network;
 // only /api/account/me is kept, so the app can open offline.
-const NEVER_CACHE = /\/api\/(broadcasting|auth\/|auth-config|account\/(?!me$)|demo|password)|\/stream$/;
+const NEVER_CACHE = /\/api\/(broadcasting|auth\/|auth-config|admin\/(applications|contracts|contract-templates|founding-partners|founding-partner-settings)(?:\/|$)|account\/(?!me$)|demo|password)|\/stream$/;
 const isJson = (response) => (response.headers.get("content-type") || "").includes("json");
 
 const withHeaders = async (response, extra) => {
@@ -48,7 +48,7 @@ registerRoute(
     plugins: [
       {
         // Save only good JSON answers, stamped with the time we saved them.
-        cacheWillUpdate: async ({ response }) => (response && response.status === 200 && isJson(response)
+        cacheWillUpdate: async ({ response }) => (response && response.status === 200 && !/no-store/i.test(response.headers.get("cache-control") || "") && isJson(response)
           ? withHeaders(response, { "x-menupilot-cached-at": String(Date.now()) })
           : null),
         // Reached only when the network failed: tell the page this is a saved copy.

@@ -75,6 +75,9 @@ const NAV = {
   admin: [
     { id: "platform", title: t("إدارة المنصة"), icon: LayoutDashboard, links: [
       ["/admin/dashboard", t("نظرة عامة"), LayoutDashboard, null, null],
+      ["/admin/applications", t("طلبات الانضمام"), UtensilsCrossed, null, null],
+      ["/admin/contracts", t("إدارة العقود"), UtensilsCrossed, null, null],
+      ["/admin/founding-partners", t("المطاعم الشريكة المؤسسة"), UtensilsCrossed, null, null],
       ["/admin/restaurants", t("المطاعم"), UtensilsCrossed, null, null],
       ["/admin/owners", t("أصحاب المطاعم"), Users, null, null],
       ["/admin/password-requests", t("استعادة كلمات المرور"), KeyRound, null, null],

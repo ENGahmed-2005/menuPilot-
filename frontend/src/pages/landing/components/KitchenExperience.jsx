@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChefHat, MoveUpRight } from "lucide-react";
 import { lang } from "../../../i18n";
 

@@ -119,14 +119,14 @@ function PlanCard({ id, plan, popular, delay, annual }) {
         <div className="flex-1" />
 
         <a
-          href={`/register?plan=${id}`}
+          href="/join"
           className={`mt-6 block rounded-full px-4 py-2.5 text-center text-xs font-black transition ${
             popular
               ? "bg-[#EEA122] text-[#172331] hover:bg-[#E67E22]"
               : "border border-[#F3EFE5]/15 text-[#F3EFE5] hover:border-[#EEA122]/35 hover:bg-[#EEA122]/10"
           }`}
         >
-          {t("ابدأ تجربتك المجانية")}
+          {t("قدّم طلب انضمام")}
         </a>
       </article>
     </Reveal>
@@ -152,7 +152,7 @@ function DeliveryOnly({ annual }) {
         </div>
         <div className="flex shrink-0 items-center gap-4 md:flex-col md:items-end md:gap-2">
           <p className="text-right"><span className="text-2xl font-black">${annual ? plan.price * ANNUAL_PAID_MONTHS : plan.price}</span><span className="text-[11px] text-[#F3EFE5]/70">{annual ? t(" / سنويًا") : t(" / شهريًا")}</span></p>
-          <a href="/register?plan=delivery_only" className="rounded-full border border-[#EEA122]/40 px-4 py-2 text-xs font-black text-[#F3EFE5] transition hover:bg-[#EEA122]/10">{t("ابدأ تجربتك المجانية")}</a>
+          <a href="/join" className="rounded-full border border-[#EEA122]/40 px-4 py-2 text-xs font-black text-[#F3EFE5] transition hover:bg-[#EEA122]/10">{t("قدّم طلب انضمام")}</a>
         </div>
       </article>
     </Reveal>
@@ -173,7 +173,7 @@ export default function Pricing() {
         {/* 14-day trial badge */}
         <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#EEA122]/30 bg-[#EEA122]/10 px-4 py-2 text-sm font-bold text-[#F3EFE5]">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#EEA122]" />
-          {t("تجربة مجانية لمدة 14 يومًا — بدون بطاقة ائتمانية")}
+          {t("تتوفر التجربة وفق شروط عقدك")}
         </div>
 
         {/* Monthly / annual */}

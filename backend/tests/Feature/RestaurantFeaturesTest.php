@@ -106,8 +106,7 @@ it('keeps the admin decisions when the plan changes', function () {
 
 it('applies revokes during a trial, but a grant never outlives the paid period', function () {
     $admin = featuresAdmin();
-    $res = $this->postJson('/api/auth/register', ['restaurant_name' => 'T', 'email' => 'ft'.uniqid().'@x.test', 'password' => 'Trial#Pass123', 'password_confirmation' => 'Trial#Pass123'])->assertCreated();
-    $trial = ['token' => authSession($res->json('data.user.id')), 'id' => $res->json('data.user.id')];
+    $trial = makeTrialOwner();
     $all = collect($this->getJson("/api/admin/restaurants/{$trial['id']}/features", authAs($admin))->json('data.groups'))->flatMap(fn ($g) => $g['items'])->pluck('key')->all();
     setFeatures($this, $admin, $trial, array_values(array_diff($all, ['online_orders'])))->assertOk();
     expect(User::find($trial['id'])->hasFeature('online_orders'))->toBeFalse();

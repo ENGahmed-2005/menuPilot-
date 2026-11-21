@@ -42,6 +42,7 @@ $accountRoutes = function () {
 };
 Route::prefix('auth')->group($accountRoutes);
 Route::prefix('account')->group($accountRoutes);
+require __DIR__.'/onboarding.php';
 
 Route::get('public/tables/{code}/menu', [MenuController::class, 'publicMenu']);
 // «Try it» demo restaurants (App\Support\DemoRestaurant).

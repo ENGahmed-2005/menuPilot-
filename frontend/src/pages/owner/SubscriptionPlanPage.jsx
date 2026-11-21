@@ -161,6 +161,20 @@ export default function SubscriptionPlanPage() {
   if (error) return <Alert tone="danger">{errorText(error, t("تعذّر تحميل بيانات الاشتراك."))}</Alert>;
   if (!data) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-64" /></div>;
 
+  if (data.contract_billing) {
+    const contract = data.contract_billing;
+    const cycle = { monthly: t("شهري"), annual: t("سنوي"), one_time: t("مرة واحدة") };
+    return <div className="space-y-5">
+      <PageHeader title={t("الاشتراك والدفع")} />
+      <Card className="space-y-2 p-5">
+        <p>{t("عقد الاشتراك")} <strong>{contract.number}</strong></p>
+        <p><strong>{contract.amount} {contract.currency}</strong> · {cycle[contract.billing_cycle]}</p>
+        <p>{t("تاريخ الانتهاء")} <time>{contract.end_date}</time></p>
+        <p>{t("تواصل مع فريق MenuPilot للدفع أو تعديل العقد.")}</p>
+      </Card>
+    </div>;
+  }
+
   // After reporting: the invoice + WhatsApp.
   if (sent) {
     return (

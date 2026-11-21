@@ -44,7 +44,7 @@ export default function Login() {
     const failed = params.get("error");
     if (failed) {
       if (failed === "GOOGLE_REGISTRATION_REQUIRED") {
-        navigate("/register?google=1", { replace: true });
+        navigate("/join", { replace: true });
         return;
       }
       // A refusal from our own rules (disabled account, two-step accounts) explains itself in error_description.
@@ -156,7 +156,7 @@ export default function Login() {
               <Link to="/" className="lg:hidden" dir="ltr" aria-label="menuPilot">
                 <Logo on="light" height={34} />
               </Link>
-              <Link to="/register" className="flex items-center gap-2 text-sm font-bold text-[#4B5147] transition hover:text-[#E67E22]">{t("ليس لديك حساب؟ إنشاء حساب")} <ArrowLeft size={16} /></Link>
+              <Link to="/join" className="flex items-center gap-2 text-sm font-bold text-[#4B5147] transition hover:text-[#E67E22]">{t("قدّم طلب انضمام")} <ArrowLeft size={16} /></Link>
             </div>
 
             <div className="rounded-[28px] border border-[#4B5147]/10 bg-white p-4 shadow-[0_24px_70px_rgba(31,36,32,.08)] sm:p-8 md:p-10">

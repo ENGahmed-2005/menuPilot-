@@ -5,13 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Support\Audit;
 use App\Support\AuthSessions;
-use App\Support\CredentialAccount;
 use App\Support\RestaurantFeatures;
 use App\Support\SubscriptionAccess;
 use App\Support\SubscriptionPlans;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -184,58 +183,9 @@ class AdminController extends Controller
         return response()->json(['data' => $u->fresh()]);
     }
 
-    /**
-     * POST admin/restaurants — create a restaurant (owner account) from the
-     * admin panel. The password is generated when not given and returned once.
-     */
-    public function storeRestaurant(Request $r)
+    public function storeRestaurant(): JsonResponse
     {
-        if (! $this->guard($r)) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $v = $r->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'restaurant_name' => 'required|string|max:255',
-            'restaurant_phone' => 'nullable|string|max:50',
-            'plan' => ['nullable', Rule::in(['trial', ...SubscriptionPlans::acceptedPlans()])],
-            'addons' => ['sometimes', 'array', 'max:10'],
-            'addons.*' => ['string', 'distinct', Rule::in(array_keys(SubscriptionPlans::addons()))],
-            'password' => 'nullable|string|min:8',
-        ]);
-        [$plan, $addons] = SubscriptionPlans::normalize($v['plan'] ?? 'trial', $v['addons'] ?? []);
-        if ($plan === 'trial') {
-            $addons = []; // a trial already includes everything
-        } elseif ($conflict = SubscriptionPlans::incompatibility($plan, $addons)) {
-            return response()->json(['message' => $conflict, 'errors' => ['addons' => [$conflict]], 'code' => 'ADDON_NOT_AVAILABLE'], 422);
-        }
-        $password = $v['password'] ?? 'MP-'.Str::upper(Str::random(6)).'-'.random_int(100, 999);
-        $now = now();
-
-        // The platform vouches for the address it typed: no verification e-mail
-        // stands between the owner and the generated password.
-        $owner = User::forceCreate([
-            'name' => $v['name'],
-            'email' => Str::lower(trim($v['email'])),
-            'restaurant_name' => $v['restaurant_name'],
-            'restaurant_phone' => $v['restaurant_phone'] ?? null,
-            'password' => Hash::make($password),
-            'role' => 'owner',
-            'plan' => $plan,
-            'is_active' => true,
-            'email_verified' => true,
-            'trial_started_at' => $plan === 'trial' ? $now : null,
-            'trial_ends_at' => $plan === 'trial' ? $now->copy()->addDays(14) : null,
-            'subscription_started_at' => $plan === 'trial' ? null : $now,
-        ]);
-        CredentialAccount::sync($owner->id, $owner->password);
-        if ($addons) {
-            $owner->forceFill(['addons' => $addons])->save();
-        }
-        Audit::log($r, 'admin.restaurant_created', 'restaurant', $owner->id, ['restaurant' => $owner->restaurant_name, 'plan' => $plan, 'addons' => $addons], $owner->id);
-
-        return response()->json(['data' => ['restaurant' => $owner->fresh(), 'generated_password' => isset($v['password']) ? null : $password]], 201);
+        return response()->json(['message' => 'Activate a signed contract to create a restaurant.', 'code' => 'SIGNED_CONTRACT_REQUIRED'], 410);
     }
 
     /**
