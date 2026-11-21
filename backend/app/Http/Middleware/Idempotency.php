@@ -4,22 +4,22 @@ namespace App\Http\Middleware;
 
 use App\Support\AuthSessions;
 use Closure;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
- * Safe retries for the offline queue (docs/offline.md). A screen that was
- * offline sends each change with an `Idempotency-Key`; if the answer was lost
- * and the same key arrives again, the first answer is replayed instead of
- * doing it twice (a payment, a close, a cancel). Only successful (2xx) answers
- * are kept, so a retry after a failure (e.g. an expired login) really runs.
+ * Durable retry protection for state-changing API requests.
+ *
+ * The idempotency record and the controller's database changes are committed
+ * in the same outer transaction. If the process dies before commit, both roll
+ * back; if the commit succeeds but the response is lost, a retry replays the
+ * stored response. The unique key also serializes concurrent requests across
+ * app instances without depending on a shared cache/lock driver.
  */
 class Idempotency
 {
     private const TTL_HOURS = 24;
-
-    /** Seconds the first try may run before a retry with the same key may run it again. */
-    private const LOCK_SECONDS = 30;
 
     private const KEY_PATTERN = '/^[A-Za-z0-9_-]{8,100}$/';
 
@@ -30,57 +30,107 @@ class Idempotency
             return $next($request);
         }
 
-        // Same key from another person or for another address is another request.
-        $scope = hash('sha256', $this->who($request).'|'.$request->method().'|'.$request->path().'|'.$key);
-        $storeKey = "idempotency:$scope";
+        $keyHash = hash('sha256', $this->who($request).'|'.$request->method().'|'.$request->path().'|'.$key);
+        $requestHash = hash('sha256', $request->getContent().'|'.http_build_query($request->query()));
+        $now = now();
 
-        if ($saved = Cache::get($storeKey)) {
-            return $this->replay($saved);
-        }
+        $saved = DB::table('idempotency_records')
+            ->where('key_hash', $keyHash)
+            ->where('expires_at', '>', $now)
+            ->first();
 
-        // The first try is still running (the retry came too early): ask to wait.
-        $lock = Cache::lock("$storeKey:lock", self::LOCK_SECONDS);
-        if (! $lock->get()) {
-            return response()->json(['message' => 'الطلب نفسه ما زال قيد التنفيذ. حاول بعد لحظات.', 'code' => 'IDEMPOTENCY_IN_PROGRESS'], 409, ['Retry-After' => '2']);
+        if ($saved) {
+            return $this->replayOrConflict($saved, $requestHash);
         }
 
         try {
-            // It may have finished between the first look and taking the lock.
-            if ($saved = Cache::get($storeKey)) {
-                return $this->replay($saved);
-            }
-            $response = $next($request);
-            $status = $response->getStatusCode();
-            if ($status >= 200 && $status < 300) {
-                Cache::put($storeKey, [
-                    'status' => $status,
-                    'content' => $response->getContent(),
-                    'type' => $response->headers->get('Content-Type', 'application/json'),
-                ], now()->addHours(self::TTL_HOURS));
+            return DB::transaction(function () use ($request, $next, $keyHash, $requestHash) {
+                // Remove only an expired entry. A concurrent insert for the same
+                // key is arbitrated by the unique index, not by a cache lock.
+                DB::table('idempotency_records')
+                    ->where('key_hash', $keyHash)
+                    ->where('expires_at', '<=', now())
+                    ->delete();
+
+                DB::table('idempotency_records')->insert([
+                    'key_hash' => $keyHash,
+                    'request_hash' => $requestHash,
+                    'response_status' => null,
+                    'response_content' => null,
+                    'response_type' => null,
+                    'expires_at' => now()->addHours(self::TTL_HOURS),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                // Nested controller transactions become savepoints under this
+                // transaction, keeping the mutation and replay record atomic.
+                $response = $next($request);
+                $status = $response->getStatusCode();
+
+                if ($status >= 200 && $status < 300) {
+                    DB::table('idempotency_records')->where('key_hash', $keyHash)->update([
+                        'response_status' => $status,
+                        'response_content' => $response->getContent(),
+                        'response_type' => $response->headers->get('Content-Type', 'application/json'),
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    // Failures aren't cached; clients can retry after correcting
+                    // the problem. No successful mutation should return a 4xx.
+                    DB::table('idempotency_records')->where('key_hash', $keyHash)->delete();
+                }
+
+                return $response;
+            }, 3);
+        } catch (QueryException $exception) {
+            // Another request with this key won the unique-index race. Its
+            // transaction has completed (or failed), so read the durable result.
+            $saved = DB::table('idempotency_records')
+                ->where('key_hash', $keyHash)
+                ->where('expires_at', '>', now())
+                ->first();
+
+            if ($saved) {
+                return $this->replayOrConflict($saved, $requestHash);
             }
 
-            return $response;
-        } finally {
-            $lock->release();
+            throw $exception;
         }
     }
 
-    /**
-     * Who sends it: the signed-in account (so a resend after signing in
-     * again still replays), else the guest's session secret, else the IP.
-     * Runs before ApiAuth and shares its lookup (App\Support\AuthSessions).
-     */
     private function who(Request $request): string
     {
         if ($user = AuthSessions::resolve($request)['user']) {
             return "user:{$user->id}";
         }
 
-        return ($session = $request->header('X-Session-Token')) ? 'session:'.hash('sha256', $session) : 'ip:'.$request->ip();
+        return ($session = $request->header('X-Session-Token'))
+            ? 'session:'.hash('sha256', $session)
+            : 'ip:'.$request->ip();
     }
 
-    private function replay(array $saved)
+    private function replayOrConflict(object $saved, string $requestHash)
     {
-        return response($saved['content'], $saved['status'], ['Content-Type' => $saved['type'], 'Idempotent-Replay' => 'true']);
+        if (! hash_equals($saved->request_hash, $requestHash)) {
+            return response()->json([
+                'message' => 'تم استخدام مفتاح الطلب نفسه مع بيانات مختلفة. استخدم مفتاحًا جديدًا.',
+                'code' => 'IDEMPOTENCY_KEY_REUSED',
+            ], 409);
+        }
+
+        // A row with no response is not visible until its transaction commits;
+        // this guard is defensive for manually edited/inconsistent records.
+        if ($saved->response_status === null || $saved->response_content === null) {
+            return response()->json([
+                'message' => 'الطلب نفسه ما زال قيد التنفيذ. حاول بعد لحظات.',
+                'code' => 'IDEMPOTENCY_IN_PROGRESS',
+            ], 409, ['Retry-After' => '2']);
+        }
+
+        return response($saved->response_content, (int) $saved->response_status, [
+            'Content-Type' => $saved->response_type ?: 'application/json',
+            'Idempotent-Replay' => 'true',
+        ]);
     }
 }
