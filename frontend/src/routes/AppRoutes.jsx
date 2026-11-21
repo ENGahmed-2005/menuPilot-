@@ -8,6 +8,7 @@ import SubscriptionGuard from "../components/subscription/SubscriptionGuard";
 import Landing from "../pages/landing/LandingPage";
 import Login from "../pages/auth/Login";
 const RestaurantOnboarding = lazy(() => import("../pages/admin/RestaurantOnboarding"));
+const RestaurantGuide = lazy(() => import("../pages/landing/RestaurantGuide"));
 const JoinInformation = lazy(() => import("../pages/auth/JoinInformation"));
 const Register = lazy(() => import("../pages/auth/Register"));
 const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
@@ -62,9 +63,9 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/join" element={<Register />} />
-      <Route path="/join/received" element={<JoinInformation mode="received" />} />
-      <Route path="/join/how-it-works" element={<JoinInformation mode="guide" />} />
-      <Route path="/founding-partners" element={<JoinInformation mode="partners" />} />
+      <Route path="/join/received" element={<JoinInformation />} />
+      <Route path="/join?/how-it-works" element={<RestaurantGuide />} />
+      <Route path="/founding-partners" element={<RestaurantGuide partnership />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/menu" element={<RestaurantMenu />} />
