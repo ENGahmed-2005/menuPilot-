@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ChefHat, ClipboardList, Globe, Handshake, QrCode, ReceiptText, ShoppingBag, Truck, Users } from "lucide-react";
+import { ArrowLeft, ChefHat, ClipboardList, Globe, Handshake, QrCode, ReceiptText, ShoppingBag, Truck, Users } from "lucide-react";
 import Logo from "../../components/brand/Logo";
 import LanguageSwitch from "../../components/ui/LanguageSwitch";
 import { dir, lang } from "../../i18n";
@@ -47,7 +47,7 @@ const questions = [
   [c("كيف تُحدّد الشروط التجارية؟", "What are the commercial terms?"), c("تُحدّد الرسوم والمدة والمزايا المتفق عليها في اتفاقية مطعمك قبل التوقيع.", "Your restaurant’s agreement sets out fees, duration and any agreed benefits before you sign.")],
 ];
 function ApplyLink({ children }) {
-  return <Link className={primary} to="/join">{children}<ArrowRight size={18} aria-hidden="true" className="rtl:rotate-180" /></Link>;
+  return <Link className={primary} to="/join">{children}<ArrowLeft size={18} aria-hidden="true" /></Link>;
 }
 function Timeline({ items }) {
   return <ol className="mt-7">{items.map(([Icon, title, body], index) => <li key={title} className="relative flex gap-4 pb-6 last:pb-0 before:absolute before:start-[19px] before:top-9 before:bottom-0 before:w-px before:bg-[#a25b23] last:before:hidden">
