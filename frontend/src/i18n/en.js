@@ -1,6 +1,17 @@
 /* English for every Arabic string in the app, keyed by the Arabic text (see i18n/index.js).
    Placeholders like {0} must stay in the English text. Missing keys show the Arabic. */
 export default {
+  "سعة المطعم": "Restaurant capacity",
+  "إدارة الطلبات الخارجية والتوصيل": "Manage takeaway and delivery",
+  "متابعة الأداء والمبيعات من لوحة واحدة": "Track performance and sales in one dashboard",
+  "انضم إلى MenuPilot واربط طلبات مطعمك ومطبخك وموظفيك وإدارتك في منظومة تشغيل واحدة.": "Bring your orders, kitchen, team and management together with MenuPilot.",
+  "شاشات تشغيل مخصصة لكل قسم": "Give each team its own workspace",
+  "استقبال الطلبات عبر QR مباشرة": "Take orders directly by QR code",
+  "بيانات التواصل": "Contact details",
+  "ابدأ إدارة مطعمك بطريقة أذكى": "Run your restaurant smarter",
+  "اختياري": "Optional",
+  "إرسال طلب الانضمام": "Submit application",
+  "تفاصيل إضافية": "Additional details",
   "اطلب توصيل": "Order delivery",
   "مطاعم التوصيل": "Restaurants that deliver",
   "من المطعم لبابك": "From the restaurant to your door",
