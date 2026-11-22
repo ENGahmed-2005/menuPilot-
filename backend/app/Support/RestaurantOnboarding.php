@@ -5,6 +5,7 @@ namespace App\Support;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class RestaurantOnboarding
 {
@@ -39,6 +40,33 @@ class RestaurantOnboarding
         ]);
     }
 
+    /**
+     * Remove credentials and common secret formats before writing transport errors to application logs.
+     */
+    private static function sanitizeMailError(string $message): string
+    {
+        $secrets = [
+            config('mail.mailers.smtp.password'),
+            config('mail.mailers.mailersend.key'),
+        ];
+
+        foreach ($secrets as $secret) {
+            if (is_string($secret) && $secret !== '') {
+                $message = str_replace($secret, '[REDACTED]', $message);
+            }
+        }
+
+        $message = preg_replace('/(authorization\s*:\s*)(?:basic|bearer)\s+\S+/i', '$1[REDACTED]', $message) ?? $message;
+        $message = preg_replace('/(:\/\/)[^\/\s@]+@/', '$1[REDACTED]@', $message) ?? $message;
+        $message = preg_replace(
+            '/\b(password|passwd|secret|token|api[_-]?key)\b(\s*[=:]\s*|\s+)(?:"[^"]*"|\'[^\']*\'|[^\s,;]+)/i',
+            '$1$2[REDACTED]',
+            $message
+        ) ?? $message;
+
+        return substr($message, 0, 1000);
+    }
+
     public static function notify(string $email, string $subject, string $body, ?string $eventTable = null, ?int $recordId = null): void
     {
         DB::afterCommit(static function () use ($email, $subject, $body, $eventTable, $recordId) {
@@ -48,15 +76,29 @@ class RestaurantOnboarding
                     Mail::raw($body, fn ($message) => $message->to($email)->subject($subject));
                     $result = 'mail_sent';
                 }
-            } catch (\Throwable) {
+            } catch (Throwable $exception) {
                 $result = 'mail_failed';
-                logger()->warning('MenuPilot onboarding email could not be delivered.', ['subject' => $subject]);
+                $mailer = (string) config('mail.default', 'unknown');
+                $smtp = config('mail.mailers.smtp', []);
+
+                logger()->warning('MenuPilot onboarding email could not be delivered.', [
+                    'subject' => $subject,
+                    'mailer' => $mailer,
+                    'smtp_host' => $smtp['host'] ?? null,
+                    'smtp_port' => $smtp['port'] ?? null,
+                    'smtp_scheme' => $smtp['scheme'] ?? null,
+                    'exception_class' => $exception::class,
+                    'exception_message' => self::sanitizeMailError($exception->getMessage()),
+                ]);
             }
             if ($eventTable && $recordId) {
                 try {
                     self::event($eventTable, $recordId, $result, description: $subject);
-                } catch (\Throwable) {
-                    logger()->warning('MenuPilot notification outcome could not be recorded.', ['result' => $result]);
+                } catch (Throwable $exception) {
+                    logger()->warning('MenuPilot notification outcome could not be recorded.', [
+                        'result' => $result,
+                        'exception_class' => $exception::class,
+                    ]);
                 }
             }
         });
