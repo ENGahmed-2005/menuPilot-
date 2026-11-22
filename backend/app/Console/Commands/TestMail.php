@@ -30,7 +30,7 @@ class TestMail extends Command
             $this->line('API    : MailerSend ('.($key ? substr($key, 0, 9).'…' : 'MAILERSEND_API_KEY missing').')');
         }
         if ($mailer === 'appsscript') {
-            $this->line('Relay  : Google Apps Script ('.(config('mail.mailers.appsscript.url') ? 'URL set' : 'APPS_SCRIPT_MAIL_URL missing').', '.(config('mail.mailers.appsscript.secret') ? 'secret set' : 'APPS_SCRIPT_MAIL_SECRET missing').'); sent from the script owner\'s Gmail');
+            $this->line('Relay  : Google Apps Script ('.(config('mail.mailers.appsscript.endpoint') ? 'URL set' : 'APPS_SCRIPT_MAIL_URL missing').', '.(config('mail.mailers.appsscript.secret') ? 'secret set' : 'APPS_SCRIPT_MAIL_SECRET missing').'); sent from the script owner\'s Gmail');
         }
         if ($mailer === 'smtp') {
             $this->line("Host   : {$smtp['host']}:{$smtp['port']} (".($smtp['scheme'] ?? $smtp['encryption'] ?? 'auto').')');
