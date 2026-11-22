@@ -79,7 +79,7 @@ return [
         // Gmail via a Google Apps Script Web App over HTTPS (app/Mail/Transport/AppsScriptTransport, docs/mail-relay/).
         'appsscript' => [
             'transport' => 'appsscript',
-            'url' => env('APPS_SCRIPT_MAIL_URL', ''),
+            'endpoint' => env('APPS_SCRIPT_MAIL_URL', ''),
             'secret' => env('APPS_SCRIPT_MAIL_SECRET', ''),
         ],
 
