@@ -1,9 +1,9 @@
 <?php
 
-use App\\Support\\RestaurantOnboarding;
-use Illuminate\\Foundation\\Testing\\DatabaseMigrations;
-use Illuminate\\Support\\Facades\\Log;
-use Illuminate\\Support\\Facades\\Mail;
+use App\Support\RestaurantOnboarding;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 uses(DatabaseMigrations::class);
 
