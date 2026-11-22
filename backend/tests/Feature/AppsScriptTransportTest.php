@@ -13,7 +13,7 @@ beforeEach(function () {
         'mail.default' => 'appsscript',
         'mail.mailers.appsscript' => [
             'transport' => 'appsscript',
-            'url' => 'https://script.google.com/macros/s/AKfycbTEST/exec',
+            'endpoint' => 'https://script.google.com/macros/s/AKfycbTEST/exec',
             'secret' => 'relay-test-secret',
         ],
         'mail.from' => ['address' => 'ignored@example.com', 'name' => 'menuPilot'],
@@ -64,7 +64,7 @@ it('explains a non-JSON answer such as the Google sign-in page', function () {
 });
 
 it('fails fast when the relay is not configured', function () {
-    config(['mail.mailers.appsscript.url' => '', 'mail.mailers.appsscript.secret' => '']);
+    config(['mail.mailers.appsscript.endpoint' => '', 'mail.mailers.appsscript.secret' => '']);
     Http::fake();
 
     $this->artisan('menupilot:test-mail', ['to' => 'someone@example.com'])
