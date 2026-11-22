@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Broadcasting\PusherProtocolBroadcaster;
+use App\Mail\Transport\AppsScriptTransport;
 use App\Mail\Transport\MailerSendTransport;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Mail;
@@ -28,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
 
         // MAIL_MAILER=mailersend → MailerSend API (token from MAILERSEND_API_KEY).
         Mail::extend('mailersend', fn (array $config) => new MailerSendTransport((string) ($config['key'] ?? '')));
+
+        // MAIL_MAILER=appsscript → Gmail through a Google Apps Script Web App (docs/mail-relay/).
+        Mail::extend('appsscript', fn (array $config) => new AppsScriptTransport((string) ($config['endpoint'] ?? ''), (string) ($config['secret'] ?? '')));
 
         //
     }

@@ -20,6 +20,8 @@
 
 > مزودات SMTP مجانية مناسبة: Brevo (300 رسالة يوميًا)، أو Gmail مع App Password للتجربة فقط.
 
+> **ريندر المجانية تحجب SMTP** (المنافذ 25 و465 و587): لا يعمل `MAIL_MAILER=smtp` عليها. بدائل عبر HTTPS: `MAIL_MAILER=mailersend` مع `MAILERSEND_API_KEY` (يحتاج دومينًا موثّقًا للإرسال لغير صاحب الحساب)، أو `MAIL_MAILER=appsscript` للإرسال من Gmail بلا دومين (انظر `docs/mail-relay/README.md`).
+
 اختياري ومُستحسن: `BETTER_AUTH_SECRET` بنفس قيمة خدمة الدخول، فيتحقق Laravel من توقيع كوكي الجلسة.
 
 ## 3. خدمة الدخول (Better Auth) — مجلد `auth/`

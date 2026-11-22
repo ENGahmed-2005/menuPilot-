@@ -48,6 +48,8 @@ class RestaurantOnboarding
         $secrets = [
             config('mail.mailers.smtp.password'),
             config('mail.mailers.mailersend.key'),
+            config('mail.mailers.appsscript.secret'),
+            config('mail.mailers.appsscript.endpoint'),
         ];
 
         foreach ($secrets as $secret) {

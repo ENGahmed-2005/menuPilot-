@@ -76,6 +76,13 @@ return [
             'key' => env('MAILERSEND_API_KEY', ''),
         ],
 
+        // Gmail via a Google Apps Script Web App over HTTPS (app/Mail/Transport/AppsScriptTransport, docs/mail-relay/).
+        'appsscript' => [
+            'transport' => 'appsscript',
+            'endpoint' => env('APPS_SCRIPT_MAIL_URL', ''),
+            'secret' => env('APPS_SCRIPT_MAIL_SECRET', ''),
+        ],
+
         'log' => [
             'transport' => 'log',
             'channel' => env('MAIL_LOG_CHANNEL'),
