@@ -1,10 +1,10 @@
 <?php
 
-namespace App\\Support;
+namespace App\Support;
 
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Mail;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class RestaurantOnboarding
@@ -56,10 +56,10 @@ class RestaurantOnboarding
             }
         }
 
-        $message = preg_replace('/(authorization\\s*:\\s*)(?:basic|bearer)\\s+\\S+/i', '$1[REDACTED]', $message) ?? $message;
-        $message = preg_replace('/(\\:\\/\\/)[^\\/\\s@]+@/', '$1[REDACTED]@', $message) ?? $message;
+        $message = preg_replace('/(authorization\s*:\s*)(?:basic|bearer)\s+\S+/i', '$1[REDACTED]', $message) ?? $message;
+        $message = preg_replace('/(:\/\/)[^\/\s@]+@/', '$1[REDACTED]@', $message) ?? $message;
         $message = preg_replace(
-            '/\\b(password|passwd|secret|token|api[_-]?key)\\b(\\s*[=:]\\s*|\\s+)(?:"[^"]*"|\\'[^\\']*\\'|[^\\s,;]+)/i',
+            '/\b(password|passwd|secret|token|api[_-]?key)\b(\s*[=:]\s*|\s+)(?:"[^"]*"|\'[^\']*\'|[^\s,;]+)/i',
             '$1$2[REDACTED]',
             $message
         ) ?? $message;
