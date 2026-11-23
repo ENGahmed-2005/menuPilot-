@@ -1,11 +1,11 @@
 <?php
 
 use App\Support\RestaurantOnboarding;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-uses(DatabaseMigrations::class);
+uses(RefreshDatabase::class);
 
 it('logs useful SMTP failure details without exposing credentials', function () {
     config([
