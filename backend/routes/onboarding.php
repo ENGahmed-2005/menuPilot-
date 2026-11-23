@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FoundingPartnerController;
+use App\Http\Controllers\ManualRestaurantController;
 use App\Http\Controllers\RestaurantApplicationController;
 use App\Http\Controllers\RestaurantContractController;
 use Illuminate\Support\Facades\Route;
@@ -8,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('applications', [RestaurantApplicationController::class, 'store'])->middleware('throttle:5,1');
 
 Route::prefix('admin')->middleware(['api.auth', 'role:admin', 'permission:manage_admin'])->group(function () {
+    Route::post('restaurants/manual', [ManualRestaurantController::class, 'store'])->middleware('throttle:10,1');
     Route::controller(RestaurantApplicationController::class)->prefix('applications')->group(function () {
         Route::get('/', 'index');
         Route::get('{id}', 'show')->whereNumber('id');

@@ -26,4 +26,4 @@ ENV APP_ENV=production \
     CACHE_STORE=file \
     PHP_CLI_SERVER_WORKERS=6
 EXPOSE 10000
-CMD ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=AdminSeeder --force && php artisan optimize:clear && exec php artisan serve --no-reload --host=0.0.0.0 --port=$PORT"]
+CMD ["sh", "-c", "exec php artisan serve --no-reload --host=0.0.0.0 --port=$PORT"]

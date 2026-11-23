@@ -2,9 +2,11 @@
 
 namespace App\Support;
 
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Throwable;
 
 class RestaurantOnboarding
@@ -67,6 +69,16 @@ class RestaurantOnboarding
         ) ?? $message;
 
         return substr($message, 0, 1000);
+    }
+
+    public static function inviteOwner(User $owner, ?int $id = null): void
+    {
+        $token = Str::random(64);
+        DB::table('password_reset_tokens')->updateOrInsert(['email' => $owner->email], [
+            'token' => hash('sha256', $token), 'created_at' => now(), 'owner_invitation' => true,
+        ]);
+        $url = rtrim(config('app.frontend_url'), '/').'/reset-password?'.http_build_query(['token' => $token, 'email' => $owner->email]);
+        self::notify($owner->email, 'Set your MenuPilot password', "Your restaurant is active. Set your password using this one-time link:\n".$url, 'contract_events', $id);
     }
 
     public static function notify(string $email, string $subject, string $body, ?string $eventTable = null, ?int $recordId = null): void

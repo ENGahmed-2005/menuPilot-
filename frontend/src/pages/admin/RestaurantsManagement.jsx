@@ -1,6 +1,6 @@
 /* ==========================================================================
    RestaurantsManagement.jsx — platform admin: all restaurants.
-   Create a restaurant (owner account, password shown once), edit its details,
+   Create a restaurant with an owner invitation, edit its details,
    change the plan and add-ons, grant or revoke features (restaurant
    permissions, like staff permissions in the owner panel), enable/disable
    the account, and delete it permanently
@@ -12,6 +12,7 @@ import { Building2, Pencil, RefreshCw, Search, ShieldCheck, Trash2, XCircle } fr
 import {
   deleteRestaurant, getAllRestaurants, getRestaurantFeatures, overrideRestaurantPlan, setOwnerActive, setRestaurantFeatures, updateRestaurant,
 } from "../../api/admin";
+import CreateRestaurant from "./CreateRestaurant";
 import AdminPageShell from "../../components/layout/AdminPageShell";
 import Modal from "../../components/ui/Modal";
 import Input from "../../components/ui/Input";
@@ -22,7 +23,7 @@ import { useConfirm } from "../../components/ui/ConfirmDialog";
 import { errorText } from "../../utils/errors";
 import AddonToggles from "../../components/subscription/AddonToggles";
 import { SUBSCRIPTION_ADDONS } from "../../config/subscriptions";
-import { t, locale } from "../../i18n";
+import { t, locale, lang } from "../../i18n";
 
 const PLANS = [["trial", t("تجربة مجانية")], ["basic", "Basic"], ["pro", "Pro"], ["delivery_only", t("التوصيل فقط")]];
 const PLAN_LABEL = Object.fromEntries(PLANS);
@@ -30,6 +31,7 @@ const dateLabel = (iso) => (iso ? new Date(iso).toLocaleDateString(locale, { day
 
 export default function RestaurantsManagement() {
   const toast = useToast();
+  const [creating, setCreating] = useState(false);
   const [confirm, confirmDialog] = useConfirm();
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState("");
@@ -122,6 +124,11 @@ export default function RestaurantsManagement() {
   return (
     <AdminPageShell>
       {confirmDialog}
+      {creating && <CreateRestaurant onClose={() => setCreating(false)} onCreated={message => {
+        setCreating(false);
+        toast.success(message);
+        load();
+      }} />}
       <section className="admin-heading">
         <div>
           <p className="admin-overline"><Building2 size={14} aria-hidden="true" /> {t("إدارة المنصة")}</p>
@@ -129,6 +136,7 @@ export default function RestaurantsManagement() {
           <p>{t("عدّل بيانات المطعم أو باقته، عطّله مؤقتًا، أو احذفه نهائيًا.")}</p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => setCreating(true)}>{lang === "ar" ? "إنشاء مطعم" : "Create restaurant"}</Button>
           <Button variant="secondary" onClick={load} loading={loading}><RefreshCw size={15} aria-hidden="true" /> {t("تحديث")}</Button>
         </div>
       </section>

@@ -287,7 +287,7 @@ class RestaurantContractController extends Controller
             ]);
             Onboarding::event('application_events', $applicationId, 'converted', 'approved', 'converted');
             $this->transition($contract, 'active', 'activated', ['restaurant_id' => $owner->id, 'activated_at' => now()]);
-            $this->inviteOwner($owner, $id);
+            Onboarding::inviteOwner($owner, $id);
         }, 3);
 
         return $this->show($id);
@@ -299,21 +299,11 @@ class RestaurantContractController extends Controller
             $contract = $this->locked($id, ['active']);
             $owner = User::findOrFail($contract->restaurant_id);
             abort_if($owner->email_verified, 409, 'The owner has already verified their email.');
-            $this->inviteOwner($owner, $id);
+            Onboarding::inviteOwner($owner, $id);
             Onboarding::event('contract_events', $id, 'invitation_requested');
         }, 3);
 
         return $this->show($id);
-    }
-
-    private function inviteOwner(User $owner, int $id): void
-    {
-        $token = Str::random(64);
-        DB::table('password_reset_tokens')->updateOrInsert(['email' => $owner->email], [
-            'token' => hash('sha256', $token), 'created_at' => now(), 'owner_invitation' => true,
-        ]);
-        $url = rtrim(config('app.frontend_url'), '/').'/reset-password?'.http_build_query(['token' => $token, 'email' => $owner->email]);
-        Onboarding::notify($owner->email, 'Set your MenuPilot password', "Your restaurant is active. Set your password using this one-time link:\n".$url, 'contract_events', $id);
     }
 
     public function close(Request $request, int $id): JsonResponse
