@@ -69,3 +69,12 @@ SMOKE_ADMIN_EMAIL=... SMOKE_ADMIN_PASSWORD=... node scripts/smoke-test.mjs https
 - **جلسات الزبائن:** كل جلسة لها رمز سري (`X-Session-Token`). رقم الجلسة وحده لم يعد كافيًا للوصول إليها.
 - **الصور:** تُخزَّن في قاعدة البيانات وتُعرض من `/api/media/{uuid}`، فلا تضيع عند إعادة النشر.
 - **رموز QR:** تُبنى من `FRONTEND_URL` في الـ Backend، ومن عنوان الواجهة نفسها في الواجهة.
+
+### Laravel schema releases
+
+The Laravel image starts the HTTP service. For a release that includes schema changes, run
+`php artisan migrate --force` once against the target database as an authorized release
+step before deploying the application. Use Render's pre-deploy command where available,
+or an authorized one-off release job using the same image and database environment.
+For a new installation, provision the first platform administrator separately after
+migrations complete. The manual restaurant creation feature uses the existing schema.

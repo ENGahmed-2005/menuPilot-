@@ -128,3 +128,80 @@ it('activates a signed paper contract once with a reserved partner seat and a co
     $this->assertDatabaseHas('founding_partners', ['id' => $partner, 'partnership_status' => 'closed']);
     $this->assertDatabaseHas('users', ['id' => $restaurant, 'role' => 'owner']);
 });
+
+
+function manualRestaurant(array $overrides = []): array
+{
+    return array_replace([
+        'name' => 'Owner', 'email' => 'NEW@example.test',
+        'restaurant_name' => 'Olive Kitchen', 'restaurant_phone' => '+972 512345678',
+        'restaurant_address' => 'Main street', 'account_type' => 'demo_trial',
+        'plan' => 'pro', 'trial_days' => 7, 'reason' => 'Restaurant demo',
+    ], $overrides);
+}
+
+it('creates an expiring owner trial with an invitation and an audit entry', function () {
+    $this->freezeSecond();
+    config(['mail.default' => 'array']);
+    $token = null;
+    \Illuminate\Support\Facades\Event::listen(\Illuminate\Mail\Events\MessageSent::class, function ($event) use (&$token) {
+        if (preg_match('/[?&]token=([A-Za-z0-9]+)/', $event->message->getTextBody(), $match)) {
+            $token = $match[1];
+        }
+    });
+
+    $headers = onboardingAdmin();
+    $payload = manualRestaurant(['role' => 'admin', 'password' => 'ignored']);
+    $endpoint = '/api/admin/restaurants/manual';
+    $this->postJson($endpoint, $payload)->assertUnauthorized();
+    $this->postJson($endpoint, $payload, authAs(makeOwner()))->assertForbidden();
+    $id = $this->postJson($endpoint, $payload, $headers)->assertCreated()->json('data.id');
+    $owner = User::findOrFail($id);
+    expect($owner->role)->toBe('owner')->and($owner->password)->toBe('')
+        ->and($owner->plan)->toBe('pro')->and($owner->trial_ends_at->equalTo(now()->addDays(7)))->toBeTrue();
+    $this->assertDatabaseMissing('auth_accounts', ['user_id' => $id]);
+    $this->assertDatabaseHas('audit_logs', ['action' => 'restaurant_created_manually', 'restaurant_id' => $id, 'user_id' => User::where('role', 'admin')->value('id')]);
+    $this->assertDatabaseCount('contracts', 0);
+    $this->postJson($endpoint, $payload, $headers)->assertConflict();
+
+    expect($token)->toBeString();
+    $this->assertDatabaseHas('password_reset_tokens', ['email' => $owner->email, 'token' => hash('sha256', $token), 'owner_invitation' => true]);
+    $reset = ['token' => $token, 'email' => $owner->email, 'password' => 'New#Pass123', 'password_confirmation' => 'New#Pass123'];
+    $this->postJson('/api/account/reset-password', $reset)->assertOk();
+    $this->assertDatabaseHas('auth_accounts', ['user_id' => $id, 'provider_id' => 'credential']);
+    $this->postJson('/api/account/reset-password', $reset)->assertUnprocessable();
+});
+
+it('requires agreement activation for partner and contract accounts and validates trial inputs', function () {
+    $headers = onboardingAdmin();
+    $endpoint = '/api/admin/restaurants/manual';
+    $this->postJson($endpoint, manualRestaurant(['trial_days' => 0]), $headers)->assertJsonValidationErrors('trial_days');
+    $payload = manualRestaurant();
+    unset($payload['trial_days']);
+    $this->postJson($endpoint, array_replace($payload, ['account_type' => 'contract']), $headers)->assertUnprocessable();
+    $this->postJson($endpoint, array_replace($payload, ['account_type' => 'founding_partner', 'application_id' => 1]), $headers)->assertUnprocessable();
+    $this->assertDatabaseMissing('users', ['email' => 'new@example.test']);
+});
+
+it('links only an eligible application and rolls back failed owner creation', function () {
+    $this->postJson('/api/applications', onboardingApplication())->assertCreated();
+    $application = DB::table('restaurant_applications')->first();
+    DB::table('restaurant_applications')->where('id', $application->id)->update(['status' => 'approved']);
+    $headers = onboardingAdmin();
+    $payload = manualRestaurant(['application_id' => $application->id]);
+    $endpoint = '/api/admin/restaurants/manual';
+    $this->postJson($endpoint, $payload, $headers)->assertJsonValidationErrors('application_id');
+    $payload['email'] = $application->email;
+    $modelEvent = 'eloquent.created: '.User::class;
+    \Illuminate\Support\Facades\Event::listen($modelEvent, fn () => throw new RuntimeException('Simulated persistence failure'));
+    try {
+        $this->postJson($endpoint, $payload, $headers)->assertInternalServerError();
+    } finally {
+        \Illuminate\Support\Facades\Event::forget($modelEvent);
+    }
+    $this->assertDatabaseMissing('users', ['email' => $application->email]);
+    $this->assertDatabaseMissing('password_reset_tokens', ['email' => $application->email]);
+    $this->assertDatabaseHas('restaurant_applications', ['id' => $application->id, 'status' => 'approved', 'restaurant_id' => null]);
+    $id = $this->postJson($endpoint, $payload, $headers)->assertCreated()->json('data.id');
+    $this->assertDatabaseHas('restaurant_applications', ['id' => $application->id, 'status' => 'converted', 'restaurant_id' => $id]);
+});
